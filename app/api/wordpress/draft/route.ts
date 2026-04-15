@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getHistoryById,
   getWordPressSettings,
+  syncCalendarEntryWordPressDraft,
   updateHistoryWordPressDraft,
 } from "@/lib/db";
 import {
@@ -20,10 +21,11 @@ function deriveTitle(content: string, fallbackTitle?: string) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { content, title, historyId } = body as {
+    const { content, title, historyId, calendarId } = body as {
       content?: string;
       title?: string;
       historyId?: number;
+      calendarId?: number;
     };
 
     if (!content?.trim()) {
@@ -88,6 +90,12 @@ export async function POST(req: NextRequest) {
         }) ?? null;
       }
     }
+
+    syncCalendarEntryWordPressDraft({
+      calendarId: typeof calendarId === "number" ? calendarId : null,
+      historyId: typeof historyId === "number" ? historyId : null,
+      wpPostId: draft.id,
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { countHistory, saveHistory, listHistory } from "@/lib/db";
+import { countHistory, linkCalendarEntryToHistory, saveHistory, listHistory } from "@/lib/db";
 import { getToolBySlug } from "@/lib/tools";
 
 export const runtime = "nodejs";
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { slug, fields, output } = body;
+    const { slug, fields, output, calendarId } = body;
 
     if (!slug || !fields || !output) {
       return NextResponse.json({ error: "Missing slug, fields, or output" }, { status: 400 });
@@ -99,6 +99,10 @@ export async function POST(req: NextRequest) {
       folder_name: null,
       tags: "",
     });
+
+    if (typeof calendarId === "number") {
+      linkCalendarEntryToHistory(calendarId, entry.id);
+    }
 
     return NextResponse.json(entry, { status: 201 });
   } catch (err) {

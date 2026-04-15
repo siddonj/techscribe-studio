@@ -46,6 +46,46 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
+
+        <div className="mt-8 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="bg-card border border-border rounded-2xl p-6">
+            <p className="font-mono text-accent text-xs tracking-widest uppercase mb-3">
+              Phase 2 Focus
+            </p>
+            <h2
+              className="text-2xl text-white mb-3"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Content Calendar & Scheduling
+            </h2>
+            <p className="text-slate-400 text-sm max-w-2xl">
+              Plan article ideas, assign tools, schedule publishing dates, and move directly from a planned item into a prefilled writing workflow.
+            </p>
+          </div>
+
+          <Link
+            href="/calendar"
+            className="group bg-card border border-border hover:border-accent/40 rounded-2xl p-6 transition-all duration-200 hover:bg-accent/5"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs text-muted uppercase tracking-wider mb-3">
+                  Open Planner
+                </p>
+                <h3
+                  className="text-xl text-white group-hover:text-accent transition-colors"
+                  style={{ fontFamily: "var(--font-display)" }}
+                >
+                  Build Your Editorial Queue
+                </h3>
+                <p className="text-sm text-slate-400 mt-3">
+                  Organize backlog ideas, this-week priorities, and scheduled drafts in one place.
+                </p>
+              </div>
+              <span className="text-3xl shrink-0">🗓️</span>
+            </div>
+          </Link>
+        </div>
       </div>
 
       {/* Tool categories */}

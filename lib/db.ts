@@ -1,6 +1,15 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import {
+  CALENDAR_PUBLISH_INTENTS,
+  CALENDAR_STATUSES,
+  type CalendarEntry,
+  type CalendarPublishIntent,
+  type CalendarEntryStatus,
+  type CalendarQueryOptions,
+  type CalendarSummary,
+} from "@/lib/calendar";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "history.db");
@@ -70,6 +79,68 @@ function ensureSettingsSchema(db: Database.Database) {
   }
 }
 
+function ensureCalendarSchema(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS content_calendar (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      tool_slug TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'planned',
+      scheduled_for TEXT,
+      brief TEXT,
+      keywords TEXT,
+      audience TEXT,
+      notes TEXT,
+      wp_category TEXT,
+      wp_tags TEXT,
+      publish_intent TEXT NOT NULL DEFAULT 'draft',
+      history_id INTEGER,
+      wp_post_id INTEGER,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
+  const columns = db.prepare("PRAGMA table_info(content_calendar)").all() as Array<{ name: string }>;
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (!columnNames.has("brief")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN brief TEXT");
+  }
+
+  if (!columnNames.has("keywords")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN keywords TEXT");
+  }
+
+  if (!columnNames.has("audience")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN audience TEXT");
+  }
+
+  if (!columnNames.has("notes")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN notes TEXT");
+  }
+
+  if (!columnNames.has("history_id")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN history_id INTEGER");
+  }
+
+  if (!columnNames.has("wp_post_id")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN wp_post_id INTEGER");
+  }
+
+  if (!columnNames.has("wp_category")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN wp_category TEXT");
+  }
+
+  if (!columnNames.has("wp_tags")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN wp_tags TEXT");
+  }
+
+  if (!columnNames.has("publish_intent")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN publish_intent TEXT NOT NULL DEFAULT 'draft'");
+  }
+}
+
 function getDb(): Database.Database {
   if (!_db) {
     _db = new Database(DB_PATH);
@@ -97,6 +168,7 @@ function getDb(): Database.Database {
     `);
     ensureHistorySchema(_db);
     ensureSettingsSchema(_db);
+    ensureCalendarSchema(_db);
   }
   return _db;
 }
@@ -149,6 +221,36 @@ export interface HistoryTagSummary {
 export interface HistoryFolderSummary {
   folder: string;
   count: number;
+}
+
+function buildCalendarQueryParts(options: CalendarQueryOptions) {
+  const whereClauses: string[] = [];
+  const params: Array<string | number> = [];
+
+  if (options.status) {
+    whereClauses.push("status = ?");
+    params.push(options.status);
+  }
+
+  if (options.toolSlug) {
+    whereClauses.push("tool_slug = ?");
+    params.push(options.toolSlug);
+  }
+
+  if (options.scheduledFrom) {
+    whereClauses.push("scheduled_for IS NOT NULL AND scheduled_for >= ?");
+    params.push(options.scheduledFrom);
+  }
+
+  if (options.scheduledTo) {
+    whereClauses.push("scheduled_for IS NOT NULL AND scheduled_for <= ?");
+    params.push(options.scheduledTo);
+  }
+
+  return {
+    whereSql: whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "",
+    params,
+  };
 }
 
 function splitHistoryTags(tags: string | null | undefined): string[] {
@@ -668,4 +770,214 @@ export function saveWordPressSettings(settings: {
   });
 
   return getWordPressSettings() as WordPressSettingsRow;
+}
+
+export function listCalendarEntries(options: CalendarQueryOptions = {}): CalendarEntry[] {
+  const db = getDb();
+  const { whereSql, params } = buildCalendarQueryParts(options);
+
+  return db.prepare(`
+    SELECT *
+    FROM content_calendar
+    ${whereSql}
+    ORDER BY
+      CASE WHEN scheduled_for IS NULL THEN 1 ELSE 0 END ASC,
+      scheduled_for ASC,
+      updated_at DESC
+  `).all(...params) as CalendarEntry[];
+}
+
+export function getCalendarEntryById(id: number): CalendarEntry | undefined {
+  const db = getDb();
+  return db.prepare("SELECT * FROM content_calendar WHERE id = ?").get(id) as CalendarEntry | undefined;
+}
+
+export function createCalendarEntry(entry: Omit<CalendarEntry, "id" | "created_at" | "updated_at">): CalendarEntry {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const result = db.prepare(`
+    INSERT INTO content_calendar (
+      title,
+      tool_slug,
+      status,
+      scheduled_for,
+      brief,
+      keywords,
+      audience,
+      notes,
+      wp_category,
+      wp_tags,
+      publish_intent,
+      history_id,
+      wp_post_id,
+      created_at,
+      updated_at
+    ) VALUES (
+      @title,
+      @tool_slug,
+      @status,
+      @scheduled_for,
+      @brief,
+      @keywords,
+      @audience,
+      @notes,
+      @wp_category,
+      @wp_tags,
+      @publish_intent,
+      @history_id,
+      @wp_post_id,
+      @created_at,
+      @updated_at
+    )
+  `).run({
+    ...entry,
+    created_at: now,
+    updated_at: now,
+  });
+
+  return getCalendarEntryById(result.lastInsertRowid as number) as CalendarEntry;
+}
+
+export function updateCalendarEntry(
+  id: number,
+  changes: Omit<CalendarEntry, "id" | "created_at" | "updated_at">
+): CalendarEntry | undefined {
+  const db = getDb();
+  const result = db.prepare(`
+    UPDATE content_calendar
+    SET title = @title,
+        tool_slug = @tool_slug,
+        status = @status,
+        scheduled_for = @scheduled_for,
+        brief = @brief,
+        keywords = @keywords,
+        audience = @audience,
+        notes = @notes,
+        wp_category = @wp_category,
+        wp_tags = @wp_tags,
+        publish_intent = @publish_intent,
+        history_id = @history_id,
+        wp_post_id = @wp_post_id,
+        updated_at = @updated_at
+    WHERE id = @id
+  `).run({
+    id,
+    ...changes,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (result.changes === 0) {
+    return undefined;
+  }
+
+  return getCalendarEntryById(id);
+}
+
+export function deleteCalendarEntry(id: number): boolean {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM content_calendar WHERE id = ?").run(id);
+  return result.changes > 0;
+}
+
+export function getCalendarSummary(): CalendarSummary {
+  const rows = listCalendarEntries();
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAhead = new Date();
+  weekAhead.setUTCDate(weekAhead.getUTCDate() + 7);
+  const weekAheadValue = weekAhead.toISOString().slice(0, 10);
+
+  const summary: CalendarSummary = {
+    total: rows.length,
+    overdue: 0,
+    dueThisWeek: 0,
+    unscheduled: 0,
+    byStatus: {
+      backlog: 0,
+      planned: 0,
+      "in-progress": 0,
+      ready: 0,
+      published: 0,
+    },
+  };
+
+  for (const row of rows) {
+    if (CALENDAR_STATUSES.includes(row.status)) {
+      summary.byStatus[row.status as CalendarEntryStatus] += 1;
+    }
+
+    if (!row.scheduled_for) {
+      summary.unscheduled += 1;
+      continue;
+    }
+
+    if (row.status !== "published" && row.scheduled_for < today) {
+      summary.overdue += 1;
+    }
+
+    if (row.scheduled_for >= today && row.scheduled_for <= weekAheadValue) {
+      summary.dueThisWeek += 1;
+    }
+  }
+
+  return summary;
+}
+
+export function linkCalendarEntryToHistory(calendarId: number, historyId: number): CalendarEntry | undefined {
+  const db = getDb();
+  const existing = getCalendarEntryById(calendarId);
+  if (!existing) {
+    return undefined;
+  }
+
+  const nextStatus: CalendarEntryStatus =
+    existing.status === "backlog" || existing.status === "planned"
+      ? "in-progress"
+      : existing.status;
+
+  db.prepare(`
+    UPDATE content_calendar
+    SET history_id = ?,
+        status = ?,
+        updated_at = ?
+    WHERE id = ?
+  `).run(historyId, nextStatus, new Date().toISOString(), calendarId);
+
+  return getCalendarEntryById(calendarId);
+}
+
+export function syncCalendarEntryWordPressDraft(options: {
+  calendarId?: number | null;
+  historyId?: number | null;
+  wpPostId: number;
+}) {
+  const db = getDb();
+  const now = new Date().toISOString();
+
+  if (typeof options.calendarId === "number") {
+    db.prepare(`
+      UPDATE content_calendar
+      SET wp_post_id = ?,
+          status = CASE WHEN status = 'published' THEN status ELSE 'ready' END,
+          updated_at = ?
+      WHERE id = ?
+    `).run(options.wpPostId, now, options.calendarId);
+  }
+
+  if (typeof options.historyId === "number") {
+    db.prepare(`
+      UPDATE content_calendar
+      SET wp_post_id = ?,
+          status = CASE WHEN status = 'published' THEN status ELSE 'ready' END,
+          updated_at = ?
+      WHERE history_id = ?
+    `).run(options.wpPostId, now, options.historyId);
+  }
+}
+
+export function normalizeCalendarPublishIntent(value: string | null | undefined): CalendarPublishIntent {
+  if (value && CALENDAR_PUBLISH_INTENTS.includes(value as CalendarPublishIntent)) {
+    return value as CalendarPublishIntent;
+  }
+
+  return "draft";
 }

@@ -64,6 +64,16 @@ function Sidebar() {
           <span>🕒</span> History
         </Link>
         <Link
+          href="/calendar"
+          className={`flex items-center gap-2 px-5 py-2 text-sm transition-colors ${
+            pathname === "/calendar"
+              ? "text-accent bg-accent/5 border-r-2 border-accent"
+              : "text-muted hover:text-white"
+          }`}
+        >
+          <span>🗓️</span> Calendar
+        </Link>
+        <Link
           href="/settings"
           className={`flex items-center gap-2 px-5 py-2 text-sm transition-colors ${
             pathname === "/settings"

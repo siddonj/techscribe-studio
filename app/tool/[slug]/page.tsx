@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getToolBySlug, Tool, ToolField } from "@/lib/tools";
 
@@ -80,8 +80,11 @@ function FieldInput({
 
 export default function ToolPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = params?.slug as string;
   const tool: Tool | undefined = getToolBySlug(slug);
+  const calendarIdParam = searchParams.get("calendarId");
+  const calendarId = calendarIdParam ? Number.parseInt(calendarIdParam, 10) : null;
 
   const [fields, setFields] = useState<Record<string, string>>({});
   const [output, setOutput] = useState("");
@@ -108,7 +111,13 @@ export default function ToolPage() {
     if (!tool) return;
     const defaults: Record<string, string> = {};
     tool.fields.forEach((f) => {
-      defaults[f.name] = f.type === "select" && f.options ? f.options[0] : "";
+      const queryValue = searchParams.get(f.name)?.trim();
+      if (f.type === "select" && f.options) {
+        defaults[f.name] = queryValue && f.options.includes(queryValue) ? queryValue : f.options[0];
+        return;
+      }
+
+      defaults[f.name] = queryValue ?? "";
     });
     setFields(defaults);
     setOutput("");
@@ -119,7 +128,7 @@ export default function ToolPage() {
     setPublishedDraftUrl(null);
     setArticleStep("input");
     setEditableOutline("");
-  }, [slug, tool]);
+  }, [searchParams, slug, tool]);
 
   // Auto-scroll output
   useEffect(() => {
@@ -273,7 +282,12 @@ export default function ToolPage() {
       const res = await fetch("/api/history", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: tool.slug, fields, output }),
+        body: JSON.stringify({
+          slug: tool.slug,
+          fields,
+          output,
+          calendarId: Number.isFinite(calendarId) ? calendarId : null,
+        }),
       });
       if (res.ok) {
         const entry = await res.json();
@@ -308,6 +322,7 @@ export default function ToolPage() {
           content: output,
           title: fields.topic || tool?.name,
           historyId: currentHistoryId,
+          calendarId: Number.isFinite(calendarId) ? calendarId : null,
         }),
       });
 
@@ -359,6 +374,12 @@ export default function ToolPage() {
         <div className="w-96 border-r border-border p-6 flex flex-col gap-4 overflow-y-auto">
           <div>
             <p className="text-slate-400 text-sm mb-6">{tool.description}</p>
+            {Number.isFinite(calendarId) && (
+              <div className="bg-subtle border border-border rounded-lg px-4 py-3 text-sm mb-4">
+                <p className="text-muted text-xs font-mono uppercase tracking-wider mb-1">Calendar Linked</p>
+                <p className="text-white/90">Saving this draft will link the result back to the planned calendar item.</p>
+              </div>
+            )}
           </div>
 
           {/* Outline-editing phase: show summary + outline actions */}
