@@ -1,12 +1,14 @@
 # TechScribe Studio
 
-TechScribe Studio is a self-hosted AI writing studio built with Next.js, Claude, and SQLite. It provides a RightBlogger-style tool library for blog writing, idea generation, SEO support, rewriting, social content, email copy, and video content workflows.
+TechScribe Studio is a self-hosted AI writing workspace for content teams, solo publishers, and technical operators who want the speed of AI tooling without giving up control of their prompts, drafts, and publishing flow.
 
-Phase 1 is now implemented: the app includes the tool catalog, streaming generation, saved history, WordPress settings management, connection testing, and draft publishing.
+Built with Next.js, Claude, and SQLite, it packages a broad tool library for blog writing, idea generation, SEO support, rewriting, social content, email copy, and video workflows into a single local-first application.
 
-## Phase 1 Scope
+Phase 1 is complete. The product now covers the core content loop end to end: generate, refine, save, organize, and publish drafts to WordPress from one interface.
 
-Phase 1 delivers the core authoring workflow:
+## What Phase 1 Delivers
+
+Phase 1 establishes the foundation for a usable, self-hosted content system:
 
 - AI generation across 7 content categories
 - Real-time streaming output from the generate API
@@ -18,35 +20,35 @@ Phase 1 delivers the core authoring workflow:
 - Draft publishing and draft updating to WordPress
 - Environment variable fallback for WordPress credentials
 
-## Current Features
+## Product Highlights
 
 ### Writing tools
 
-- 25+ AI writing tools across content creation, planning, SEO, rewriting, social media, email, and video
-- Tool definitions centralized in `lib/tools.ts`
-- Structured field-driven tool UI generated from each tool definition
-- Markdown output rendering in the app
+- 25+ focused tools across content creation, planning, SEO, rewriting, social media, email, and video
+- One shared tool catalog in `lib/tools.ts`, making the product easy to extend without reworking the UI
+- Structured field-driven interfaces generated directly from tool definitions
+- Markdown-native output rendering for long-form and short-form content
 
 ### Content workflow
 
-- Streaming content generation via `app/api/generate/route.ts`
-- Save generated outputs into local history
-- Re-open saved content in the History screen
-- Copy, reuse, edit, and publish saved outputs
-- Outline-to-article workflow for the article writer
+- Streaming generation via `app/api/generate/route.ts` so output appears as it is created
+- Save generated outputs into local history instead of losing drafts between sessions
+- Re-open saved content from the History screen for reuse, editing, or publishing
+- Copy, iterate on, and publish saved outputs without leaving the app
+- Outline-to-article workflow for long-form article generation
 
 ### History and organization
 
 - SQLite-backed local storage using `better-sqlite3`
 - Filter history by tool, search term, folder, tag, date, and publish status
-- Rename, merge, and delete folders and tags
-- Bulk metadata updates, export, delete, and publish actions
-- Track WordPress draft linkage and last sync status
+- Rename, merge, and delete folders and tags to keep the content library usable over time
+- Bulk metadata updates, export, delete, and publish actions for batch workflows
+- Track WordPress draft linkage and last sync status at the entry level
 
 ### WordPress integration
 
 - Save WordPress site URL, username, and app password in-app
-- Test the connection before enabling publishing
+- Test the connection before enabling publishing, so failures happen before the publish action
 - Publish new drafts from generated content
 - Update previously linked drafts from saved history
 - Fallback to `WORDPRESS_*` environment variables when saved settings do not exist
@@ -164,7 +166,7 @@ npm run lint
 
 ## Deployment
 
-TechScribe Studio is designed for self-hosted deployment.
+TechScribe Studio is designed for self-hosted deployment where you control the runtime, filesystem, and secrets.
 
 ### Local development
 
@@ -185,6 +187,7 @@ Deployment notes:
 - `better-sqlite3` requires the Node.js runtime, which is already configured in the Next.js app for the relevant API routes.
 - If you deploy to a platform with ephemeral storage, saved history and in-app WordPress settings will not persist unless you mount durable storage.
 - Set `ANTHROPIC_API_KEY` in the deployment environment even if you also use a local `.env.local` during development.
+- For a production install, treat the app as a stateful service rather than a static frontend deployment.
 
 ## Data and Security Notes
 
