@@ -2,9 +2,9 @@
 
 TechScribe Studio is a self-hosted AI writing workspace for content teams, solo publishers, and technical operators who want the speed of AI tooling without giving up control of their prompts, drafts, and publishing flow.
 
-Built with Next.js, Claude, and SQLite, it packages a broad tool library for blog writing, idea generation, SEO support, rewriting, social content, email copy, and video workflows into a single local-first application.
+Built with Next.js, Claude, and SQLite, it packages a broad tool library for blog writing, idea generation, SEO support, rewriting, social content, email copy, video workflows, and editorial planning into a single local-first application.
 
-Phase 1 is complete. The product now covers the core content loop end to end: generate, refine, save, organize, and publish drafts to WordPress from one interface.
+Phase 1 is complete, and the first Phase 2 planning layer is now in place. The product covers the core content loop end to end: plan, generate, refine, save, organize, and publish drafts to WordPress from one interface.
 
 ## What Phase 1 Delivers
 
@@ -22,6 +22,14 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 
 ## Product Highlights
 
+### Content planning and scheduling
+
+- A dedicated content calendar at `/calendar` for backlog and scheduled work
+- Quick planning flow with title, assigned tool, target date, brief, keywords, audience, and notes
+- Calendar entries can carry WordPress planning metadata such as target category, tags, and publish intent
+- Saving generated output from a planned item links the resulting history entry back into the calendar
+- Publishing a linked draft updates the calendar item with the associated WordPress draft ID
+
 ### Writing tools
 
 - 25+ focused tools across content creation, planning, SEO, rewriting, social media, email, and video
@@ -36,6 +44,7 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 - Re-open saved content from the History screen for reuse, editing, or publishing
 - Copy, iterate on, and publish saved outputs without leaving the app
 - Outline-to-article workflow for long-form article generation
+- Open a tool from the calendar with planning fields prefilled into the writing flow
 
 ### History and organization
 
@@ -134,10 +143,12 @@ Important behavior:
 techscribe-studio/
 ├── app/
 │   ├── api/
+│   │   ├── calendar/                 # Content calendar CRUD endpoints
 │   │   ├── generate/                 # Streaming generation endpoint
 │   │   ├── history/                  # Save, list, filter, organize history
 │   │   ├── settings/wordpress/       # WordPress settings + test endpoint
 │   │   └── wordpress/draft/          # Draft publish/update endpoint
+│   ├── calendar/                     # Calendar UI and planning workflow
 │   ├── history/                      # History UI
 │   ├── settings/                     # Settings UI
 │   ├── tool/[slug]/                  # Tool runner UI
@@ -146,6 +157,7 @@ techscribe-studio/
 │   └── globals.css                   # Design tokens and global styles
 ├── data/                             # Local SQLite storage at runtime
 ├── lib/
+│   ├── calendar.ts                   # Calendar types and shared constants
 │   ├── db.ts                         # SQLite schema and data access
 │   ├── tools.ts                      # Tool catalog and prompts
 │   └── wordpress.ts                  # WordPress helpers and config resolution
@@ -230,12 +242,20 @@ Example:
 }
 ```
 
-## Next Phase
+## Phase 2 Status
 
-Phase 1 is complete. Likely Phase 2 candidates are:
+Completed so far in Phase 2:
 
-- Content calendar and planning workflows
-- Scheduled or automated generation
+- Content calendar planning and scheduling flow
+- Tool prefill handoff from calendar items into generation pages
+- Calendar-to-history linkage when planned drafts are saved
+- Calendar sync when linked WordPress drafts are created or updated
+- WordPress planning metadata on calendar items, including target category, tags, and publish intent
+
+Still open for later:
+
+- Richer weekly board or month-grid calendar views
+- Scheduled or automated generation jobs
 - External keyword research integrations
 - YouTube-to-blog workflows
 - Richer publishing workflows beyond draft creation
