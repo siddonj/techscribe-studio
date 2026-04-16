@@ -591,7 +591,7 @@ export default function ToolPage() {
               {publishAllowed && publishError && (
                 <div className="mt-2">
                   {(() => {
-                    const category = publishErrorCategory ?? "unknown" as PublishFailureCategory;
+                    const category = publishErrorCategory ?? "unknown" satisfies PublishFailureCategory;
                     const categoryLabel = PUBLISH_FAILURE_CATEGORY_LABELS[category];
                     const hint = getPublishFailureHint(category);
                     return (
