@@ -52,7 +52,8 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 
 - **Keyword Research Brief** tool accepts raw data from Ahrefs, SEMrush, Google Keyword Planner, or hand-collected notes and converts it into a structured content brief
 - The brief includes a recommended title, primary and secondary keywords, LSI terms, content angle, outline, and word-count guidance
-- Handoff buttons open downstream tools (Article Writer, Outline Generator, Headline Generator) pre-filled from the brief
+- Handoff buttons open downstream tools (Article Writer, Outline Generator, Headline Generator) pre-filled with the brief title **and** the researched keyword set
+- **Plan in Calendar** handoff sends the brief title, keywords, and audience directly to the Content Calendar's Quick Plan form so the piece can be scheduled without re-entering data
 
 ### History and organization
 
@@ -293,9 +294,10 @@ TechScribe Studio supports structured handoffs between tools. When a supported u
 | YouTube to Blog Post | Meta Description Generator | Video title → topic; keywords → keyword |
 | YouTube to Blog Post | Tweet / X Post Ideas | Video title → topic |
 | YouTube to Blog Post | LinkedIn Post | Video title → topic |
-| Keyword Research Brief | Article Writer | Brief topic → topic |
-| Keyword Research Brief | Outline Generator | Brief topic → topic |
-| Keyword Research Brief | Headline Generator | Brief topic → topic |
+| Keyword Research Brief | Article Writer | Brief title → topic; researched keywords → keywords |
+| Keyword Research Brief | Outline Generator | Brief title → topic; researched keywords → keywords |
+| Keyword Research Brief | Headline Generator | Brief title → topic |
+| Keyword Research Brief | Content Calendar | Brief title → title; researched keywords → keywords; input audience → audience |
 
 ### Fallback rendering
 
@@ -307,12 +309,13 @@ To add a new upstream-to-downstream handoff:
 
 1. **Register the handoff** in `lib/handoff-registry.ts`. Add an entry to `HANDOFF_REGISTRY` keyed by the upstream tool's slug. Each `HandoffAction` needs:
    - `label` — button text shown in the UI
-   - `targetSlug` — slug of the downstream tool to open
+   - `targetSlug` — slug of the downstream tool to open (also used as the URL path segment by default)
    - `fieldMap` — maps source input field names to destination query parameter names used for pre-filling
+   - `targetPath` _(optional)_ — override the destination URL path when the target is not a tool page (e.g. `/calendar`)
 
 2. **Add an output parser** in `lib/output-parsers.ts` if the upstream tool does not already have one. Write a `(raw: string) => ParsedToolOutput` function and register it in `PARSER_REGISTRY` under the upstream tool's slug. The `prefill` keys returned by the parser must match the source field names declared in the `fieldMap` so that `buildHandoffUrl` can forward them correctly.
 
-3. No routing or page-level changes are needed. The tool page reads the registry automatically and renders the appropriate action buttons once output is fully generated.
+3. No routing or page-level changes are needed for tool-to-tool handoffs. The tool page reads the registry automatically and renders the appropriate action buttons once output is fully generated.  For handoffs that target non-tool pages (e.g. `/calendar`), the destination page must read the relevant query parameters and apply them to its own form state.
 
 ## Adding New Tools
 
@@ -468,7 +471,7 @@ Completed so far in Phase 2:
 - WordPress planning metadata on calendar items, including target category, tags, and publish intent
 - Production deployment hardening and operational documentation ([docs/operations.md](docs/operations.md))
 - YouTube-to-blog workflow — convert any video transcript or description into a full blog post with the outline-first option
-- External keyword research inputs — Keyword Research Brief tool accepts Ahrefs/SEMrush/Google Keyword Planner data and produces actionable content briefs
+- External keyword research inputs — Keyword Research Brief tool accepts Ahrefs/SEMrush/Google Keyword Planner data and produces actionable content briefs; briefs now forward researched keywords to Article Writer and Outline Generator, and a "Plan in Calendar" handoff lets users queue the planned content directly from the brief result
 - Automated generation API — `POST /api/generate/batch` endpoint for scheduler-driven content jobs (requires `BATCH_API_SECRET`); supports optional history persistence, content calendar linkage, folder, and tag assignment per job — see [docs/automation.md](docs/automation.md) for full requirements and design
 
 Still open for later:

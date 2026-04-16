@@ -29,6 +29,12 @@ export interface HandoffAction {
    * field names used as URL query parameters for pre-filling the target tool.
    */
   fieldMap: Record<string, string>;
+  /**
+   * Optional override for the destination URL path.  When set, this path is
+   * used instead of the default `/tool/{targetSlug}` pattern.  Use this for
+   * handoffs that target non-tool pages such as `/calendar`.
+   */
+  targetPath?: string;
 }
 
 /** Registry: upstream tool slug → list of available handoff actions. */
@@ -97,17 +103,28 @@ export const HANDOFF_REGISTRY: HandoffRegistry = {
     {
       label: "Write Article",
       targetSlug: "article-writer",
-      fieldMap: { topic: "topic" },
+      fieldMap: { topic: "topic", keywords: "keywords" },
     },
     {
       label: "Build Outline",
       targetSlug: "outline-generator",
-      fieldMap: { topic: "topic" },
+      fieldMap: { topic: "topic", keywords: "keywords" },
     },
     {
       label: "Generate Headlines",
       targetSlug: "headline-generator",
       fieldMap: { topic: "topic" },
+    },
+    {
+      label: "Plan in Calendar",
+      targetSlug: "calendar",
+      targetPath: "/calendar",
+      // "topic" and "keywords" come from parsedOutput.prefill (the brief's
+      // extracted title and researched keyword set).  "audience" comes from
+      // the raw input fields (what the user typed into the brief tool's
+      // "Target Audience" field).  buildHandoffUrl merges both sources so
+      // all three values are forwarded correctly.
+      fieldMap: { topic: "title", keywords: "keywords", audience: "audience" },
     },
   ],
 };
@@ -150,5 +167,6 @@ export function buildHandoffUrl(
     }
   }
   const qs = params.toString();
-  return `/tool/${action.targetSlug}${qs ? `?${qs}` : ""}`;
+  const base = action.targetPath ?? `/tool/${action.targetSlug}`;
+  return `${base}${qs ? `?${qs}` : ""}`;
 }
