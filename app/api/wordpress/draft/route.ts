@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json(
-        { error: errorMessage, httpStatus: response.status, history: failedHistory },
+        { error: errorMessage, history: failedHistory },
         { status: response.status }
       );
     }

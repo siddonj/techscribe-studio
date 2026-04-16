@@ -109,6 +109,7 @@ export default function ToolPage() {
   const [publishedDraftUrl, setPublishedDraftUrl] = useState<string | null>(null);
   const [publishState, setPublishState] = useState<PublishState | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishErrorCategory, setPublishErrorCategory] = useState<import("@/lib/publish-state").PublishFailureCategory | null>(null);
   const [publishAllowed, setPublishAllowed] = useState(false);
   const [publishStatusLoaded, setPublishStatusLoaded] = useState(false);
   const [error, setError] = useState("");
@@ -143,6 +144,7 @@ export default function ToolPage() {
     setPublishedDraftUrl(null);
     setPublishState(null);
     setPublishError(null);
+    setPublishErrorCategory(null);
     setArticleStep("input");
     setEditableOutline("");
   }, [searchParams, slug, tool]);
@@ -205,6 +207,7 @@ export default function ToolPage() {
     setPublishedDraftUrl(null);
     setPublishState(null);
     setPublishError(null);
+    setPublishErrorCategory(null);
 
     const mode = isOutlineMode ? "outline" : undefined;
     if (isOutlineMode) setArticleStep("outline-streaming");
@@ -259,6 +262,7 @@ export default function ToolPage() {
     setPublishedDraftUrl(null);
     setPublishState(null);
     setPublishError(null);
+    setPublishErrorCategory(null);
     setArticleStep("article-streaming");
 
     try {
@@ -333,6 +337,7 @@ export default function ToolPage() {
     setPublishing(true);
     setError("");
     setPublishError(null);
+    setPublishErrorCategory(null);
 
     try {
       let currentHistoryId = historyId;
@@ -354,14 +359,18 @@ export default function ToolPage() {
       const publishData = await publishRes.json();
       if (!publishRes.ok) {
         const errMsg = publishData.error || "WordPress publish failed";
+        const category = classifyPublishFailure(errMsg, publishRes.status);
         setPublishError(errMsg);
+        setPublishErrorCategory(category);
         if (currentHistoryId) {
           setHistoryId(currentHistoryId);
         }
-        throw new Error(errMsg);
+        // Return rather than throw to avoid the generic error path in catch.
+        return;
       }
 
       setPublishError(null);
+      setPublishErrorCategory(null);
       setDraftPostId(publishData.postId ?? null);
       setPublishedDraftUrl(publishData.url ?? null);
       // normalizePublishState returns null for missing/unrecognised values, which
@@ -371,11 +380,7 @@ export default function ToolPage() {
         setHistoryId(currentHistoryId);
       }
     } catch (err) {
-      // publishError is already set above; suppress generic error for publish
-      // failures so the inline banner is the primary feedback channel.
-      if (!publishError) {
-        setError(err instanceof Error ? err.message : "WordPress publish failed");
-      }
+      setError(err instanceof Error ? err.message : "WordPress publish failed");
     } finally {
       setPublishing(false);
     }
@@ -391,6 +396,7 @@ export default function ToolPage() {
     setPublishedDraftUrl(null);
     setPublishState(null);
     setPublishError(null);
+    setPublishErrorCategory(null);
     setArticleStep("input");
     setEditableOutline("");
   };
@@ -456,6 +462,7 @@ export default function ToolPage() {
                   setPublishedDraftUrl(null);
                   setPublishState(null);
                   setPublishError(null);
+    setPublishErrorCategory(null);
                 }}
                 className="w-full text-muted text-xs border border-border py-2 rounded-lg hover:text-white hover:border-white/20 transition-colors"
               >
@@ -584,7 +591,7 @@ export default function ToolPage() {
               {publishAllowed && publishError && (
                 <div className="mt-2">
                   {(() => {
-                    const category = classifyPublishFailure(publishError);
+                    const category = publishErrorCategory ?? classifyPublishFailure(publishError);
                     const categoryLabel = PUBLISH_FAILURE_CATEGORY_LABELS[category];
                     const hint = getPublishFailureHint(category);
                     return (
