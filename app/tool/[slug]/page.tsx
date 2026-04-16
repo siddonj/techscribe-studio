@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getToolBySlug, Tool, ToolField } from "@/lib/tools";
-import { getHandoffActions, buildHandoffUrl } from "@/lib/handoff-registry";
+import { getHandoffActions } from "@/lib/handoff-registry";
 import { parseToolOutput, ParsedToolOutput } from "@/lib/output-parsers";
+import HandoffCard from "@/components/HandoffCard";
 
 // Simple markdown renderer (no external deps)
 function renderMarkdown(text: string): string {
@@ -533,22 +534,7 @@ export default function ToolPage() {
                   </Link>
                 </div>
               )}
-              {!loading && output && handoffActions.length > 0 && (
-                <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  <span className="font-mono text-[11px] text-muted uppercase tracking-wider">
-                    Launch with:
-                  </span>
-                  {handoffActions.map((action) => (
-                    <Link
-                      key={action.targetSlug}
-                      href={buildHandoffUrl(action, fields, parsedOutput)}
-                      className="font-mono text-[11px] px-2.5 py-1 rounded-md border border-accent/30 text-accent hover:text-white hover:border-accent/60 transition-colors"
-                    >
-                      {action.label} →
-                    </Link>
-                  ))}
-                </div>
-              )}
+
             </div>
           )}
 
@@ -614,6 +600,15 @@ export default function ToolPage() {
               <div
                 className={`markdown-output max-w-3xl ${loading && !output ? "cursor-blink" : ""} ${loading && output ? "cursor-blink" : ""}`}
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(output) }}
+              />
+            )}
+
+            {/* Structured result card — shown once output is fully generated */}
+            {!isOutlineMode && !loading && parsedOutput && handoffActions.length > 0 && (
+              <HandoffCard
+                parsedOutput={parsedOutput}
+                actions={handoffActions}
+                fields={fields}
               />
             )}
           </div>
