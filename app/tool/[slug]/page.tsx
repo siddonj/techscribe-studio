@@ -7,7 +7,7 @@ import { getToolBySlug, Tool, ToolField } from "@/lib/tools";
 import { getHandoffActions } from "@/lib/handoff-registry";
 import { parseToolOutput, ParsedToolOutput } from "@/lib/output-parsers";
 import HandoffCard from "@/components/HandoffCard";
-import type { PublishState } from "@/lib/publish-state";
+import type { PublishState, PublishFailureCategory } from "@/lib/publish-state";
 import {
   normalizePublishState,
   classifyPublishFailure,
@@ -109,7 +109,7 @@ export default function ToolPage() {
   const [publishedDraftUrl, setPublishedDraftUrl] = useState<string | null>(null);
   const [publishState, setPublishState] = useState<PublishState | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
-  const [publishErrorCategory, setPublishErrorCategory] = useState<import("@/lib/publish-state").PublishFailureCategory | null>(null);
+  const [publishErrorCategory, setPublishErrorCategory] = useState<PublishFailureCategory | null>(null);
   const [publishAllowed, setPublishAllowed] = useState(false);
   const [publishStatusLoaded, setPublishStatusLoaded] = useState(false);
   const [error, setError] = useState("");
@@ -462,7 +462,7 @@ export default function ToolPage() {
                   setPublishedDraftUrl(null);
                   setPublishState(null);
                   setPublishError(null);
-    setPublishErrorCategory(null);
+                  setPublishErrorCategory(null);
                 }}
                 className="w-full text-muted text-xs border border-border py-2 rounded-lg hover:text-white hover:border-white/20 transition-colors"
               >
@@ -591,7 +591,7 @@ export default function ToolPage() {
               {publishAllowed && publishError && (
                 <div className="mt-2">
                   {(() => {
-                    const category = publishErrorCategory ?? classifyPublishFailure(publishError);
+                    const category = publishErrorCategory ?? "unknown" as PublishFailureCategory;
                     const categoryLabel = PUBLISH_FAILURE_CATEGORY_LABELS[category];
                     const hint = getPublishFailureHint(category);
                     return (

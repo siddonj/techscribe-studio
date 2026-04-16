@@ -201,7 +201,7 @@ export function classifyPublishFailure(
   if (httpStatus === 401 || httpStatus === 403) return "credential";
   if (httpStatus === 400 || httpStatus === 422) return "payload";
 
-  const msg = (errorMessage ?? "").toLowerCase();
+  const msg = (errorMessage ?? "").trim().toLowerCase();
 
   if (
     msg.includes("401") ||
