@@ -453,6 +453,7 @@ export default function CalendarPage() {
             <div>
               <p className="font-mono text-xs text-accent uppercase tracking-widest">Quick Plan</p>
               <p className="text-sm text-slate-400 mt-1">Add a topic, assign a tool, and give it a date so the queue stays visible.</p>
+              <p className="text-xs text-muted/60 mt-0.5">Dates are planning guides only — publishing to WordPress is always triggered manually.</p>
             </div>
             <Link href={buildToolHref(createDraft)} className="text-sm border border-border rounded-lg px-3 py-2 text-muted hover:text-white hover:border-accent/40 transition-colors">
               Open Tool Draft
@@ -932,6 +933,7 @@ export default function CalendarPage() {
                         value={editorDraft.scheduled_for}
                         onChange={(event) => setEditorDraft((current) => current ? { ...current, scheduled_for: event.target.value } : current)}
                       />
+                      <p className="text-[10px] text-muted/60 mt-1">Planning date only — publishing to WordPress must be triggered manually from the tool or archive.</p>
                     </div>
                   </div>
 
@@ -990,6 +992,48 @@ export default function CalendarPage() {
                     <div className="bg-subtle border border-border rounded-xl p-4">
                       <p className="font-mono text-xs text-muted uppercase tracking-wider">Current Tool</p>
                       <p className="text-sm text-white mt-2">{getToolBySlug(editorDraft.tool_slug)?.name ?? editorDraft.tool_slug}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-subtle border border-border rounded-xl p-4 space-y-3">
+                    <p className="font-mono text-xs text-muted uppercase tracking-wider">Publishing</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">Publish Intent</label>
+                        <select
+                          className={inputClassName}
+                          value={selectedEntry.publish_intent}
+                          onChange={async (event) => {
+                            const newIntent = event.target.value as CalendarPublishIntent;
+                            try {
+                              await fetch(`/api/calendar/${selectedEntry.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ ...toPayload(editorDraft), publish_intent: newIntent }),
+                              });
+                              await fetchCalendar(selectedEntry.id);
+                            } catch {
+                              // ignore
+                            }
+                          }}
+                        >
+                          <option value="draft">Draft — send to WordPress as draft</option>
+                          <option value="publish">Publish — make live on WordPress immediately</option>
+                        </select>
+                        <p className="text-[10px] text-muted/60 mt-1">Controls whether the next publish action sends this as a draft or goes live. Triggered manually.</p>
+                      </div>
+                      <div>
+                        <p className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">WordPress Status</p>
+                        {selectedEntry.wp_post_id ? (
+                          <div className="space-y-1">
+                            <span className="inline-block text-[11px] font-mono border border-green-400/20 text-green-300 rounded px-2 py-1">
+                              Post #{selectedEntry.wp_post_id} synced
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted/60">Not yet published to WordPress</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

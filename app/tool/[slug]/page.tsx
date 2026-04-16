@@ -100,6 +100,7 @@ export default function ToolPage() {
   const [draftPostId, setDraftPostId] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publishedDraftUrl, setPublishedDraftUrl] = useState<string | null>(null);
+  const [publishState, setPublishState] = useState<"draft" | "publish" | null>(null);
   const [publishAllowed, setPublishAllowed] = useState(false);
   const [publishStatusLoaded, setPublishStatusLoaded] = useState(false);
   const [error, setError] = useState("");
@@ -132,6 +133,7 @@ export default function ToolPage() {
     setHistoryId(null);
     setDraftPostId(null);
     setPublishedDraftUrl(null);
+    setPublishState(null);
     setArticleStep("input");
     setEditableOutline("");
   }, [searchParams, slug, tool]);
@@ -192,6 +194,7 @@ export default function ToolPage() {
     setHistoryId(null);
     setDraftPostId(null);
     setPublishedDraftUrl(null);
+    setPublishState(null);
 
     const mode = isOutlineMode ? "outline" : undefined;
     if (isOutlineMode) setArticleStep("outline-streaming");
@@ -244,6 +247,7 @@ export default function ToolPage() {
     setHistoryId(null);
     setDraftPostId(null);
     setPublishedDraftUrl(null);
+    setPublishState(null);
     setArticleStep("article-streaming");
 
     try {
@@ -342,6 +346,7 @@ export default function ToolPage() {
 
       setDraftPostId(publishData.postId ?? null);
       setPublishedDraftUrl(publishData.url ?? null);
+      setPublishState(publishData.publishState === "publish" ? "publish" : "draft");
       if (currentHistoryId) {
         setHistoryId(currentHistoryId);
       }
@@ -360,6 +365,7 @@ export default function ToolPage() {
     setHistoryId(null);
     setDraftPostId(null);
     setPublishedDraftUrl(null);
+    setPublishState(null);
     setArticleStep("input");
     setEditableOutline("");
   };
@@ -423,6 +429,7 @@ export default function ToolPage() {
                   setSaved(false);
                   setHistoryId(null);
                   setPublishedDraftUrl(null);
+                  setPublishState(null);
                 }}
                 className="w-full text-muted text-xs border border-border py-2 rounded-lg hover:text-white hover:border-white/20 transition-colors"
               >
@@ -491,9 +498,13 @@ export default function ToolPage() {
                       href={publishedDraftUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border border-green-400/20 text-green-300 hover:text-green-200 hover:border-green-400/40 transition-colors"
+                      className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                        publishState === "publish"
+                          ? "border-fuchsia-400/20 text-fuchsia-300 hover:text-fuchsia-200 hover:border-fuchsia-400/40"
+                          : "border-green-400/20 text-green-300 hover:text-green-200 hover:border-green-400/40"
+                      }`}
                     >
-                      View Draft
+                      {publishState === "publish" ? "View Live" : "View Draft"}
                     </a>
                   )}
                   <button
@@ -508,7 +519,11 @@ export default function ToolPage() {
                       disabled={publishing || !publishAllowed || !publishStatusLoaded}
                       className="flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border border-border text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
                     >
-                      {publishing ? (draftPostId ? "Updating..." : "Publishing...") : (draftPostId ? "Update Draft" : "Publish Draft")}
+                      {publishing
+                        ? (draftPostId ? "Updating..." : "Publishing...")
+                        : draftPostId
+                          ? (publishState === "publish" ? "Re-publish Live" : "Update Draft")
+                          : "Publish Draft"}
                     </button>
                   )}
                   {!loading && (
