@@ -9,24 +9,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: "#08090e",
-        surface: "#0f1018",
-        card: "#13141f",
-        "card-alt": "#191b2c",
-        border: "#2a2d40",
-        accent: "#00e5ff",
-        "accent-dim": "#00b8cc",
+        bg: "#09110d",
+        surface: "#101915",
+        "card-alt": "#1b2821",
+        card: "#151f1a",
+        border: "#23352c",
+        accent: "#1ed760",
+        "accent-dim": "#17b851",
         purple: "#7c3aed",
-        muted: "#64748b",
-        subtle: "#252840",
-        // Semantic status colors
+        muted: "#6d8778",
+        subtle: "#18231d",
         status: {
-          success: "#4ade80",   // green-400  — content ready / linked
-          warning: "#fbbf24",   // amber-400  — in-progress / due soon
-          error: "#f87171",     // red-400    — failed / overdue
-          info: "#38bdf8",      // sky-400    — planned / info
-          draft: "#94a3b8",     // slate-400  — backlog / unpublished
-          published: "#e879f9", // fuchsia-400 — live content
+          success: "#4ade80",
+          warning: "#fbbf24",
+          error: "#f87171",
+          info: "#38bdf8",
+          draft: "#94a3b8",
+          published: "#e879f9",
         },
       },
       fontFamily: {

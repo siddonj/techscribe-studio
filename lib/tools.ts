@@ -28,6 +28,7 @@ export interface Tool {
   supportsResearch?: boolean;
 }
 
+
 export const CATEGORIES = [
   "Content Creation",
   "Ideas & Planning",
@@ -55,11 +56,11 @@ export const TOOLS: Tool[] = [
       { name: "audience", label: "Target Audience", type: "text", placeholder: "e.g. Beginner developers, tech enthusiasts" },
     ],
     systemPrompt: `You are an expert SEO content writer for a tech blog called TechScribe. Write comprehensive, well-structured blog articles that are informative, engaging, and optimized for search engines. Use clear headings (H2, H3), short paragraphs, and include practical examples. Format output in Markdown.`,
-    userPromptTemplate: `Write a {length} blog article about: {topic}\n\nTarget keywords: {keywords}\nTone: {tone}\nTarget audience: {audience}{contextSection}\n\nInclude: compelling intro, structured body with H2/H3 headings, practical tips, and a strong conclusion with a CTA.`,
+    userPromptTemplate: `Write a {length} blog article about: {topic}\n\nTarget keywords: {keywords}\nContext / brief: {context}\nTone: {tone}\nTarget audience: {audience}\n\nInclude: compelling intro, structured body with H2/H3 headings, practical tips, and a strong conclusion with a CTA.`,
     outlineSystemPrompt: `You are an expert content strategist for a tech blog called TechScribe. Your job is to produce a clear, well-structured article outline using Markdown headings. Return ONLY the outline — no article body, no explanations, just the structure.`,
-    outlineUserPromptTemplate: `Create a detailed blog article outline for:\nTopic: {topic}\nTarget keywords: {keywords}\nTone: {tone}\nLength: {length}\nAudience: {audience}{contextSection}\n\nStructure the outline as:\n# Suggested Article Title\n## Introduction\n## [Main Section 1] (4-6 main sections total)\n### [Subsection]\n### [Subsection]\n## [Main Section 2]\n...\n## Conclusion\n\nReturn only the outline — no body content.`,
-    articleWithOutlinePromptTemplate: `Write a {length} blog article about: {topic}\n\nTarget keywords: {keywords}\nTone: {tone}\nTarget audience: {audience}{contextSection}\n\nFollow this outline exactly:\n{outline}\n\nExpand every section with full paragraphs. Include a compelling introduction, practical examples throughout, and a strong conclusion with a CTA. Format in Markdown.`,
-    supportsResearch: true,
+    outlineUserPromptTemplate: `Create a detailed blog article outline for:\nTopic: {topic}\nTarget keywords: {keywords}\nContext / brief: {context}\nTone: {tone}\nLength: {length}\nAudience: {audience}\n\nStructure the outline as:\n# Suggested Article Title\n## Introduction\n## [Main Section 1] (4-6 main sections total)\n### [Subsection]\n### [Subsection]\n## [Main Section 2]\n...\n## Conclusion\n\nReturn only the outline — no body content.`,
+    articleWithOutlinePromptTemplate: `Write a {length} blog article about: {topic}\n\nTarget keywords: {keywords}\nContext / brief: {context}\nTone: {tone}\nTarget audience: {audience}\n\nFollow this outline exactly:\n{outline}\n\nExpand every section with full paragraphs. Include a compelling introduction, practical examples throughout, and a strong conclusion with a CTA. Format in Markdown.`,
+      supportsResearch: true,
   },
   {
     slug: "listicle-writer",
@@ -145,8 +146,8 @@ export const TOOLS: Tool[] = [
       { name: "count", label: "Number of Ideas", type: "select", options: ["5", "10", "15", "20"] },
       { name: "format", label: "Preferred Post Formats", type: "select", options: ["Mixed", "How-to guides", "Listicles", "Comparisons", "Opinion pieces", "Case studies"] },
     ],
-    systemPrompt: `You are a content strategist for a tech blog. Generate compelling, specific blog post ideas with clear audience appeal and SEO potential. Format each idea with a title, brief description, and suggested keywords.`,
-    userPromptTemplate: `Generate {count} blog post ideas for a {niche} blog.\nSpecific angle: {topic}\nPreferred formats: {format}\n\nFor each idea provide:\n1. A catchy title\n2. A 1-sentence description\n3. 3 target keywords`,
+    systemPrompt: `You are a content strategist for a tech blog. Generate compelling, specific blog post ideas with clear audience appeal and SEO potential. Return each idea in a consistent Markdown format so it can be reused in downstream writing workflows.`,
+    userPromptTemplate: `Generate {count} blog post ideas for a {niche} blog.\nSpecific angle: {topic}\nPreferred formats: {format}\n\nReturn each idea in this exact Markdown structure:\n## Idea [number]: [Title]\nDescription: [one sentence description]\nKeywords: [keyword 1], [keyword 2], [keyword 3]\n\nKeep every idea specific, useful, and distinct.`,
   },
   {
     slug: "headline-generator",

@@ -16,6 +16,12 @@ import {
   PUBLISH_FAILURE_CATEGORY_LABELS,
 } from "@/lib/publish-state";
 
+interface BlogIdeaSuggestion {
+  title: string;
+  description: string;
+  keywords: string[];
+}
+
 // Simple markdown renderer (no external deps)
 function renderMarkdown(text: string): string {
   return text
@@ -38,6 +44,98 @@ function renderMarkdown(text: string): string {
     .replace(/<p><\/p>/g, '');
 }
 
+function normalizeSuggestionText(value: string): string {
+  return value
+    .replace(/^[-*]\s*/, "")
+    .replace(/^\d+\.\s*/, "")
+    .replace(/^\*\*(.*?)\*\*$/, "$1")
+    .trim();
+}
+
+function parseBlogIdeaSuggestions(text: string): BlogIdeaSuggestion[] {
+  const normalized = text.replace(/\r\n/g, "\n");
+  const headingSections = normalized
+    .split(/\n(?=##+\s+)/)
+    .map((section) => section.trim())
+    .filter(Boolean);
+
+  const fromHeadingSections = headingSections
+    .map((section) => {
+      const lines = section.split("\n").map((line) => line.trim()).filter(Boolean);
+      const [heading, ...rest] = lines;
+      if (!heading || !/^##+\s+/i.test(heading)) {
+        return null;
+      }
+
+      const title = normalizeSuggestionText(
+        heading.replace(/^##+\s*/i, "").replace(/^Idea\s+\d+\s*:\s*/i, "")
+      );
+      const body = rest.join("\n");
+      const descriptionMatch = body.match(/(?:^|\n)(?:Description|Summary)\s*:\s*(.+?)(?=\n(?:Keywords?|Description|Summary)\s*:|$)/is);
+      const keywordsMatch = body.match(/(?:^|\n)Keywords?\s*:\s*(.+)$/im);
+      const description = normalizeSuggestionText(
+        descriptionMatch?.[1] ?? rest.find((line) => !/^Keywords?\s*:/i.test(line)) ?? ""
+      );
+      const keywords = (keywordsMatch?.[1] ?? "")
+        .split(",")
+        .map((keyword) => normalizeSuggestionText(keyword))
+        .filter(Boolean);
+
+      if (!title || (!description && keywords.length === 0)) {
+        return null;
+      }
+
+      return { title, description, keywords };
+    })
+    .filter((value): value is BlogIdeaSuggestion => value !== null);
+
+  if (fromHeadingSections.length > 0) {
+    return fromHeadingSections;
+  }
+
+  const numberedIdeaMatches = Array.from(
+    normalized.matchAll(/(?:^|\n)\d+\.\s+\*\*(.+?)\*\*([\s\S]*?)(?=\n\d+\.\s+\*\*|$)/g)
+  );
+
+  return numberedIdeaMatches
+    .map((match) => {
+      const title = normalizeSuggestionText(match[1] ?? "");
+      const body = (match[2] ?? "").trim();
+      const bodyLines = body.split("\n").map((line) => line.trim()).filter(Boolean);
+      const description = normalizeSuggestionText(
+        bodyLines.find((line) => !/^Keywords?\s*:/i.test(line)) ?? ""
+      );
+      const keywordsLine = bodyLines.find((line) => /^Keywords?\s*:/i.test(line)) ?? "";
+      const keywords = keywordsLine
+        .replace(/^Keywords?\s*:/i, "")
+        .split(",")
+        .map((keyword) => normalizeSuggestionText(keyword))
+        .filter(Boolean);
+
+      if (!title || (!description && keywords.length === 0)) {
+        return null;
+      }
+
+      return { title, description, keywords };
+    })
+    .filter((value): value is BlogIdeaSuggestion => value !== null);
+}
+
+function buildArticleWriterHrefFromIdea(idea: BlogIdeaSuggestion): string {
+  const params = new URLSearchParams();
+  params.set("topic", idea.title);
+
+  if (idea.description) {
+    params.set("context", idea.description);
+  }
+
+  if (idea.keywords.length > 0) {
+    params.set("keywords", idea.keywords.join(", "));
+  }
+
+  return `/tool/article-writer?${params.toString()}`;
+}
+
 function FieldInput({
   field,
   value,
@@ -47,7 +145,8 @@ function FieldInput({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const base = "w-full input-base";
+  const base =
+    "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-white placeholder-muted focus:outline-none transition-colors";
 
   if (field.type === "textarea") {
     return (
@@ -120,6 +219,34 @@ export default function ToolPage() {
   const [articleStep, setArticleStep] = useState<ArticleStep>("input");
   const [editableOutline, setEditableOutline] = useState("");
   const isOutlineMode = !!tool?.outlineSystemPrompt;
+  const workflowStageLabel = isOutlineMode
+    ? articleStep === "outline-streaming"
+      ? "Generating outline"
+      : articleStep === "outline-editing"
+        ? "Editing outline"
+        : articleStep === "article-streaming"
+          ? "Writing article"
+          : articleStep === "article-done"
+            ? "Article ready"
+            : "Ready"
+    : loading
+      ? "Generating"
+      : output
+        ? "Output ready"
+        : "Ready";
+  const saveStateLabel = historyId ? `Saved #${historyId}` : saved ? "Saved" : "Not saved";
+  const publishStateLabel = draftPostId
+    ? publishedDraftUrl
+      ? "Draft linked"
+      : "Draft created"
+    : publishAllowed
+      ? "Publish enabled"
+      : publishStatusLoaded
+        ? "Publish locked"
+        : "Checking publish";
+  const blogIdeaSuggestions = tool.slug === "blog-post-ideas"
+    ? parseBlogIdeaSuggestions(output)
+    : [];
 
   // Research / knowledge sources state
   const [researchItems, setResearchItems] = useState<ResearchItem[]>([]);
@@ -426,40 +553,78 @@ export default function ToolPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Top bar */}
-      <header className="border-b border-border px-8 py-4 flex items-center gap-4">
-        <Link href="/" className="text-muted hover:text-white text-sm transition-colors">
-          ← Dashboard
-        </Link>
-        <span className="text-border">|</span>
-        <span className="text-xl">{tool.icon}</span>
-        <h1 className="text-white font-medium">{tool.name}</h1>
-        <span className="ml-auto font-mono text-xs text-muted bg-subtle px-2 py-1 rounded">
-          {tool.category}
-        </span>
-      </header>
+      <div className="p-5 md:p-8 max-w-[1600px] mx-auto w-full flex-1 flex flex-col gap-6">
+        <section className="shell-panel rounded-[2rem] p-6 md:p-8 overflow-hidden relative">
+          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
+          <div className="relative grid gap-6 xl:grid-cols-[1.15fr_0.85fr] items-start">
+            <div>
+              <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
+                <span>←</span>
+                <span>Back to dashboard</span>
+              </Link>
+              <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.24em] text-accent">Writing Workflow</p>
+              <div className="mt-3 flex items-center gap-3">
+                <span className="text-3xl">{tool.icon}</span>
+                <div>
+                  <h1 className="text-3xl md:text-4xl text-white" style={{ fontFamily: "var(--font-display)" }}>
+                    {tool.name}
+                  </h1>
+                  <p className="text-slate-400 mt-2 max-w-2xl leading-relaxed">{tool.description}</p>
+                </div>
+              </div>
+            </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Input panel */}
-        <div className="w-96 border-r border-border p-6 flex flex-col gap-4 overflow-y-auto bg-bg">
-          <div>
-            <p className="text-slate-200 text-sm mb-6">{tool.description}</p>
-            {Number.isFinite(calendarId) && (
-              <div className="bg-card-alt border border-border rounded-lg px-4 py-3 text-sm mb-4">
-                <p className="text-muted text-xs font-mono uppercase tracking-wider mb-1">Calendar Linked</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-2 gap-3">
+              {[
+                { label: "Category", value: tool.category },
+                { label: "Workflow", value: isOutlineMode ? "Outline" : "Direct" },
+                { label: "Calendar", value: Number.isFinite(calendarId) ? "Linked" : "Standalone" },
+                { label: "Publish", value: publishAllowed ? "Enabled" : "Restricted" },
+              ].map((item) => (
+                <div key={item.label} className="shell-stat-card rounded-3xl px-4 py-4">
+                  <p className="font-mono text-[11px] text-slate-500 uppercase tracking-[0.18em]">{item.label}</p>
+                  <p className="text-lg text-white mt-2 leading-snug">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="shell-status-strip rounded-[1.5rem] p-4 md:p-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: "Stage", value: workflowStageLabel },
+            { label: "Archive", value: saveStateLabel },
+            { label: "Draft Publish", value: publishStateLabel },
+            { label: "Output", value: output ? `${output.trim().split(/\s+/).filter(Boolean).length} words` : "Waiting for generation" },
+          ].map((item) => (
+            <div key={item.label} className="shell-status-pill rounded-2xl px-4 py-3">
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
+              <p className="text-sm text-white mt-2">{item.value}</p>
+            </div>
+          ))}
+        </section>
+
+        <div className="flex flex-1 overflow-hidden gap-6 min-h-0">
+          <aside className="w-96 shell-panel rounded-[2rem] p-6 flex flex-col gap-4 overflow-y-auto shrink-0">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent mb-2">Input Studio</p>
+              <p className="text-slate-400 text-sm mb-6">Shape the brief, tone, and constraints before you generate.</p>
+              {Number.isFinite(calendarId) && (
+                <div className="shell-panel-soft rounded-2xl px-4 py-3 text-sm mb-4">
+                  <p className="text-slate-500 text-xs font-mono uppercase tracking-wider mb-1">Calendar Linked</p>
                 <p className="text-white/90">Saving this draft will link the result back to the planned calendar item.</p>
               </div>
-            )}
-          </div>
+              )}
+            </div>
 
           {/* Outline-editing phase: show summary + outline actions */}
           {isOutlineMode && articleStep === "outline-editing" ? (
             <>
-              <div className="bg-card-alt border border-border rounded-lg px-4 py-3 text-sm">
-                <p className="text-muted text-xs font-mono uppercase tracking-wider mb-1">Topic</p>
+              <div className="shell-panel-soft rounded-2xl px-4 py-3 text-sm">
+                <p className="text-slate-500 text-xs font-mono uppercase tracking-wider mb-1">Topic</p>
                 <p className="text-white">{fields.topic || "—"}</p>
               </div>
-              <p className="text-muted text-xs leading-relaxed">
+              <p className="text-slate-500 text-xs leading-relaxed">
                 Review and edit the outline on the right, then click{" "}
                 <span className="text-accent">Generate Article</span> to write the full post.
               </p>
@@ -471,7 +636,7 @@ export default function ToolPage() {
               <button
                 onClick={handleGenerateArticle}
                 disabled={loading}
-                className="w-full bg-accent text-bg font-semibold py-3 rounded-lg text-sm hover:bg-accent-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed pulse-glow mt-2"
+                className="w-full bg-accent text-[#08100c] font-semibold py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed pulse-glow mt-2"
               >
                 {loading ? "Generating Article…" : "Generate Article ✦"}
               </button>
@@ -487,7 +652,7 @@ export default function ToolPage() {
                   setPublishError(null);
                   setPublishErrorCategory(null);
                 }}
-                className="w-full text-muted text-xs border border-border py-2 rounded-lg hover:text-white hover:border-white/20 transition-colors"
+                className="w-full text-slate-400 text-xs border border-white/10 py-2.5 rounded-2xl hover:text-white hover:border-white/20 transition-colors"
               >
                 ← Edit Inputs
               </button>
@@ -496,7 +661,7 @@ export default function ToolPage() {
             <>
               {tool.fields.map((field) => (
                 <div key={field.name}>
-                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">
                     {field.label}
                     {field.required && <span className="text-accent ml-1">*</span>}
                   </label>
@@ -555,7 +720,7 @@ export default function ToolPage() {
               <button
                 onClick={handleGenerate}
                 disabled={loading}
-                className="w-full bg-accent text-bg font-semibold py-3 rounded-lg text-sm hover:bg-accent-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed pulse-glow mt-2"
+                className="w-full bg-accent text-[#08100c] font-semibold py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed pulse-glow mt-2"
               >
                 {loading
                   ? isOutlineMode ? "Generating Outline…" : "Generating…"
@@ -565,23 +730,20 @@ export default function ToolPage() {
               {output && (
                 <button
                   onClick={handleClear}
-                  className="w-full text-muted text-xs border border-border py-2 rounded-lg hover:text-white hover:border-white/20 transition-colors"
+                  className="w-full text-slate-400 text-xs border border-white/10 py-2.5 rounded-2xl hover:text-white hover:border-white/20 transition-colors"
                 >
                   Clear output
                 </button>
               )}
             </>
           )}
-        </div>
+          </aside>
 
-        {/* Output panel */}
-        <div className="flex-1 flex flex-col bg-card">
-          {/* Output toolbar — shown when output is ready and not in outline-editing */}
+          <section className="flex-1 shell-panel rounded-[2rem] overflow-hidden flex flex-col min-w-0">
+          {/* Output toolbar */}
           {output && articleStep !== "outline-editing" && (
-            <div className="px-6 py-3 border-b border-border bg-card-alt">
-              {/* Tab row + action buttons */}
+            <div className="px-6 py-4 border-b border-white/5">
               <div className="flex items-center justify-between gap-4">
-                {/* ARTICLE / EDITOR tabs (only when article is fully done) */}
                 {(articleStep === "article-done" || (!isOutlineMode && !loading)) ? (
                   <div className="flex items-center gap-1">
                     <button
@@ -606,11 +768,15 @@ export default function ToolPage() {
                     </button>
                   </div>
                 ) : (
-                  <span className="font-mono text-xs text-muted">OUTPUT</span>
+                  <span className="font-mono text-xs text-slate-500">OUTPUT</span>
                 )}
-
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs text-muted">
+                  {blogIdeaSuggestions.length > 0 && (
+                    <span className="font-mono text-xs text-accent">
+                      {blogIdeaSuggestions.length} ideas ready for handoff
+                    </span>
+                  )}
+                  <span className="font-mono text-xs text-slate-500">
                     {output.split(" ").length} words
                   </span>
                   {publishedDraftUrl && (
@@ -715,11 +881,11 @@ export default function ToolPage() {
 
           {/* Outline toolbar */}
           {articleStep === "outline-editing" && (
-            <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card-alt">
-              <span className="font-mono text-xs text-muted">OUTLINE — Edit below, then generate</span>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+              <span className="font-mono text-xs text-slate-500">OUTLINE — Edit below, then generate</span>
               <button
                 onClick={() => navigator.clipboard.writeText(editableOutline)}
-                className="btn-secondary"
+                className="font-mono text-xs px-3 py-2 rounded-2xl border border-white/10 text-slate-300 hover:text-white hover:border-accent/40 transition-colors"
               >
                 Copy
               </button>
@@ -737,18 +903,21 @@ export default function ToolPage() {
           {/* Output content */}
           <div
             ref={outputRef}
-            className="flex-1 overflow-y-auto p-8"
+            className="flex-1 overflow-y-auto p-6 md:p-8"
           >
             {!output && !loading && (
               <div className="flex flex-col items-center justify-center h-full text-center">
-                <div className="text-5xl mb-4 opacity-30">{tool.icon}</div>
-                <p className="text-muted text-sm max-w-xs">
+                <div className="shell-panel-soft rounded-[2rem] px-8 py-10 max-w-lg mx-auto">
+                  <div className="text-5xl mb-4 opacity-30">{tool.icon}</div>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent mb-3">Output Bay</p>
+                  <p className="text-slate-400 text-sm max-w-xs mx-auto">
                   Fill in the fields and click{" "}
                   <span className="text-accent">
                     {isOutlineMode ? "Generate Outline" : "Generate"}
                   </span>{" "}
                   to see your content here.
-                </p>
+                  </p>
+                </div>
               </div>
             )}
 
@@ -778,21 +947,62 @@ export default function ToolPage() {
               />
             )}
 
-            {/* Article output — EDITOR tab (editable textarea) */}
+            {!isOutlineMode && (output || loading) && outputTab === "article" && (
+              <div className="space-y-6">
+                {tool.slug === "blog-post-ideas" && blogIdeaSuggestions.length > 0 && !loading && (
+                  <section className="space-y-3">
+                    <div>
+                      <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">Idea Handoff</p>
+                      <p className="text-sm text-slate-400 mt-2">
+                        Send any idea directly into Article Writer with the title, brief, and keywords prefilled.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      {blogIdeaSuggestions.map((idea) => (
+                        <div
+                          key={`${idea.title}-${idea.keywords.join("|")}`}
+                          className="shell-panel-soft shell-hover-lift rounded-[1.5rem] p-4"
+                        >
+                          <p className="text-white font-semibold leading-snug">{idea.title}</p>
+                          <p className="text-sm text-slate-400 mt-2 leading-relaxed">{idea.description || "No description detected."}</p>
+                          {idea.keywords.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {idea.keywords.map((keyword) => (
+                                <span
+                                  key={keyword}
+                                  className="shell-status-pill rounded-full px-2.5 py-1 text-[11px] font-mono text-slate-300"
+                                >
+                                  {keyword}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="mt-4 flex gap-2">
+                            <Link
+                              href={buildArticleWriterHrefFromIdea(idea)}
+                              className="shell-hover-lift inline-flex items-center justify-center rounded-2xl bg-accent px-4 py-2.5 text-sm font-semibold text-[#08100c] hover:bg-accent-dim transition-colors"
+                            >
+                              Send to Article Writer
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+                <div
+                  className={`markdown-output max-w-3xl ${loading && !output ? "cursor-blink" : ""} ${loading && output ? "cursor-blink" : ""}`}
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(output) }}
+                />
+              </div>
+            )}
+
             {(articleStep === "article-streaming" || articleStep === "article-done") && output && outputTab === "editor" && (
               <textarea
                 className={editorTextareaClassName}
                 value={output}
                 onChange={(e) => setOutput(e.target.value)}
                 placeholder="Your article will appear here…"
-              />
-            )}
-
-            {/* Non-outline-mode output — ARTICLE tab (rendered) */}
-            {!isOutlineMode && (output || loading) && outputTab === "article" && (
-              <div
-                className={`markdown-output max-w-3xl ${loading && !output ? "cursor-blink" : ""} ${loading && output ? "cursor-blink" : ""}`}
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(output) }}
               />
             )}
 
@@ -815,6 +1025,7 @@ export default function ToolPage() {
               />
             )}
           </div>
+          </section>
         </div>
       </div>
 

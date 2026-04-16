@@ -172,45 +172,60 @@ export default function SettingsPage() {
     }
   };
 
-  const inputClassName = "w-full input-base";
+  const inputClassName = "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-white placeholder-muted focus:outline-none transition-colors";
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-border px-8 py-4 flex items-center gap-4">
-        <Link href="/" className="text-muted hover:text-white text-sm transition-colors">
-          ← Dashboard
-        </Link>
-        <span className="text-border">|</span>
-        <span className="text-xl">⚙️</span>
-        <h1 className="text-white font-medium">Settings</h1>
-      </header>
+      <div className="p-5 md:p-8 max-w-6xl w-full mx-auto space-y-6">
+        <section className="shell-panel rounded-[2rem] p-6 md:p-8 overflow-hidden relative">
+          <div className="absolute right-0 top-0 h-36 w-36 rounded-full bg-accent/10 blur-3xl" />
+          <div className="relative grid gap-6 lg:grid-cols-[1.1fr_0.9fr] items-start">
+            <div>
+              <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
+                <span>←</span>
+                <span>Back to dashboard</span>
+              </Link>
+              <div className="font-mono text-accent text-[11px] tracking-[0.24em] uppercase mt-5 mb-3">
+                Integrations
+              </div>
+              <h1
+                className="text-4xl text-white mb-4"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                WordPress Setup
+              </h1>
+              <p className="text-slate-400 text-base md:text-lg max-w-2xl leading-relaxed">
+                Save your publishing credentials, verify the connection, and keep draft publishing enabled without touching environment files.
+              </p>
+            </div>
 
-      <div className="p-8 max-w-4xl">
-        <div className="mb-8">
-          <div className="font-mono text-accent text-xs tracking-widest uppercase mb-3">
-            Integrations
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "Source", value: loading ? "..." : source },
+                { label: "Password", value: hasSavedPassword ? "Saved" : "Missing" },
+                { label: "Verified", value: hasSuccessfulTest ? "Passed" : "Pending" },
+                { label: "Current Form", value: isCurrentConfigVerified ? "Trusted" : "Untested" },
+              ].map((item) => (
+                <div key={item.label} className="shell-stat-card rounded-3xl p-4">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-slate-500">{item.label}</p>
+                  <p className="text-lg text-white mt-2 capitalize">{item.value}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <h2
-            className="font-display text-4xl text-white mb-4"
-          >
-            WordPress Setup
-          </h2>
-          <p className="text-slate-200 text-lg max-w-2xl">
-            Save your WordPress site URL and application password here so draft publishing works without editing environment files.
-          </p>
-        </div>
+        </section>
 
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <section className="bg-card border border-border rounded-2xl p-6 space-y-5 shadow-card-elevated">
+          <section className="shell-panel rounded-[2rem] p-6 space-y-5">
             <div>
-              <p className="font-mono text-xs text-muted uppercase tracking-wider mb-1">Connection</p>
-              <p className="text-sm text-slate-200">
+              <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-1">Connection</p>
+              <p className="text-sm text-slate-400">
                 Use your WordPress site root URL and an Application Password from your WordPress user profile.
               </p>
             </div>
 
             <div>
-              <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">
                 Site URL
               </label>
               <input
@@ -223,7 +238,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">
                 Username
               </label>
               <input
@@ -236,7 +251,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">
                 Application Password
               </label>
               <input
@@ -246,7 +261,7 @@ export default function SettingsPage() {
                 placeholder={hasSavedPassword ? "Leave blank to keep current password" : "xxxx xxxx xxxx xxxx xxxx xxxx"}
                 onChange={(event) => setAppPassword(event.target.value)}
               />
-              <p className="text-xs text-muted mt-2">
+              <p className="text-xs text-slate-500 mt-2">
                 {hasSavedPassword
                   ? "A password is already saved. Enter a new one only if you want to replace it."
                   : "The password is stored locally in your SQLite database for this self-hosted app."}
@@ -279,49 +294,49 @@ export default function SettingsPage() {
               <button
                 onClick={handleSave}
                 disabled={saving || loading || testing}
-                className="bg-accent text-bg font-semibold px-5 py-3 rounded-lg text-sm hover:bg-accent-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-accent text-[#08100c] font-semibold px-5 py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? "Saving..." : "Save WordPress Settings"}
               </button>
               <button
                 onClick={handleTestConnection}
                 disabled={testing || loading || saving}
-                className="border border-border text-white font-semibold px-5 py-3 rounded-lg text-sm hover:border-accent/40 hover:text-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="border border-white/10 text-white font-semibold px-5 py-3 rounded-2xl text-sm hover:border-accent/40 hover:text-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {testing ? "Testing..." : "Test Connection"}
               </button>
             </div>
           </section>
 
-          <aside className="bg-card border border-border rounded-2xl p-6 space-y-5 h-fit shadow-card-elevated">
+          <aside className="shell-panel rounded-[2rem] p-6 space-y-5 h-fit">
             <div>
-              <p className="font-mono text-xs text-muted uppercase tracking-wider mb-1">Current Source</p>
+              <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-1">Current Source</p>
               <p className="text-white text-sm capitalize">{loading ? "Loading..." : source}</p>
             </div>
 
             <div>
-              <p className="font-mono text-xs text-muted uppercase tracking-wider mb-1">Saved Password</p>
+              <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-1">Saved Password</p>
               <p className="text-white text-sm">{hasSavedPassword ? "Configured" : "Not configured"}</p>
             </div>
 
             <div>
-              <p className="font-mono text-xs text-muted uppercase tracking-wider mb-1">Connection Verified</p>
+              <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-1">Connection Verified</p>
               <p className="text-white text-sm">{hasSuccessfulTest ? "Passed" : "Not yet"}</p>
             </div>
 
             <div>
-              <p className="font-mono text-xs text-muted uppercase tracking-wider mb-1">Last Test</p>
+              <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-1">Last Test</p>
               <p className="text-white text-sm">{formatDate(lastTestedAt) || "Not tested yet"}</p>
             </div>
 
             <div>
-              <p className="font-mono text-xs text-muted uppercase tracking-wider mb-1">Last Updated</p>
+              <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-1">Last Updated</p>
               <p className="text-white text-sm">{formatDate(updatedAt) || "Not saved yet"}</p>
             </div>
 
-            <div className="border-t border-border pt-5">
-              <p className="font-mono text-xs text-muted uppercase tracking-wider mb-2">Notes</p>
-              <div className="space-y-2 text-sm text-slate-200">
+            <div className="border-t border-white/5 pt-5">
+              <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-2">Notes</p>
+              <div className="space-y-2 text-sm text-slate-400">
                 <p>Draft publishing uses the in-app settings first.</p>
                 <p>Env vars still work as a fallback if no saved settings exist.</p>
                 <p>{isCurrentConfigVerified ? "The current form values have been verified." : "The current form values have not been verified yet."}</p>

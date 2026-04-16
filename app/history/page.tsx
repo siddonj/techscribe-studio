@@ -911,18 +911,46 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Top bar */}
-      <header className="border-b border-border px-8 py-4 flex items-center gap-4">
-        <Link href="/" className="text-muted hover:text-white text-sm transition-colors">
-          ← Dashboard
-        </Link>
-        <span className="text-border">|</span>
-        <span className="text-xl">🕒</span>
-        <h1 className="text-white font-medium">Generation History</h1>
-        <span className="ml-auto font-mono text-xs text-muted bg-subtle px-2 py-1 rounded">
-          {rows.length}/{totalRows || rows.length} loaded
-        </span>
-      </header>
+      <div className="p-5 md:p-8 pb-0">
+        <section className="shell-panel rounded-[2rem] px-6 py-5 md:px-7 md:py-6">
+          <div className="flex flex-wrap items-start gap-4 justify-between">
+            <div>
+              <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
+                <span>←</span>
+                <span>Back to dashboard</span>
+              </Link>
+              <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.24em] text-accent">Archive</p>
+              <h1 className="mt-2 text-3xl text-white" style={{ fontFamily: "var(--font-display)" }}>
+                Generation History
+              </h1>
+              <p className="mt-2 text-sm text-slate-400 max-w-2xl">
+                Search previous output, batch-organize entries, and manage WordPress-linked drafts from the same archive surface.
+              </p>
+            </div>
+            <div className="shell-stat-card rounded-3xl px-4 py-3 min-w-[11rem]">
+              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-slate-500">Loaded</p>
+              <p className="mt-2 text-xl text-white">{rows.length}/{totalRows || rows.length}</p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="px-5 md:px-8 pt-4">
+        <section className="shell-status-strip rounded-[1.5rem] p-4 md:p-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {[
+            { label: "Loaded Rows", value: rows.length },
+            { label: "Selected", value: selectedCount },
+            { label: "Folders", value: folderSummaries.length },
+            { label: "Tags", value: tagSummaries.length },
+            { label: "Publishing", value: publishAllowed ? "Draft sync enabled" : publishStatusLoaded ? "Connection required" : "Checking" },
+          ].map((item) => (
+            <div key={item.label} className="shell-status-pill rounded-2xl px-4 py-3">
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
+              <p className="text-sm text-white mt-2">{item.value}</p>
+            </div>
+          ))}
+        </section>
+      </div>
 
       {/* Publish State Summary */}
       {!loading && rows.length > 0 && (
@@ -963,18 +991,18 @@ export default function HistoryPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* List panel */}
-        <div className="w-96 border-r border-border flex flex-col overflow-hidden bg-surface">
+        <div className="w-96 border-r border-white/5 flex flex-col overflow-hidden shell-panel">
           {/* Filter bar */}
-          <div className="px-4 py-3 border-b border-border space-y-3 overflow-y-auto shrink-0 max-h-[60vh]">
+          <div className="px-4 py-3 border-b border-white/5 space-y-3 overflow-y-auto shrink-0 max-h-[60vh]">
             {selectedCount > 0 && (
-              <div className="bg-subtle border border-border rounded-lg p-3 space-y-3">
+              <div className="shell-panel-soft rounded-2xl p-3 space-y-3 shell-hover-lift">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-mono text-muted uppercase tracking-wider">
+                  <p className="text-xs font-mono text-slate-500 uppercase tracking-wider">
                     {selectedCount} selected
                   </p>
                   <button
                     onClick={() => setSelectedIds([])}
-                    className="text-xs text-muted hover:text-white transition-colors"
+                    className="text-xs text-slate-400 hover:text-white transition-colors"
                   >
                     Clear
                   </button>
@@ -1493,8 +1521,8 @@ export default function HistoryPage() {
               return (
                 <div
                   key={row.id}
-                  className={`w-full text-left px-4 py-3 border-b border-border transition-colors ${
-                    isSelected ? "bg-accent/5 border-l-2 border-l-accent" : rowIndex % 2 !== 0 ? "bg-subtle/20 hover:bg-subtle/60" : "hover:bg-subtle/40"
+                  className={`shell-hover-lift w-full text-left px-4 py-3 rounded-2xl border transition-colors ${
+                    isSelected ? "bg-accent/8 border-accent/30" : "border-white/8 bg-black/10 hover:bg-white/[0.03]"
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -1554,7 +1582,7 @@ export default function HistoryPage() {
             })}
 
             {!loading && visibleRows.length > 0 && (
-              <div className="px-4 py-3 border-t border-border bg-subtle/40">
+              <div className="px-4 py-3 border-t border-white/5 bg-white/[0.03]">
                 <label className="flex items-center gap-2 text-xs text-muted">
                   <input
                     type="checkbox"
@@ -1568,11 +1596,11 @@ export default function HistoryPage() {
             )}
 
             {!loading && hasMoreRows && (
-              <div className="p-4 border-t border-border">
+              <div className="p-4 border-t border-white/5">
                 <button
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="w-full text-sm border border-border rounded-lg py-2.5 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                  className="w-full text-sm border border-white/10 rounded-2xl py-2.5 text-slate-300 hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
                 >
                   {loadingMore ? "Loading more..." : `Load More (${rows.length}/${totalRows})`}
                 </button>
@@ -1582,18 +1610,21 @@ export default function HistoryPage() {
         </div>
 
         {/* Detail panel */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 shell-panel rounded-[2rem] flex flex-col overflow-hidden m-2 ml-0">
           {!selected ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="text-5xl mb-4 opacity-20">🕒</div>
-              <p className="text-muted text-sm max-w-xs">
-                Select a saved generation from the list to view its content.
-              </p>
+              <div className="shell-panel-soft rounded-[2rem] px-8 py-10 max-w-lg mx-auto">
+                <div className="text-5xl mb-4 opacity-20">🕒</div>
+                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent mb-3">Detail View</p>
+                <p className="text-slate-400 text-sm max-w-xs mx-auto">
+                  Select a saved generation from the list to inspect metadata, manage draft status, and review the full output.
+                </p>
+              </div>
             </div>
           ) : (
             <>
               {/* Detail toolbar */}
-              <div className="flex items-center justify-between px-6 py-3 border-b border-border shrink-0">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -1601,15 +1632,14 @@ export default function HistoryPage() {
                       <span className="text-white text-sm font-medium truncate">{selected.title}</span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <span className="font-mono text-xs text-muted">{selected.tool_name}</span>
-                      <span className="font-mono text-xs text-muted/50">{formatDate(selected.created_at)}</span>
-                      <span className="font-mono text-xs text-muted/50">{selected.word_count} words</span>
+                      <span className="font-mono text-xs text-slate-500">{selected.tool_name}</span>
+                      <span className="font-mono text-xs text-slate-500">{formatDate(selected.created_at)}</span>
+                      <span className="font-mono text-xs text-slate-500">{selected.word_count} words</span>
                       <span className={`font-mono text-xs ${getDraftDetailClassName(selected)}`}>
                         {getDraftStatusText(selected)}
                       </span>
                     </div>
                   </div>
-                  {/* Article / Editor tabs */}
                   <div className="flex items-center gap-1 ml-4 shrink-0">
                     <button
                       onClick={() => setDetailTab("article")}
@@ -1683,7 +1713,7 @@ export default function HistoryPage() {
                 </div>
               </div>
               {!publishAllowed && publishStatusLoaded && (
-                <div className="px-6 py-2 border-b border-border bg-amber-400/5">
+                <div className="px-6 py-3 border-b border-white/5 bg-amber-400/5">
                   <div className="flex items-center gap-3">
                     <p className="text-xs text-amber-300/90">
                       Publish Draft is disabled until your saved WordPress settings pass a successful connection test in Settings.
@@ -1719,7 +1749,21 @@ export default function HistoryPage() {
               )}
 
               {/* Inputs summary */}
-              <div className="px-6 py-3 border-b border-border bg-subtle shrink-0">
+              <div className="px-6 py-5 border-b border-white/5 bg-white/[0.02] shrink-0">
+                <div className="shell-status-strip rounded-[1.5rem] p-4 mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+                  {[
+                    { label: "Archive ID", value: `#${selected.id}` },
+                    { label: "Tool", value: selected.tool_name },
+                    { label: "Folder", value: selected.folder_name || "Unsorted" },
+                    { label: "Tags", value: editingTagList.length || "None" },
+                  ].map((item) => (
+                    <div key={item.label} className="shell-status-pill rounded-2xl px-4 py-3">
+                      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
+                      <p className="text-sm text-white mt-2 truncate">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                   <div>
                     <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">Title</label>
@@ -1764,16 +1808,6 @@ export default function HistoryPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">WP Excerpt</label>
-                    <input
-                      type="text"
-                      className={inputClassName}
-                      value={editingWpExcerpt}
-                      onChange={(e) => setEditingWpExcerpt(e.target.value)}
-                      placeholder="Short post excerpt"
-                    />
-                  </div>
-                  <div>
                     <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">WP Category IDs</label>
                     <input
                       type="text"
@@ -1794,16 +1828,16 @@ export default function HistoryPage() {
                     />
                   </div>
                 </div>
-                <div className="mb-3 rounded-lg border border-border bg-surface/50 p-3 space-y-3">
+                <div className="mb-3 shell-panel-soft rounded-[1.5rem] p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-mono text-muted uppercase tracking-wider">Tag Suggestions</p>
-                    <span className="text-xs text-muted">Add existing tags to keep naming consistent</span>
+                    <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">Tag Suggestions</p>
+                    <span className="text-[11px] text-slate-500">Add existing tags to keep naming consistent</span>
                   </div>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       list="history-tag-options"
-                      className="flex-1 input-base"
+                      className="shell-input flex-1 rounded-2xl px-3 py-2.5 text-sm text-white placeholder-muted focus:outline-none"
                       value={editingTagDraft}
                       onChange={(e) => setEditingTagDraft(e.target.value)}
                       onKeyDown={(e) => {
@@ -1816,7 +1850,7 @@ export default function HistoryPage() {
                     />
                     <button
                       onClick={() => handleAddEditingTag()}
-                      className="px-3 py-2 text-sm border border-border rounded-lg text-muted hover:text-white hover:border-accent/40 transition-colors"
+                      className="shell-hover-lift px-3 py-2.5 text-sm border border-white/10 rounded-2xl text-slate-300 hover:text-white hover:border-accent/40 transition-colors"
                     >
                       Add Tag
                     </button>
@@ -1854,17 +1888,17 @@ export default function HistoryPage() {
                   <button
                     onClick={handleSaveMetadata}
                     disabled={savingMetadata}
-                    className="text-sm border border-border rounded-lg px-3 py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                    className="shell-hover-lift text-sm border border-white/10 rounded-2xl px-3 py-2.5 text-slate-300 hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
                   >
                     {savingMetadata ? "Saving..." : "Save Metadata"}
                   </button>
                 </div>
-                <p className="font-mono text-xs text-muted uppercase tracking-wider mb-2">Inputs</p>
+                <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-2">Inputs</p>
                 <div className="flex flex-wrap gap-x-6 gap-y-1">
                   {Object.entries(JSON.parse(selected.fields) as Record<string, string>).map(([k, v]) =>
                     v ? (
-                      <span key={k} className="text-xs text-muted">
-                        <span className="text-muted/50 capitalize">{k}: </span>
+                      <span key={k} className="text-xs text-slate-400">
+                        <span className="text-slate-500 capitalize">{k}: </span>
                         <span className="text-white/70">{String(v).slice(0, 80)}{String(v).length > 80 ? "…" : ""}</span>
                       </span>
                     ) : null

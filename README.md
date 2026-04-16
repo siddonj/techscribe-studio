@@ -6,6 +6,8 @@ Built with Next.js, Claude, and SQLite, it packages a broad tool library for blo
 
 Phase 1 is complete, and the first Phase 2 planning layer is now in place. The product covers the core content loop end to end: plan, generate, refine, save, organize, and publish drafts to WordPress from one interface.
 
+The current UI uses a darker control-room shell with a persistent tool sidebar, workflow status strips, and linked planning surfaces so the app feels closer to a live editorial system than a loose collection of individual generators.
+
 ## What Phase 1 Delivers
 
 Phase 1 establishes the foundation for a usable, self-hosted content system:
@@ -36,6 +38,14 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 - One shared tool catalog in `lib/tools.ts`, making the product easy to extend without reworking the UI
 - Structured field-driven interfaces generated directly from tool definitions
 - Markdown-native output rendering for long-form and short-form content
+- Interactive suggestion cards for Blog Post Ideas, including one-click handoff into Article Writer
+
+### Interface refresh
+
+- SoulSync-inspired dark green shell across dashboard, calendar, history, settings, and tool pages
+- Shared panel, status-strip, and hover-lift components defined in `app/globals.css`
+- Mobile-aware sidebar navigation with grouped tool categories and workflow context
+- Consistent control-room layout so planning, writing, archive management, and publishing feel like one system
 
 ### Content workflow
 
@@ -47,6 +57,7 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 - Open a tool from the calendar with planning fields prefilled into the writing flow
 - **YouTube-to-blog**: paste a video transcript and generate a full blog post (with optional outline step)
 - **Batch generation API** (`POST /api/generate/batch`): trigger multiple tool jobs programmatically from cron jobs, CI pipelines, or external schedulers
+- Send ideas from the Blog Post Ideas tool directly into Article Writer with title, brief, and keywords prefilled
 
 ### External research inputs
 
