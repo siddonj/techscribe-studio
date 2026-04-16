@@ -79,6 +79,28 @@ export const HANDOFF_REGISTRY: HandoffRegistry = {
   ],
   "youtube-to-blog": [
     {
+      label: "Generate Headlines",
+      targetSlug: "headline-generator",
+      // "topic" comes from parsedOutput.prefill (the blog post H1 extracted by
+      // parseYoutubeToBlog) so downstream receives the SEO-optimised post title
+      // rather than the original video title.
+      fieldMap: { topic: "topic" },
+    },
+    {
+      label: "Build Outline",
+      targetSlug: "outline-generator",
+      // "topic" from parsedOutput.prefill; "keywords" from raw input fields.
+      fieldMap: { topic: "topic", keywords: "keywords" },
+    },
+    {
+      label: "Plan in Calendar",
+      targetSlug: "calendar",
+      targetPath: "/calendar",
+      // "topic" from parsedOutput.prefill becomes the calendar item title;
+      // "keywords" from raw input fields are forwarded for content planning.
+      fieldMap: { topic: "title", keywords: "keywords" },
+    },
+    {
       label: "Generate Meta Title",
       targetSlug: "meta-title",
       fieldMap: { videoTitle: "topic", keywords: "keyword" },
