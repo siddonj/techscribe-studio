@@ -52,6 +52,18 @@ export const HANDOFF_REGISTRY: HandoffRegistry = {
       fieldMap: { niche: "topic" },
     },
   ],
+  "headline-generator": [
+    {
+      label: "Write Article",
+      targetSlug: "article-writer",
+      fieldMap: { topic: "topic" },
+    },
+    {
+      label: "Build Outline",
+      targetSlug: "outline-generator",
+      fieldMap: { topic: "topic" },
+    },
+  ],
   "outline-generator": [
     {
       label: "Write Article",
