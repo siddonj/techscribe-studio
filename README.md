@@ -188,6 +188,7 @@ techscribe-studio/
 │   ├── api/
 │   │   ├── calendar/                 # Content calendar CRUD endpoints
 │   │   ├── generate/                 # Streaming generation endpoint
+│   │   │   └── batch/                # Batch / automated generation endpoint
 │   │   ├── history/                  # Save, list, filter, organize history
 │   │   ├── settings/wordpress/       # WordPress settings + test endpoint
 │   │   └── wordpress/draft/          # Draft publish/update endpoint
@@ -201,11 +202,19 @@ techscribe-studio/
 ├── data/                             # Local SQLite storage at runtime
 ├── components/
 │   └── HandoffCard.tsx               # Result card with downstream launch actions
+├── docs/
+│   ├── automation.md                 # Automated generation requirements and design
+│   ├── data-persistence.md           # SQLite storage reference and backup guide
+│   ├── operations.md                 # Deployment, process management, reverse proxy
+│   ├── recovery.md                   # Failure recovery procedures
+│   ├── smoke-test.md                 # Pre-release smoke-test checklist
+│   └── upgrade.md                   # Upgrade and migration reference
 ├── lib/
 │   ├── calendar.ts                   # Calendar types and shared constants
 │   ├── db.ts                         # SQLite schema and data access
 │   ├── handoff-registry.ts           # Upstream → downstream handoff definitions
 │   ├── output-parsers.ts             # Structured parsers for handoff-enabled tools
+│   ├── publish-state.ts              # Publish state model constants and helpers
 │   ├── tools.ts                      # Tool catalog and prompts
 │   └── wordpress.ts                  # WordPress helpers and config resolution
 ├── .env.local.example
@@ -342,6 +351,8 @@ Example:
 
 The `POST /api/generate/batch` endpoint enables automated content generation from external schedulers, CI pipelines, or cron jobs.
 
+For the full requirements specification, design rationale, and integration details, see **[docs/automation.md](docs/automation.md)**.
+
 ### Setup
 
 1. Set `BATCH_API_SECRET` in your environment to a long random string. The endpoint returns `503` if this variable is not set.
@@ -368,7 +379,11 @@ Authorization: Bearer your-secret-token-here
         "length": "Medium (~1500 words)",
         "keywords": "VS Code, extensions, developer tools",
         "audience": "Web developers"
-      }
+      },
+      "save": true,
+      "calendar_id": 42,
+      "folder": "automation",
+      "tags": ["auto", "weekly"]
     },
     {
       "slug": "meta-title",
@@ -384,6 +399,15 @@ Authorization: Bearer your-secret-token-here
 
 Maximum batch size is 20 jobs per request. Jobs are processed sequentially.
 
+#### Optional per-job fields
+
+| Field | Type | Description |
+|---|---|---|
+| `save` | boolean | When `true`, persist the generated output to the history database. |
+| `calendar_id` | number | Content calendar entry to link after saving. Advances the entry from `planned`/`backlog` to `in-progress`. Only used when `save` is `true`. |
+| `folder` | string | Folder name to assign to the saved history entry. Only used when `save` is `true`. |
+| `tags` | string[] | Tags to assign to the saved history entry. Only used when `save` is `true`. |
+
 ### Response format
 
 ```json
@@ -392,7 +416,8 @@ Maximum batch size is 20 jobs per request. Jobs are processed sequentially.
     {
       "slug": "article-writer",
       "status": "success",
-      "output": "# 10 Best VS Code Extensions in 2025\n\n..."
+      "output": "# 10 Best VS Code Extensions in 2025\n\n...",
+      "history_id": 7
     },
     {
       "slug": "meta-title",
@@ -403,7 +428,7 @@ Maximum batch size is 20 jobs per request. Jobs are processed sequentially.
 }
 ```
 
-A per-job failure (unknown slug, upstream error) sets `status: "error"` and adds an `error` field. It does not abort remaining jobs.
+`history_id` is present in a result when `save: true` was set for that job. A per-job failure (unknown slug, upstream error) sets `status: "error"` and adds an `error` field. It does not abort remaining jobs.
 
 ### Example: GitHub Actions cron workflow
 
@@ -421,7 +446,15 @@ jobs:
           curl -sf -X POST https://your-techscribe.example.com/api/generate/batch \
             -H "Authorization: Bearer ${{ secrets.BATCH_API_SECRET }}" \
             -H "Content-Type: application/json" \
-            -d '{"jobs":[{"slug":"blog-post-ideas","fields":{"niche":"DevOps","count":"10","format":"Mixed"}}]}'
+            -d '{
+              "jobs": [{
+                "slug": "blog-post-ideas",
+                "fields": { "niche": "DevOps", "count": "10", "format": "Mixed" },
+                "save": true,
+                "folder": "weekly-ideas",
+                "tags": ["auto", "devops"]
+              }]
+            }'
 ```
 
 ## Phase 2 Status
@@ -436,7 +469,7 @@ Completed so far in Phase 2:
 - Production deployment hardening and operational documentation ([docs/operations.md](docs/operations.md))
 - YouTube-to-blog workflow — convert any video transcript or description into a full blog post with the outline-first option
 - External keyword research inputs — Keyword Research Brief tool accepts Ahrefs/SEMrush/Google Keyword Planner data and produces actionable content briefs
-- Automated generation API — `POST /api/generate/batch` endpoint for scheduler-driven content jobs (requires `BATCH_API_SECRET`)
+- Automated generation API — `POST /api/generate/batch` endpoint for scheduler-driven content jobs (requires `BATCH_API_SECRET`); supports optional history persistence, content calendar linkage, folder, and tag assignment per job — see [docs/automation.md](docs/automation.md) for full requirements and design
 
 Still open for later:
 
