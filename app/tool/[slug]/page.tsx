@@ -88,6 +88,38 @@ function FieldInput({
   );
 }
 
+function EditableOutput({
+  isEditing,
+  loading,
+  value,
+  onChange,
+  placeholder,
+}: {
+  isEditing: boolean;
+  loading: boolean;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+}) {
+  if (isEditing && !loading) {
+    return (
+      <textarea
+        className="w-full h-full min-h-[400px] bg-transparent text-white text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder-muted"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoFocus
+      />
+    );
+  }
+  return (
+    <div
+      className={`markdown-output max-w-3xl ${loading && !value ? "cursor-blink" : ""} ${loading && value ? "cursor-blink" : ""}`}
+      dangerouslySetInnerHTML={{ __html: renderMarkdown(value) }}
+    />
+  );
+}
+
 export default function ToolPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -119,6 +151,7 @@ export default function ToolPage() {
   type ArticleStep = "input" | "outline-streaming" | "outline-editing" | "article-streaming" | "article-done";
   const [articleStep, setArticleStep] = useState<ArticleStep>("input");
   const [editableOutline, setEditableOutline] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
   const isOutlineMode = !!tool?.outlineSystemPrompt;
 
   // Initialize field defaults
@@ -147,6 +180,7 @@ export default function ToolPage() {
     setPublishErrorCategory(null);
     setArticleStep("input");
     setEditableOutline("");
+    setIsEditing(false);
   }, [searchParams, slug, tool]);
 
   // Auto-scroll output
@@ -211,6 +245,7 @@ export default function ToolPage() {
 
     const mode = isOutlineMode ? "outline" : undefined;
     if (isOutlineMode) setArticleStep("outline-streaming");
+    setIsEditing(false);
 
     try {
       const res = await fetch("/api/generate", {
@@ -264,6 +299,7 @@ export default function ToolPage() {
     setPublishError(null);
     setPublishErrorCategory(null);
     setArticleStep("article-streaming");
+    setIsEditing(false);
 
     try {
       const res = await fetch("/api/generate", {
@@ -399,6 +435,7 @@ export default function ToolPage() {
     setPublishErrorCategory(null);
     setArticleStep("input");
     setEditableOutline("");
+    setIsEditing(false);
   };
 
   return (
@@ -548,6 +585,21 @@ export default function ToolPage() {
                   </button>
                   {!loading && (
                     <button
+                      onClick={() => {
+                        setIsEditing((prev) => !prev);
+                        setSaved(false);
+                      }}
+                      className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                        isEditing
+                          ? "border-accent/60 text-accent hover:text-white hover:border-accent"
+                          : "border-border text-muted hover:text-white hover:border-accent/40"
+                      }`}
+                    >
+                      {isEditing ? "Preview" : "Edit"}
+                    </button>
+                  )}
+                  {!loading && (
+                    <button
                       onClick={handlePublishDraft}
                       disabled={publishing || !publishAllowed || !publishStatusLoaded}
                       className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border transition-colors disabled:opacity-50 ${
@@ -660,17 +712,23 @@ export default function ToolPage() {
 
             {/* Article output */}
             {(articleStep === "article-streaming" || articleStep === "article-done") && (output || loading) && (
-              <div
-                className={`markdown-output max-w-3xl ${loading && !output ? "cursor-blink" : ""} ${loading && output ? "cursor-blink" : ""}`}
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(output) }}
+              <EditableOutput
+                isEditing={isEditing && articleStep === "article-done"}
+                loading={loading}
+                value={output}
+                onChange={(v) => { setOutput(v); setSaved(false); }}
+                placeholder="Edit your article here…"
               />
             )}
 
             {/* Non-outline-mode output */}
             {!isOutlineMode && (output || loading) && (
-              <div
-                className={`markdown-output max-w-3xl ${loading && !output ? "cursor-blink" : ""} ${loading && output ? "cursor-blink" : ""}`}
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(output) }}
+              <EditableOutput
+                isEditing={isEditing}
+                loading={loading}
+                value={output}
+                onChange={(v) => { setOutput(v); setSaved(false); }}
+                placeholder="Edit your content here…"
               />
             )}
 
