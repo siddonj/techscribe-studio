@@ -11,6 +11,9 @@ import {
   getPublishStateDetailClass,
   getPublishStateBadgeLabel,
   getPublishStateStatusText,
+  classifyPublishFailure,
+  getPublishFailureHint,
+  PUBLISH_FAILURE_CATEGORY_LABELS,
 } from "@/lib/publish-state";
 
 // Simple markdown renderer (same as tool page)
@@ -407,6 +410,13 @@ export default function HistoryPage() {
 
       const data = await res.json();
       if (!res.ok) {
+        // If the API returned an updated (failed) history row, sync it into the
+        // UI so the failure badge and retry button appear immediately.
+        if (data.history) {
+          const failedRow = data.history as HistoryRow;
+          setSelected(failedRow);
+          setRows((prev) => prev.map((row) => (row.id === failedRow.id ? failedRow : row)));
+        }
         throw new Error(data.error || "WordPress publish failed");
       }
 
@@ -1518,11 +1528,23 @@ export default function HistoryPage() {
                 </div>
               )}
 
-              {resolvePublishState(selected) === "failed" && selected.wp_error_message && (
+              {resolvePublishState(selected) === "failed" && (
                 <div className="px-6 py-2 border-b border-border bg-red-400/5">
-                  <p className="text-[11px] text-red-300/90">
-                    Last publish attempt failed: {selected.wp_error_message}. Click <span className="text-white font-semibold">Retry Publish</span> above to try again without regenerating.
-                  </p>
+                  {(() => {
+                    const category = classifyPublishFailure(selected.wp_error_message);
+                    const categoryLabel = PUBLISH_FAILURE_CATEGORY_LABELS[category];
+                    const hint = getPublishFailureHint(category);
+                    return (
+                      <div className="flex flex-col gap-0.5">
+                        <p className="text-[11px] text-red-300/90">
+                          <span className="font-semibold text-red-300">{categoryLabel}:</span>{" "}
+                          {selected.wp_error_message ?? "Last publish attempt failed."}{" "}
+                          Click <span className="text-white font-semibold">Retry Publish</span> above to try again without regenerating.
+                        </p>
+                        <p className="text-[11px] text-red-300/60">{hint}</p>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 

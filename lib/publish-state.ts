@@ -176,6 +176,103 @@ export function getPublishStateStatusText(row: HistoryRow, formatIsoDate: (iso: 
     : "Draft linked";
 }
 
+// ─── Failure classification ───────────────────────────────────────────────────
+
+/**
+ * Broad failure categories that help users understand what to fix next:
+ *
+ * - `credential` — auth / permission problem (401, 403, or auth-related text)
+ * - `connection` — network or URL problem (fetch failure, ECONNREFUSED, etc.)
+ * - `payload`    — the post data was rejected by WordPress (400, 422, etc.)
+ * - `unknown`    — could not determine a more specific category
+ */
+export type PublishFailureCategory = "credential" | "connection" | "payload" | "unknown";
+
+/**
+ * Classify a raw publish error message (stored in `wp_error_message`) or an
+ * HTTP status code into one of the broad `PublishFailureCategory` values.
+ *
+ * Pass `httpStatus` when available for more reliable detection of auth errors.
+ */
+export function classifyPublishFailure(
+  errorMessage: string | null | undefined,
+  httpStatus?: number | null
+): PublishFailureCategory {
+  if (httpStatus === 401 || httpStatus === 403) return "credential";
+  if (httpStatus === 400 || httpStatus === 422) return "payload";
+
+  const msg = (errorMessage ?? "").trim().toLowerCase();
+
+  if (
+    msg.includes("401") ||
+    msg.includes("403") ||
+    msg.includes("unauthorized") ||
+    msg.includes("forbidden") ||
+    msg.includes("invalid username") ||
+    msg.includes("invalid password") ||
+    msg.includes("application password") ||
+    msg.includes("authentication")
+  ) {
+    return "credential";
+  }
+
+  if (
+    msg.includes("econnrefused") ||
+    msg.includes("enotfound") ||
+    msg.includes("etimedout") ||
+    msg.includes("network") ||
+    msg.includes("fetch failed") ||
+    msg.includes("failed to fetch") ||
+    msg.includes("connect") ||
+    msg.includes("dns") ||
+    msg.includes("timeout") ||
+    msg.includes("unreachable") ||
+    msg.includes("socket")
+  ) {
+    return "connection";
+  }
+
+  if (
+    msg.includes("400") ||
+    msg.includes("422") ||
+    msg.includes("invalid_param") ||
+    msg.includes("invalid param") ||
+    msg.includes("rest_invalid") ||
+    msg.includes("unprocessable") ||
+    msg.includes("bad request") ||
+    msg.includes("invalid post")
+  ) {
+    return "payload";
+  }
+
+  return "unknown";
+}
+
+/** Human-readable label for each failure category. */
+export const PUBLISH_FAILURE_CATEGORY_LABELS: Record<PublishFailureCategory, string> = {
+  credential: "Credential error",
+  connection: "Connection error",
+  payload: "Payload error",
+  unknown: "Publish error",
+};
+
+/**
+ * Returns a short, actionable hint for the given failure category to guide the
+ * user toward a fix.
+ */
+export function getPublishFailureHint(category: PublishFailureCategory): string {
+  switch (category) {
+    case "credential":
+      return "Check your WordPress username and application password in Settings.";
+    case "connection":
+      return "Check your WordPress site URL and ensure the site is reachable.";
+    case "payload":
+      return "Review your post metadata (slug, category IDs, tag IDs) for invalid values.";
+    default:
+      return "Retry the publish action. If the error persists, check your WordPress settings.";
+  }
+}
+
 // ─── Type guard ───────────────────────────────────────────────────────────────
 
 /** Returns `true` when `value` is a valid canonical `PublishState`. */
