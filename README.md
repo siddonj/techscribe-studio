@@ -238,6 +238,8 @@ Deployment notes:
 
 For step-by-step instructions covering process management, reverse proxy setup, backups, failure recovery, and a pre-release smoke-test checklist, see **[docs/operations.md](docs/operations.md)**.
 
+For a complete reference on what SQLite data matters, where it lives, data directory requirements, and backup procedures, see **[docs/data-persistence.md](docs/data-persistence.md)**.
+
 ## Data and Security Notes
 
 - `.env.local` is ignored and should never be committed.
