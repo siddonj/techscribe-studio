@@ -236,7 +236,9 @@ Deployment notes:
 
 ### Full operations guide
 
-For step-by-step instructions covering process management, reverse proxy setup, backups, failure recovery, and a pre-release smoke-test checklist, see **[docs/operations.md](docs/operations.md)**.
+For step-by-step instructions covering process management, reverse proxy setup, backups, and failure recovery, see **[docs/operations.md](docs/operations.md)**.
+
+For the pre-release smoke-test checklist that covers generate, save, history, planner linkage, settings verification, and draft publishing, see **[docs/smoke-test.md](docs/smoke-test.md)**.
 
 For a complete reference on what SQLite data matters, where it lives, data directory requirements, and backup procedures, see **[docs/data-persistence.md](docs/data-persistence.md)**.
 

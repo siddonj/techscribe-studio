@@ -343,46 +343,11 @@ See [Section 1 of the recovery guide](recovery.md#1-missing-or-invalid-environme
 
 ## 8. Smoke-Test Checklist
 
-Run this checklist before any release or after deploying to a new environment. It takes under five minutes and exercises every major subsystem.
+The full pre-release checklist lives in its own document so it can be used quickly without navigating the entire operations guide:
 
-### Infrastructure
+**[docs/smoke-test.md](smoke-test.md)**
 
-- [ ] `http://localhost:3000` (or your domain) loads the dashboard without errors
-- [ ] No JavaScript console errors on the dashboard page
-
-### AI Generation
-
-- [ ] Navigate to any tool (e.g. **Blog Post Ideas** at `/tool/blog-post-ideas`)
-- [ ] Fill in the required field and submit the form
-- [ ] Confirm output streams progressively into the page (not a blank page or spinner that never resolves)
-- [ ] Confirm the output renders as formatted text when generation completes
-
-### History
-
-- [ ] After a successful generation, click **Save**
-- [ ] Navigate to `/history` and confirm the saved entry appears
-- [ ] Open the entry and confirm the content is intact
-
-### WordPress (if configured)
-
-- [ ] Navigate to `/settings`
-- [ ] Click **Test Connection** and confirm it returns a success state
-- [ ] From a saved history entry, trigger **Publish as Draft**
-- [ ] Confirm the history entry status changes to `Draft Linked`
-- [ ] Open the WordPress admin and confirm the draft was created
-
-### Content Calendar
-
-- [ ] Navigate to `/calendar`
-- [ ] Create a new calendar entry with a title and planned date
-- [ ] Confirm the entry appears in the calendar view
-- [ ] Open the entry and click **Open in Tool** to confirm the tool page pre-fills correctly
-
-### Settings persistence
-
-- [ ] Save WordPress settings on the Settings page
-- [ ] Restart the app (`npm run start` or via your process manager)
-- [ ] Navigate back to `/settings` and confirm the credentials are still present
+It covers infrastructure, AI generation, save and history, content planner linkage, draft publishing, and settings persistence — and should take under five minutes to complete.
 
 ---
 
