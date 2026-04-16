@@ -210,7 +210,15 @@ export interface HistoryRow {
   wp_last_sync_action: "created" | "updated" | null;
   folder_name: string | null;
   tags: string | null;
-  wp_publish_state: "draft" | "publish" | "failed" | null;
+  /**
+   * Canonical publish state for this history row.
+   *
+   * New values (`draft_created`, `draft_updated`, `published`) are written by
+   * the current code.  Legacy rows may still hold the old values `"draft"` or
+   * `"publish"` — these are normalised at read-time by
+   * `lib/publish-state.resolvePublishState`.
+   */
+  wp_publish_state: "draft_created" | "draft_updated" | "published" | "failed" | "draft" | "publish" | null;
   wp_error_message: string | null;
 }
 
@@ -346,13 +354,16 @@ function buildHistoryQueryParts(options: HistoryQueryOptions) {
   }
 
   if (options.status === "never-published") {
-    whereClauses.push("wp_post_id IS NULL");
+    whereClauses.push("wp_post_id IS NULL AND (wp_publish_state IS NULL OR wp_publish_state != 'failed')");
   } else if (options.status === "draft-linked") {
-    whereClauses.push("wp_post_id IS NOT NULL AND (wp_publish_state IS NULL OR wp_publish_state = 'draft') AND (wp_last_sync_action IS NULL OR wp_last_sync_action = 'created')");
+    // Matches both new ("draft_created") and legacy ("draft" + created action) stored values
+    whereClauses.push("wp_post_id IS NOT NULL AND (wp_publish_state = 'draft_created' OR ((wp_publish_state IS NULL OR wp_publish_state = 'draft') AND (wp_last_sync_action IS NULL OR wp_last_sync_action = 'created')))");
   } else if (options.status === "draft-updated") {
-    whereClauses.push("wp_post_id IS NOT NULL AND (wp_publish_state IS NULL OR wp_publish_state = 'draft') AND wp_last_sync_action = 'updated'");
+    // Matches both new ("draft_updated") and legacy ("draft" + updated action) stored values
+    whereClauses.push("wp_post_id IS NOT NULL AND (wp_publish_state = 'draft_updated' OR ((wp_publish_state IS NULL OR wp_publish_state = 'draft') AND wp_last_sync_action = 'updated'))");
   } else if (options.status === "published-live") {
-    whereClauses.push("wp_post_id IS NOT NULL AND wp_publish_state = 'publish'");
+    // Matches both new ("published") and legacy ("publish") stored values
+    whereClauses.push("wp_post_id IS NOT NULL AND (wp_publish_state = 'published' OR wp_publish_state = 'publish')");
   } else if (options.status === "publish-failed") {
     whereClauses.push("wp_publish_state = 'failed'");
   }
@@ -437,7 +448,7 @@ export function updateHistoryWordPressDraft(
     wp_url: string;
     wp_last_published_at: string;
     wp_last_sync_action: "created" | "updated";
-    wp_publish_state: "draft" | "publish";
+    wp_publish_state: "draft_created" | "draft_updated" | "published";
   }
 ): HistoryRow | undefined {
   const db = getDb();

@@ -7,6 +7,7 @@ import { getToolBySlug, Tool, ToolField } from "@/lib/tools";
 import { getHandoffActions } from "@/lib/handoff-registry";
 import { parseToolOutput, ParsedToolOutput } from "@/lib/output-parsers";
 import HandoffCard from "@/components/HandoffCard";
+import type { PublishState } from "@/lib/publish-state";
 
 // Simple markdown renderer (no external deps)
 function renderMarkdown(text: string): string {
@@ -100,7 +101,7 @@ export default function ToolPage() {
   const [draftPostId, setDraftPostId] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publishedDraftUrl, setPublishedDraftUrl] = useState<string | null>(null);
-  const [publishState, setPublishState] = useState<"draft" | "publish" | null>(null);
+  const [publishState, setPublishState] = useState<PublishState | null>(null);
   const [publishAllowed, setPublishAllowed] = useState(false);
   const [publishStatusLoaded, setPublishStatusLoaded] = useState(false);
   const [error, setError] = useState("");
@@ -346,7 +347,13 @@ export default function ToolPage() {
 
       setDraftPostId(publishData.postId ?? null);
       setPublishedDraftUrl(publishData.url ?? null);
-      setPublishState(publishData.publishState === "publish" ? "publish" : "draft");
+      setPublishState(
+        publishData.publishState === "published" || publishData.publishState === "publish"
+          ? "published"
+          : publishData.publishState === "draft_updated"
+            ? "draft_updated"
+            : "draft_created"
+      );
       if (currentHistoryId) {
         setHistoryId(currentHistoryId);
       }
@@ -499,12 +506,12 @@ export default function ToolPage() {
                       target="_blank"
                       rel="noreferrer"
                       className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
-                        publishState === "publish"
+                        publishState === "published"
                           ? "border-fuchsia-400/20 text-fuchsia-300 hover:text-fuchsia-200 hover:border-fuchsia-400/40"
                           : "border-green-400/20 text-green-300 hover:text-green-200 hover:border-green-400/40"
                       }`}
                     >
-                      {publishState === "publish" ? "View Live" : "View Draft"}
+                      {publishState === "published" ? "View Live" : "View Draft"}
                     </a>
                   )}
                   <button
@@ -522,7 +529,7 @@ export default function ToolPage() {
                       {publishing
                         ? (draftPostId ? "Updating..." : "Publishing...")
                         : draftPostId
-                          ? (publishState === "publish" ? "Re-publish Live" : "Update Draft")
+                          ? (publishState === "published" ? "Re-publish Live" : "Update Draft")
                           : "Publish Draft"}
                     </button>
                   )}

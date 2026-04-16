@@ -100,7 +100,12 @@ export async function POST(req: NextRequest) {
     }
 
     const draft = await response.json();
-    const resolvedPublishState: "draft" | "publish" = draft.status === "publish" ? "publish" : "draft";
+    const resolvedPublishState: "draft_created" | "draft_updated" | "published" =
+      draft.status === "publish"
+        ? "published"
+        : syncAction === "updated"
+          ? "draft_updated"
+          : "draft_created";
     let updatedHistory = null;
 
     if (typeof historyId === "number") {

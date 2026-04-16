@@ -4,6 +4,14 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import type { HistoryFolderSummary, HistoryRow, HistoryTagSummary } from "@/lib/db";
 import { TOOLS } from "@/lib/tools";
+import {
+  resolvePublishState,
+  getPublishStateBadgeClass,
+  getPublishStateInlineClass,
+  getPublishStateDetailClass,
+  getPublishStateBadgeLabel,
+  getPublishStateStatusText,
+} from "@/lib/publish-state";
 
 // Simple markdown renderer (same as tool page)
 function renderMarkdown(text: string): string {
@@ -66,80 +74,23 @@ function joinTagValues(tags: string[]): string {
 }
 
 function getDraftBadgeClassName(row: HistoryRow): string {
-  if (row.wp_publish_state === "failed") {
-    return "text-red-300 border-red-400/20";
-  }
-  if (row.wp_publish_state === "publish") {
-    return "text-fuchsia-300 border-fuchsia-400/20";
-  }
-  return "text-green-300 border-green-400/20";
+  return getPublishStateBadgeClass(row);
 }
 
 function getDraftInlineClassName(row: HistoryRow): string {
-  if (row.wp_publish_state === "failed") {
-    return "text-red-300/75";
-  }
-  if (row.wp_publish_state === "publish") {
-    return "text-fuchsia-300/75";
-  }
-  return "text-green-300/75";
+  return getPublishStateInlineClass(row);
 }
 
 function getDraftDetailClassName(row: HistoryRow): string {
-  if (row.wp_publish_state === "failed") {
-    return "text-red-300/90";
-  }
-  if (row.wp_publish_state === "publish") {
-    return "text-fuchsia-300/90";
-  }
-  if (row.wp_post_id) {
-    return "text-green-300/90";
-  }
-  return "text-muted/70";
+  return getPublishStateDetailClass(row);
 }
 
-function getDraftBadgeLabel(row: HistoryRow) {
-  if (row.wp_publish_state === "failed") {
-    return "Publish Failed";
-  }
-
-  if (!row.wp_post_id) {
-    return null;
-  }
-
-  if (row.wp_publish_state === "publish") {
-    return "Published Live";
-  }
-
-  return row.wp_last_sync_action === "updated" ? "Updated" : "Draft Linked";
+function getDraftBadgeLabel(row: HistoryRow): string | null {
+  return getPublishStateBadgeLabel(row);
 }
 
 function getDraftStatusText(row: HistoryRow) {
-  if (row.wp_publish_state === "failed") {
-    return row.wp_error_message
-      ? `Publish failed: ${row.wp_error_message}`
-      : "Last publish attempt failed";
-  }
-
-  if (!row.wp_post_id) {
-    return "Never published to WordPress";
-  }
-
-  if (row.wp_publish_state === "publish") {
-    return row.wp_last_published_at
-      ? `Published live ${formatDate(row.wp_last_published_at)}`
-      : "Published live";
-  }
-
-  if (row.wp_last_sync_action === "updated") {
-    return row.wp_last_published_at
-      ? `Draft updated ${formatDate(row.wp_last_published_at)}`
-      : "Draft updated";
-  }
-
-  return row.wp_last_published_at
-    ? `Draft linked ${formatDate(row.wp_last_published_at)}`
-    : "Draft linked";
+  return getPublishStateStatusText(row, formatDate);
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -1493,12 +1444,12 @@ export default function HistoryPage() {
                       target="_blank"
                       rel="noreferrer"
                       className={`font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
-                        selected.wp_publish_state === "publish"
+                        resolvePublishState(selected) === "published"
                           ? "border-fuchsia-400/20 text-fuchsia-300 hover:text-fuchsia-200 hover:border-fuchsia-400/40"
                           : "border-green-400/20 text-green-300 hover:text-green-200 hover:border-green-400/40"
                       }`}
                     >
-                      {selected.wp_publish_state === "publish" ? "View Live" : "View Draft"}
+                      {resolvePublishState(selected) === "published" ? "View Live" : "View Draft"}
                     </a>
                   )}
                   <Link
@@ -1514,7 +1465,7 @@ export default function HistoryPage() {
                   >
                     {publishing === selected.id
                       ? (selected.wp_post_id ? "Updating..." : "Publishing...")
-                      : selected.wp_publish_state === "failed"
+                      : resolvePublishState(selected) === "failed"
                         ? "Retry Publish"
                         : selected.wp_post_id
                           ? "Update Draft"
@@ -1551,7 +1502,7 @@ export default function HistoryPage() {
                 </div>
               )}
 
-              {selected.wp_publish_state === "failed" && selected.wp_error_message && (
+              {resolvePublishState(selected) === "failed" && selected.wp_error_message && (
                 <div className="px-6 py-2 border-b border-border bg-red-400/5">
                   <p className="text-[11px] text-red-300/90">
                     Last publish attempt failed: {selected.wp_error_message}. Click <span className="text-white font-semibold">Retry Publish</span> above to try again without regenerating.
