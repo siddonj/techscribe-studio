@@ -230,6 +230,133 @@ function parseHeadlineGenerator(raw: string): ParsedToolOutput {
   };
 }
 
+/**
+ * Parser for the "youtube-to-blog" tool.
+ *
+ * Expected output structure (Markdown blog post):
+ *
+ *   # Blog Post Title
+ *
+ *   ## Introduction
+ *   …
+ *
+ * The parser extracts the H1 as the title so it can be forwarded to
+ * downstream tools like Meta Title Generator or Social Media tools.
+ * H2/H3 headings are collected as keyword chips for the HandoffCard.
+ */
+function parseYoutubeToBlog(raw: string): ParsedToolOutput {
+  const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+
+  let title = "";
+  let summary = "";
+  const keywords: string[] = [];
+
+  for (const line of lines) {
+    if (!title) {
+      const h1Match = line.match(/^#\s+(.+)$/);
+      if (h1Match) {
+        title = h1Match[1].replace(/^\*+|\*+$/g, "").trim();
+        continue;
+      }
+    }
+
+    // Collect H2/H3 headings as section chips
+    const headingMatch = line.match(/^(#{2,3})\s+(.+)$/);
+    if (headingMatch) {
+      const heading = headingMatch[2].replace(/^\*+|\*+$/g, "").trim();
+      if (!summary && headingMatch[1] === "##") {
+        summary = heading;
+      }
+      if (heading && !keywords.includes(heading)) {
+        keywords.push(heading);
+      }
+    }
+  }
+
+  return {
+    title,
+    summary,
+    keywords,
+    prefill: {
+      // "topic" maps into downstream tools like meta-title, tweet-ideas, etc.
+      topic: title,
+    },
+  };
+}
+
+/**
+ * Parser for the "keyword-research-brief" tool.
+ *
+ * Expected output structure (Markdown content brief):
+ *
+ *   1. **Recommended Title**
+ *   2. **Primary Keyword** …
+ *   3. **Secondary Keywords** …
+ *   …
+ *
+ * The parser extracts the recommended title (first bold heading in a
+ * numbered list), the primary keyword, and secondary keywords as chips.
+ */
+function parseKeywordResearchBrief(raw: string): ParsedToolOutput {
+  const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+
+  let title = "";
+  let summary = "";
+  const keywords: string[] = [];
+
+  for (const line of lines) {
+    // Match "1. **Recommended Title**" header
+    const sectionMatch = line.match(/^\d+\.\s+\*\*(.+?)\*\*/);
+    if (sectionMatch) {
+      const sectionName = sectionMatch[1].toLowerCase();
+      // The line after "Recommended Title" section header contains the actual title
+      if (sectionName.includes("recommended title") || sectionName.includes("title")) {
+        // Title may be on the same line after the section label, or inlined
+        const inlineTitle = line.replace(/^\d+\.\s+\*\*[^*]+\*\*[:\s]*/, "").trim();
+        if (inlineTitle && !title) {
+          title = inlineTitle.replace(/^\*+|\*+$/g, "").trim();
+        }
+      }
+      continue;
+    }
+
+    // H1 or H2 headings in the output can also carry the title
+    if (!title) {
+      const h1Match = line.match(/^#\s+(.+)$/);
+      if (h1Match) {
+        title = h1Match[1].replace(/^\*+|\*+$/g, "").trim();
+        continue;
+      }
+    }
+
+    // Keyword lines – "Primary Keyword:", "Secondary Keywords:", LSI lines
+    const kwMatch = line.match(/^(?:[-*•]\s*)?(.+)$/);
+    if (kwMatch) {
+      const text = kwMatch[1].replace(/^\*+|\*+$/g, "").trim();
+      if (text && text.length < 80 && !summary) {
+        summary = text;
+      }
+      if (text && text.length < 60) {
+        if (!keywords.includes(text)) keywords.push(text);
+      }
+    }
+  }
+
+  // Fallback: use first non-empty line as title if none found
+  if (!title && lines.length > 0) {
+    title = lines[0].replace(/^[#*\d.\s]+/, "").trim();
+  }
+
+  return {
+    title,
+    summary,
+    keywords: keywords.slice(0, 12),
+    prefill: {
+      topic: title,
+    },
+  };
+}
+
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 type OutputParser = (raw: string) => ParsedToolOutput;
@@ -238,6 +365,8 @@ const PARSER_REGISTRY: Partial<Record<string, OutputParser>> = {
   "blog-post-ideas": parseBlogPostIdeas,
   "headline-generator": parseHeadlineGenerator,
   "outline-generator": parseOutlineGenerator,
+  "youtube-to-blog": parseYoutubeToBlog,
+  "keyword-research-brief": parseKeywordResearchBrief,
 };
 
 // ── Public API ────────────────────────────────────────────────────────────────

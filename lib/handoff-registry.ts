@@ -71,6 +71,45 @@ export const HANDOFF_REGISTRY: HandoffRegistry = {
       fieldMap: { topic: "topic", keywords: "keywords", audience: "audience" },
     },
   ],
+  "youtube-to-blog": [
+    {
+      label: "Generate Meta Title",
+      targetSlug: "meta-title",
+      fieldMap: { videoTitle: "topic", keywords: "keyword" },
+    },
+    {
+      label: "Write Meta Description",
+      targetSlug: "meta-description",
+      fieldMap: { videoTitle: "topic", keywords: "keyword" },
+    },
+    {
+      label: "Create Tweet Posts",
+      targetSlug: "tweet-ideas",
+      fieldMap: { videoTitle: "topic" },
+    },
+    {
+      label: "Write LinkedIn Post",
+      targetSlug: "linkedin-post",
+      fieldMap: { videoTitle: "topic" },
+    },
+  ],
+  "keyword-research-brief": [
+    {
+      label: "Write Article",
+      targetSlug: "article-writer",
+      fieldMap: { topic: "topic" },
+    },
+    {
+      label: "Build Outline",
+      targetSlug: "outline-generator",
+      fieldMap: { topic: "topic" },
+    },
+    {
+      label: "Generate Headlines",
+      targetSlug: "headline-generator",
+      fieldMap: { topic: "topic" },
+    },
+  ],
 };
 
 /**
