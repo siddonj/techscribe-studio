@@ -100,10 +100,10 @@ export async function POST(req: NextRequest) {
       tags: "",
       wp_publish_state: null,
       wp_error_message: null,
-      wp_slug: typeof wp_slug === "string" && wp_slug.trim() ? wp_slug.trim() : null,
-      wp_excerpt: typeof wp_excerpt === "string" && wp_excerpt.trim() ? wp_excerpt.trim() : null,
-      wp_categories: typeof wp_categories === "string" && wp_categories.trim() ? wp_categories.trim() : null,
-      wp_tags: typeof wp_tags === "string" && wp_tags.trim() ? wp_tags.trim() : null,
+      wp_slug: typeof wp_slug === "string" ? (wp_slug.trim() || null) : null,
+      wp_excerpt: typeof wp_excerpt === "string" ? (wp_excerpt.trim() || null) : null,
+      wp_categories: typeof wp_categories === "string" ? (wp_categories.trim() || null) : null,
+      wp_tags: typeof wp_tags === "string" ? (wp_tags.trim() || null) : null,
     });
 
     if (typeof calendarId === "number") {

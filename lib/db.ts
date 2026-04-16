@@ -555,9 +555,8 @@ export function updateHistoryMetadata(
     WHERE id = @id
   `).run({
     id,
-    title: metadata.title,
-    folder_name: metadata.folder_name,
-    tags: metadata.tags,
+    ...metadata,
+    // Optional fields default to null so SQLite receives a defined value
     wp_slug: metadata.wp_slug ?? null,
     wp_excerpt: metadata.wp_excerpt ?? null,
     wp_categories: metadata.wp_categories ?? null,
