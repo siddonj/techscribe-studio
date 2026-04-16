@@ -237,6 +237,11 @@ function buildCalendarQueryParts(options: CalendarQueryOptions) {
     params.push(options.toolSlug);
   }
 
+  if (options.publishIntent) {
+    whereClauses.push("publish_intent = ?");
+    params.push(options.publishIntent);
+  }
+
   if (options.scheduledFrom) {
     whereClauses.push("scheduled_for IS NOT NULL AND scheduled_for >= ?");
     params.push(options.scheduledFrom);

@@ -20,12 +20,14 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const statusParam = searchParams.get("status")?.trim() ?? "";
     const toolSlug = searchParams.get("tool")?.trim() || undefined;
+    const publishIntentParam = searchParams.get("publish_intent")?.trim() ?? "";
     const scheduledFrom = searchParams.get("from")?.trim() || undefined;
     const scheduledTo = searchParams.get("to")?.trim() || undefined;
 
     const rows = listCalendarEntries({
       status: isCalendarStatus(statusParam) ? statusParam : undefined,
       toolSlug,
+      publishIntent: isCalendarPublishIntent(publishIntentParam) ? publishIntentParam : undefined,
       scheduledFrom,
       scheduledTo,
     });

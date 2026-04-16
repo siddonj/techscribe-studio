@@ -19,6 +19,11 @@ export const CALENDAR_STATUS_LABELS: Record<CalendarEntryStatus, string> = {
   published: "Published",
 };
 
+export const CALENDAR_PUBLISH_INTENT_LABELS: Record<CalendarPublishIntent, string> = {
+  draft: "Draft",
+  publish: "Publish",
+};
+
 export interface CalendarEntry {
   id: number;
   title: string;
@@ -41,6 +46,7 @@ export interface CalendarEntry {
 export interface CalendarQueryOptions {
   status?: CalendarEntryStatus;
   toolSlug?: string;
+  publishIntent?: CalendarPublishIntent;
   scheduledFrom?: string;
   scheduledTo?: string;
 }
