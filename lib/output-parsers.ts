@@ -56,11 +56,11 @@ function parseBlogPostIdeas(raw: string): ParsedToolOutput {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Match the first numbered idea: "1. **Title**" or "1. Title"
-    const titleMatch = line.match(/^1\.\s+(?:\*\*)?(.+?)(?:\*\*)?$/);
+    // Match the first numbered idea: "1. **Title**" (bold) or "1. Title" (plain)
+    const titleMatch = line.match(/^1\.\s+\*\*(.+)\*\*$/) ?? line.match(/^1\.\s+(.+)$/);
     if (!titleMatch) continue;
 
-    title = titleMatch[1].trim();
+    title = titleMatch[1].replace(/^\*+|\*+$/g, "").trim();
 
     // Search the following lines for description and keywords.
     // Stop only when a new numbered item is encountered.
@@ -76,7 +76,7 @@ function parseBlogPostIdeas(raw: string): ParsedToolOutput {
         keywords.push(
           ...kwMatch[1]
             .split(/[,;]+/)
-            .map((k) => k.trim().replace(/^\*+|\*+$/, ""))
+            .map((k) => k.trim().replace(/^\*+|\*+$/g, ""))
             .filter(Boolean)
         );
         continue;
