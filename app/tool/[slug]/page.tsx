@@ -106,11 +106,6 @@ export default function ToolPage() {
   const [publishAllowed, setPublishAllowed] = useState(false);
   const [publishStatusLoaded, setPublishStatusLoaded] = useState(false);
   const [error, setError] = useState("");
-  const [wpSlug, setWpSlug] = useState("");
-  const [wpExcerpt, setWpExcerpt] = useState("");
-  const [wpCategories, setWpCategories] = useState("");
-  const [wpTags, setWpTags] = useState("");
-  const [showWpMetadata, setShowWpMetadata] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
 
   // Outline flow state (only used for tools with outlineSystemPrompt)
@@ -143,11 +138,6 @@ export default function ToolPage() {
     setPublishState(null);
     setArticleStep("input");
     setEditableOutline("");
-    setWpSlug("");
-    setWpExcerpt("");
-    setWpCategories("");
-    setWpTags("");
-    setShowWpMetadata(false);
   }, [searchParams, slug, tool]);
 
   // Auto-scroll output
@@ -312,10 +302,6 @@ export default function ToolPage() {
           fields,
           output,
           calendarId: Number.isFinite(calendarId) ? calendarId : null,
-          wp_slug: wpSlug.trim() || undefined,
-          wp_excerpt: wpExcerpt.trim() || undefined,
-          wp_categories: wpCategories.trim() || undefined,
-          wp_tags: wpTags.trim() || undefined,
         }),
       });
       if (res.ok) {
@@ -352,8 +338,6 @@ export default function ToolPage() {
           title: fields.topic || tool?.name,
           historyId: currentHistoryId,
           calendarId: Number.isFinite(calendarId) ? calendarId : null,
-          wp_slug: wpSlug.trim() || undefined,
-          wp_excerpt: wpExcerpt.trim() || undefined,
         }),
       });
 
@@ -388,11 +372,6 @@ export default function ToolPage() {
     setPublishState(null);
     setArticleStep("input");
     setEditableOutline("");
-    setWpSlug("");
-    setWpExcerpt("");
-    setWpCategories("");
-    setWpTags("");
-    setShowWpMetadata(false);
   };
 
   return (
@@ -551,15 +530,6 @@ export default function ToolPage() {
                           : "Publish Draft"}
                     </button>
                   )}
-                  {!loading && publishAllowed && (
-                    <button
-                      onClick={() => setShowWpMetadata((prev) => !prev)}
-                      className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${showWpMetadata ? "border-accent/40 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
-                      title="WordPress publish metadata"
-                    >
-                      ⚙ Meta
-                    </button>
-                  )}
                   {!loading && (
                     <button
                       onClick={handleSave}
@@ -581,57 +551,6 @@ export default function ToolPage() {
                   >
                     Go to Settings →
                   </Link>
-                </div>
-              )}
-
-              {showWpMetadata && (
-                <div className="mt-3 rounded-lg border border-border bg-subtle p-3 space-y-3">
-                  <p className="text-[11px] font-mono text-muted uppercase tracking-wider">WordPress Publish Metadata</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Slug</label>
-                      <input
-                        type="text"
-                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
-                        value={wpSlug}
-                        onChange={(e) => setWpSlug(e.target.value)}
-                        placeholder="my-post-url-slug"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Categories <span className="normal-case text-muted/60">(reference)</span></label>
-                      <input
-                        type="text"
-                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
-                        value={wpCategories}
-                        onChange={(e) => setWpCategories(e.target.value)}
-                        placeholder="News, Tutorials"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Excerpt</label>
-                    <textarea
-                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60 resize-none"
-                      rows={2}
-                      value={wpExcerpt}
-                      onChange={(e) => setWpExcerpt(e.target.value)}
-                      placeholder="Short summary shown in post listings…"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Tags <span className="normal-case text-muted/60">(reference)</span></label>
-                    <input
-                      type="text"
-                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
-                      value={wpTags}
-                      onChange={(e) => setWpTags(e.target.value)}
-                      placeholder="seo, how-to, wordpress"
-                    />
-                  </div>
-                  <p className="text-[11px] text-muted/60">
-                    Slug and excerpt are sent to WordPress on publish. Categories and WP tags are stored as reference — assign them by ID in the WordPress editor.
-                  </p>
                 </div>
               )}
 

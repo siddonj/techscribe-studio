@@ -63,11 +63,6 @@ export async function PATCH(
           .filter(Boolean)
           .join(",");
 
-    const wpSlug = body.wp_slug != null ? String(body.wp_slug).trim() || null : null;
-    const wpExcerpt = body.wp_excerpt != null ? String(body.wp_excerpt).trim() || null : null;
-    const wpCategories = body.wp_categories != null ? String(body.wp_categories).trim() || null : null;
-    const wpTags = body.wp_tags != null ? String(body.wp_tags).trim() || null : null;
-
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
@@ -76,10 +71,6 @@ export async function PATCH(
       title,
       folder_name: folderName || null,
       tags,
-      wp_slug: wpSlug,
-      wp_excerpt: wpExcerpt,
-      wp_categories: wpCategories,
-      wp_tags: wpTags,
     });
 
     if (!updated) {
