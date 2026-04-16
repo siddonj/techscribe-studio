@@ -179,6 +179,9 @@ export default function HistoryPage() {
   const [editingWpCategories, setEditingWpCategories] = useState("");
   const [editingWpTags, setEditingWpTags] = useState("");
   const [savingMetadata, setSavingMetadata] = useState(false);
+  const [editingOutput, setEditingOutput] = useState("");
+  const [savingOutput, setSavingOutput] = useState(false);
+  const [detailTab, setDetailTab] = useState<"article" | "editor">("article");
   const [bulkFolderName, setBulkFolderName] = useState("");
   const [bulkTags, setBulkTags] = useState("");
   const [copied, setCopied] = useState(false);
@@ -289,6 +292,8 @@ export default function HistoryPage() {
       setEditingWpExcerpt("");
       setEditingWpCategories("");
       setEditingWpTags("");
+      setEditingOutput("");
+      setDetailTab("article");
       return;
     }
 
@@ -300,6 +305,8 @@ export default function HistoryPage() {
     setEditingWpExcerpt(selected.wp_excerpt ?? "");
     setEditingWpCategories(selected.wp_categories ?? "");
     setEditingWpTags(selected.wp_tags ?? "");
+    setEditingOutput(selected.output);
+    setDetailTab("article");
   }, [selected]);
 
   useEffect(() => {
@@ -645,6 +652,32 @@ export default function HistoryPage() {
       console.error(error);
     } finally {
       setSavingMetadata(false);
+    }
+  };
+
+  const handleSaveOutput = async () => {
+    if (!selected) return;
+
+    setSavingOutput(true);
+
+    try {
+      const res = await fetch(`/api/history/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ output: editingOutput }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update content");
+      }
+
+      setSelected(data as HistoryRow);
+      setRows((prev) => prev.map((row) => (row.id === data.id ? data : row)));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSavingOutput(false);
     }
   };
 
@@ -1505,18 +1538,43 @@ export default function HistoryPage() {
             <>
               {/* Detail toolbar */}
               <div className="flex items-center justify-between px-6 py-3 border-b border-border shrink-0">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span>{selected.tool_icon}</span>
-                    <span className="text-white text-sm font-medium truncate">{selected.title}</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span>{selected.tool_icon}</span>
+                      <span className="text-white text-sm font-medium truncate">{selected.title}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="font-mono text-xs text-muted">{selected.tool_name}</span>
+                      <span className="font-mono text-xs text-muted/50">{formatDate(selected.created_at)}</span>
+                      <span className="font-mono text-xs text-muted/50">{selected.word_count} words</span>
+                      <span className={`font-mono text-xs ${getDraftDetailClassName(selected)}`}>
+                        {getDraftStatusText(selected)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 mt-0.5">
-                    <span className="font-mono text-xs text-muted">{selected.tool_name}</span>
-                    <span className="font-mono text-xs text-muted/50">{formatDate(selected.created_at)}</span>
-                    <span className="font-mono text-xs text-muted/50">{selected.word_count} words</span>
-                    <span className={`font-mono text-xs ${getDraftDetailClassName(selected)}`}>
-                      {getDraftStatusText(selected)}
-                    </span>
+                  {/* Article / Editor tabs */}
+                  <div className="flex items-center gap-1 ml-4 shrink-0">
+                    <button
+                      onClick={() => setDetailTab("article")}
+                      className={`font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                        detailTab === "article"
+                          ? "border-accent text-accent bg-accent/10"
+                          : "border-border text-muted hover:text-white hover:border-white/20"
+                      }`}
+                    >
+                      Article
+                    </button>
+                    <button
+                      onClick={() => setDetailTab("editor")}
+                      className={`font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                        detailTab === "editor"
+                          ? "border-accent text-accent bg-accent/10"
+                          : "border-border text-muted hover:text-white hover:border-white/20"
+                      }`}
+                    >
+                      Editor
+                    </button>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -1760,10 +1818,33 @@ export default function HistoryPage() {
 
               {/* Output */}
               <div className="flex-1 overflow-y-auto p-8">
-                <div
-                  className="markdown-output max-w-3xl"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(selected.output) }}
-                />
+                {detailTab === "article" ? (
+                  <div
+                    className="markdown-output max-w-3xl"
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(selected.output) }}
+                  />
+                ) : (
+                  <div className="flex flex-col h-full gap-3">
+                    <textarea
+                      className="flex-1 w-full min-h-[400px] bg-transparent text-white text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder-muted"
+                      value={editingOutput}
+                      onChange={(e) => setEditingOutput(e.target.value)}
+                      placeholder="Edit your content here…"
+                    />
+                    <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+                      <span className="font-mono text-xs text-muted">
+                        {editingOutput.split(/\s+/).filter(Boolean).length} words
+                      </span>
+                      <button
+                        onClick={handleSaveOutput}
+                        disabled={savingOutput}
+                        className="font-semibold text-sm px-4 py-2 rounded-lg border border-accent/60 text-accent hover:bg-accent/10 transition-colors disabled:opacity-50"
+                      >
+                        {savingOutput ? "Saving..." : "Save Content"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}

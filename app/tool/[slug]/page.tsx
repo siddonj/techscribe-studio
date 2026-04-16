@@ -121,6 +121,12 @@ export default function ToolPage() {
   const [editableOutline, setEditableOutline] = useState("");
   const isOutlineMode = !!tool?.outlineSystemPrompt;
 
+  // Output tab state (ARTICLE = rendered, EDITOR = editable textarea)
+  type OutputTab = "article" | "editor";
+  const [outputTab, setOutputTab] = useState<OutputTab>("article");
+
+  const editorTextareaClassName = "w-full h-full min-h-[400px] bg-transparent text-white text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder-muted";
+
   // Initialize field defaults
   useEffect(() => {
     if (!tool) return;
@@ -399,6 +405,17 @@ export default function ToolPage() {
     setPublishErrorCategory(null);
     setArticleStep("input");
     setEditableOutline("");
+    setOutputTab("article");
+  };
+
+  const handleReset = () => {
+    handleClear();
+    if (!tool) return;
+    const defaults: Record<string, string> = {};
+    tool.fields.forEach((f) => {
+      defaults[f.name] = f.type === "select" && f.options ? f.options[0] : "";
+    });
+    setFields(defaults);
   };
 
   return (
@@ -517,11 +534,39 @@ export default function ToolPage() {
 
         {/* Output panel */}
         <div className="flex-1 flex flex-col">
-          {/* Output toolbar */}
+          {/* Output toolbar — shown when output is ready and not in outline-editing */}
           {output && articleStep !== "outline-editing" && (
             <div className="px-6 py-3 border-b border-border">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs text-muted">OUTPUT</span>
+              {/* Tab row + action buttons */}
+              <div className="flex items-center justify-between gap-4">
+                {/* ARTICLE / EDITOR tabs (only when article is fully done) */}
+                {(articleStep === "article-done" || (!isOutlineMode && !loading)) ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setOutputTab("article")}
+                      className={`font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                        outputTab === "article"
+                          ? "border-accent text-accent bg-accent/10"
+                          : "border-border text-muted hover:text-white hover:border-white/20"
+                      }`}
+                    >
+                      Article
+                    </button>
+                    <button
+                      onClick={() => setOutputTab("editor")}
+                      className={`font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                        outputTab === "editor"
+                          ? "border-accent text-accent bg-accent/10"
+                          : "border-border text-muted hover:text-white hover:border-white/20"
+                      }`}
+                    >
+                      Editor
+                    </button>
+                  </div>
+                ) : (
+                  <span className="font-mono text-xs text-muted">OUTPUT</span>
+                )}
+
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs text-muted">
                     {output.split(" ").length} words
@@ -572,6 +617,23 @@ export default function ToolPage() {
                     >
                       {saved ? "✓ Saved!" : "Save"}
                     </button>
+                  )}
+                  {/* Edit & Run Again / Reset Form — shown when article is done */}
+                  {(articleStep === "article-done" || (!isOutlineMode && !loading && output)) && (
+                    <>
+                      <button
+                        onClick={handleClear}
+                        className="flex items-center gap-1.5 font-semibold text-xs px-3 py-1.5 rounded-md border border-accent/60 text-accent hover:bg-accent/10 transition-colors"
+                      >
+                        Edit &amp; Run Again
+                      </button>
+                      <button
+                        onClick={handleReset}
+                        className="flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border border-border text-muted hover:text-white hover:border-white/20 transition-colors"
+                      >
+                        Reset Form
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -643,7 +705,7 @@ export default function ToolPage() {
             {/* Editable outline */}
             {articleStep === "outline-editing" && (
               <textarea
-                className="w-full h-full min-h-[400px] bg-transparent text-white text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder-muted"
+                className={editorTextareaClassName}
                 value={editableOutline}
                 onChange={(e) => setEditableOutline(e.target.value)}
                 placeholder="Your outline will appear here…"
@@ -658,24 +720,44 @@ export default function ToolPage() {
               />
             )}
 
-            {/* Article output */}
-            {(articleStep === "article-streaming" || articleStep === "article-done") && (output || loading) && (
+            {/* Article output — ARTICLE tab (rendered) */}
+            {(articleStep === "article-streaming" || articleStep === "article-done") && (output || loading) && outputTab === "article" && (
               <div
                 className={`markdown-output max-w-3xl ${loading && !output ? "cursor-blink" : ""} ${loading && output ? "cursor-blink" : ""}`}
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(output) }}
               />
             )}
 
-            {/* Non-outline-mode output */}
-            {!isOutlineMode && (output || loading) && (
+            {/* Article output — EDITOR tab (editable textarea) */}
+            {(articleStep === "article-streaming" || articleStep === "article-done") && output && outputTab === "editor" && (
+              <textarea
+                className={editorTextareaClassName}
+                value={output}
+                onChange={(e) => setOutput(e.target.value)}
+                placeholder="Your article will appear here…"
+              />
+            )}
+
+            {/* Non-outline-mode output — ARTICLE tab (rendered) */}
+            {!isOutlineMode && (output || loading) && outputTab === "article" && (
               <div
                 className={`markdown-output max-w-3xl ${loading && !output ? "cursor-blink" : ""} ${loading && output ? "cursor-blink" : ""}`}
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(output) }}
+              />
+            )}
+
+            {/* Non-outline-mode output — EDITOR tab (editable textarea) */}
+            {!isOutlineMode && output && !loading && outputTab === "editor" && (
+              <textarea
+                className={editorTextareaClassName}
+                value={output}
+                onChange={(e) => setOutput(e.target.value)}
+                placeholder="Your content will appear here…"
               />
             )}
 
             {/* Structured result card — shown once output is fully generated */}
-            {!isOutlineMode && !loading && parsedOutput && handoffActions.length > 0 && (
+            {!isOutlineMode && !loading && parsedOutput && handoffActions.length > 0 && outputTab === "article" && (
               <HandoffCard
                 parsedOutput={parsedOutput}
                 actions={handoffActions}

@@ -569,6 +569,22 @@ export function updateHistoryMetadata(
   return getHistoryById(id);
 }
 
+export function updateHistoryOutput(id: number, output: string): HistoryRow | undefined {
+  const db = getDb();
+  const wordCount = output.split(/\s+/).filter(Boolean).length;
+  const result = db
+    .prepare(
+      `UPDATE history SET output = @output, word_count = @word_count WHERE id = @id`
+    )
+    .run({ id, output, word_count: wordCount });
+
+  if (result.changes === 0) {
+    return undefined;
+  }
+
+  return getHistoryById(id);
+}
+
 export function bulkAssignHistoryMetadata(
   ids: number[],
   changes: {
