@@ -139,6 +139,86 @@ npm run dev
 
 Then open http://localhost:3000.
 
+## MCP Server
+
+TechScribe Studio ships a built-in [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that lets AI assistants like **Claude Desktop**, **Cursor**, and other MCP clients interact with the app directly.
+
+### What the MCP server exposes
+
+| Tool | Description |
+|---|---|
+| `list_writing_tools` | List all available writing tools with their slugs, fields, and descriptions |
+| `generate_content` | Generate content using any TechScribe tool and optionally save to history |
+| `save_to_history` | Save a piece of content to the history database |
+| `list_history` | List saved history entries with optional search, filter, and sort |
+| `get_history_entry` | Retrieve a single history entry by ID |
+| `list_calendar_entries` | List content calendar entries |
+| `create_calendar_entry` | Create a new content calendar entry |
+
+### Running the MCP server
+
+The MCP server communicates over stdio, which is the standard transport for desktop MCP clients. The app must be running before the MCP server can handle requests.
+
+```bash
+# In one terminal — start the app
+npm run dev
+
+# In another terminal — start the MCP server (or let your client start it)
+npm run mcp-server
+```
+
+**Environment variables:**
+
+| Variable | Default | Description |
+|---|---|---|
+| `TECHSCRIBE_URL` | `http://localhost:3000` | Base URL of the running TechScribe Studio app |
+| `BATCH_API_SECRET` | _(empty)_ | Must match the app's `BATCH_API_SECRET` if that is set |
+
+### Claude Desktop setup
+
+Add the following to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "techscribe-studio": {
+      "command": "npx",
+      "args": ["tsx", "/absolute/path/to/techscribe-studio/mcp-server/index.ts"],
+      "env": {
+        "TECHSCRIBE_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+### Cursor setup
+
+Add the following to your Cursor MCP settings (`.cursor/mcp.json` or the global MCP config):
+
+```json
+{
+  "mcpServers": {
+    "techscribe-studio": {
+      "command": "npx",
+      "args": ["tsx", "/absolute/path/to/techscribe-studio/mcp-server/index.ts"],
+      "env": {
+        "TECHSCRIBE_URL": "http://localhost:3000"
+      }
+    }
+  }
+}
+```
+
+### Example prompts with MCP
+
+Once connected, you can use natural language with your AI assistant:
+
+- *"List all the SEO tools available in TechScribe Studio."*
+- *"Generate a 1500-word article about React Server Components using the article-writer tool and save it to history."*
+- *"Show me my last 5 history entries."*
+- *"Create a calendar entry for a listicle about TypeScript tips, scheduled for next Monday."*
+
 ## Publish Scheduling Ownership Model
 
 TechScribe Studio uses a **WordPress-owned scheduling** model. The app does not auto-publish or schedule posts on a timer. Publishing is always triggered manually from the tool page or the history archive.
