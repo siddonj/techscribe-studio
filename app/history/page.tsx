@@ -169,6 +169,10 @@ export default function HistoryPage() {
   const [editingFolder, setEditingFolder] = useState("");
   const [editingTags, setEditingTags] = useState("");
   const [editingTagDraft, setEditingTagDraft] = useState("");
+  const [editingWpSlug, setEditingWpSlug] = useState("");
+  const [editingWpExcerpt, setEditingWpExcerpt] = useState("");
+  const [editingWpCategories, setEditingWpCategories] = useState("");
+  const [editingWpTags, setEditingWpTags] = useState("");
   const [savingMetadata, setSavingMetadata] = useState(false);
   const [bulkFolderName, setBulkFolderName] = useState("");
   const [bulkTags, setBulkTags] = useState("");
@@ -276,6 +280,10 @@ export default function HistoryPage() {
       setEditingFolder("");
       setEditingTags("");
       setEditingTagDraft("");
+      setEditingWpSlug("");
+      setEditingWpExcerpt("");
+      setEditingWpCategories("");
+      setEditingWpTags("");
       return;
     }
 
@@ -283,6 +291,10 @@ export default function HistoryPage() {
     setEditingFolder(selected.folder_name ?? "");
     setEditingTags(selected.tags ?? "");
     setEditingTagDraft("");
+    setEditingWpSlug(selected.wp_slug ?? "");
+    setEditingWpExcerpt(selected.wp_excerpt ?? "");
+    setEditingWpCategories(selected.wp_categories ?? "");
+    setEditingWpTags(selected.wp_tags ?? "");
   }, [selected]);
 
   useEffect(() => {
@@ -602,6 +614,10 @@ export default function HistoryPage() {
           title: editingTitle,
           folder_name: editingFolder,
           tags: editingTags,
+          wp_slug: editingWpSlug,
+          wp_excerpt: editingWpExcerpt,
+          wp_categories: editingWpCategories,
+          wp_tags: editingWpTags,
         }),
       });
 
@@ -1541,6 +1557,48 @@ export default function HistoryPage() {
                       value={editingTags}
                       onChange={(e) => setEditingTags(e.target.value)}
                       placeholder="seo, wordpress, newsletter"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Slug</label>
+                    <input
+                      type="text"
+                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                      value={editingWpSlug}
+                      onChange={(e) => setEditingWpSlug(e.target.value)}
+                      placeholder="my-post-url-slug"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Excerpt</label>
+                    <input
+                      type="text"
+                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                      value={editingWpExcerpt}
+                      onChange={(e) => setEditingWpExcerpt(e.target.value)}
+                      placeholder="Short post excerpt"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Category IDs</label>
+                    <input
+                      type="text"
+                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                      value={editingWpCategories}
+                      onChange={(e) => setEditingWpCategories(e.target.value)}
+                      placeholder="1, 5, 12"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Tag IDs</label>
+                    <input
+                      type="text"
+                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                      value={editingWpTags}
+                      onChange={(e) => setEditingWpTags(e.target.value)}
+                      placeholder="3, 7"
                     />
                   </div>
                 </div>

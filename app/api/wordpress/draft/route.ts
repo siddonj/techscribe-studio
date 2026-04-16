@@ -20,6 +20,15 @@ function deriveTitle(content: string, fallbackTitle?: string) {
   return heading || fallbackTitle || "Untitled Draft";
 }
 
+/** Parse a comma-separated string of term IDs into an integer array. */
+function parseTermIds(value: string | null | undefined): number[] {
+  if (!value?.trim()) return [];
+  return value
+    .split(",")
+    .map((id) => parseInt(id.trim(), 10))
+    .filter((id) => !isNaN(id) && id > 0);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -65,14 +74,42 @@ export async function POST(req: NextRequest) {
     const publishIntent = resolvedCalendarEntry?.publish_intent ?? "draft";
     const wpStatus = publishIntent === "publish" ? "publish" : "draft";
 
-    // Build the post payload; categories and tags require resolved WP IDs so
-    // they are not forwarded automatically — the planner stores them as
-    // reference metadata for manual entry in the WordPress editor.
+    // Build the post payload including optional publish metadata.
+    // slug and excerpt are sent as plain strings when present.
+    // categories and tags require resolved WP term IDs; the user enters
+    // these as comma-separated integers in the history detail panel or the
+    // calendar entry editor.
+    // When the history row has no categories/tags, fall back to the calendar
+    // entry's reference values (also parsed as IDs).
     const postPayload: Record<string, unknown> = {
       title: finalTitle,
       content: htmlContent,
       status: wpStatus,
     };
+
+    const wpSlug = existingHistory?.wp_slug?.trim();
+    if (wpSlug) {
+      postPayload.slug = wpSlug;
+    }
+
+    const wpExcerpt = existingHistory?.wp_excerpt?.trim();
+    if (wpExcerpt) {
+      postPayload.excerpt = wpExcerpt;
+    }
+
+    const categoryIds = parseTermIds(
+      existingHistory?.wp_categories ?? resolvedCalendarEntry?.wp_category
+    );
+    if (categoryIds.length > 0) {
+      postPayload.categories = categoryIds;
+    }
+
+    const tagIds = parseTermIds(
+      existingHistory?.wp_tags ?? resolvedCalendarEntry?.wp_tags
+    );
+    if (tagIds.length > 0) {
+      postPayload.tags = tagIds;
+    }
 
     const response = await fetch(endpoint, {
       method: "POST",

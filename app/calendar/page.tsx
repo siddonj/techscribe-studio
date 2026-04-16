@@ -28,6 +28,8 @@ interface CalendarDraft {
   keywords: string;
   audience: string;
   notes: string;
+  wp_category: string;
+  wp_tags: string;
 }
 
 const inputClassName =
@@ -43,6 +45,8 @@ function createEmptyDraft(): CalendarDraft {
     keywords: "",
     audience: "",
     notes: "",
+    wp_category: "",
+    wp_tags: "",
   };
 }
 
@@ -138,6 +142,8 @@ function toDraft(entry: CalendarEntry): CalendarDraft {
     keywords: entry.keywords ?? "",
     audience: entry.audience ?? "",
     notes: entry.notes ?? "",
+    wp_category: entry.wp_category ?? "",
+    wp_tags: entry.wp_tags ?? "",
   };
 }
 
@@ -149,6 +155,8 @@ function toPayload(draft: CalendarDraft) {
     keywords: draft.keywords.trim() || null,
     audience: draft.audience.trim() || null,
     notes: draft.notes.trim() || null,
+    wp_category: draft.wp_category.trim() || null,
+    wp_tags: draft.wp_tags.trim() || null,
   };
 }
 
@@ -1037,6 +1045,28 @@ export default function CalendarPage() {
                         ) : (
                           <p className="text-sm text-muted/60">Not yet published to WordPress</p>
                         )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">WP Category IDs</label>
+                        <input
+                          className={inputClassName}
+                          placeholder="1, 5, 12"
+                          value={editorDraft.wp_category}
+                          onChange={(event) => setEditorDraft((current) => current ? { ...current, wp_category: event.target.value } : current)}
+                        />
+                        <p className="text-[10px] text-muted/60 mt-1">Comma-separated WordPress category IDs sent on publish.</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">WP Tag IDs</label>
+                        <input
+                          className={inputClassName}
+                          placeholder="3, 7"
+                          value={editorDraft.wp_tags}
+                          onChange={(event) => setEditorDraft((current) => current ? { ...current, wp_tags: event.target.value } : current)}
+                        />
+                        <p className="text-[10px] text-muted/60 mt-1">Comma-separated WordPress tag IDs sent on publish.</p>
                       </div>
                     </div>
                   </div>
