@@ -98,6 +98,8 @@ export async function POST(req: NextRequest) {
       wp_last_sync_action: null,
       folder_name: null,
       tags: "",
+      wp_publish_state: null,
+      wp_error_message: null,
     });
 
     if (typeof calendarId === "number") {

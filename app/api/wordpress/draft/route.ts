@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  getCalendarEntryById,
   getHistoryById,
   getWordPressSettings,
+  markHistoryPublishFailed,
   syncCalendarEntryWordPressDraft,
   updateHistoryWordPressDraft,
 } from "@/lib/db";
@@ -54,29 +56,51 @@ export async function POST(req: NextRequest) {
       ? `${siteUrl}/wp-json/wp/v2/posts/${existingPostId}`
       : `${siteUrl}/wp-json/wp/v2/posts`;
 
+    // Resolve publish intent and metadata from linked calendar entry
+    const resolvedCalendarEntry =
+      typeof calendarId === "number"
+        ? getCalendarEntryById(calendarId)
+        : undefined;
+
+    const publishIntent = resolvedCalendarEntry?.publish_intent ?? "draft";
+    const wpStatus = publishIntent === "publish" ? "publish" : "draft";
+
+    // Build the post payload; categories and tags require resolved WP IDs so
+    // they are not forwarded automatically — the planner stores them as
+    // reference metadata for manual entry in the WordPress editor.
+    const postPayload: Record<string, unknown> = {
+      title: finalTitle,
+      content: htmlContent,
+      status: wpStatus,
+    };
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: buildWordPressAuthHeader(username, appPassword),
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        title: finalTitle,
-        content: htmlContent,
-        status: "draft",
-      }),
+      body: JSON.stringify(postPayload),
       cache: "no-store",
     });
 
     if (!response.ok) {
       const message = await response.text();
+      const errorMessage = `WordPress publish failed: ${message}`;
+
+      // Record the failure on the history row so it is retryable
+      if (typeof historyId === "number") {
+        markHistoryPublishFailed(historyId, errorMessage);
+      }
+
       return NextResponse.json(
-        { error: `WordPress publish failed: ${message}` },
+        { error: errorMessage },
         { status: response.status }
       );
     }
 
     const draft = await response.json();
+    const resolvedPublishState: "draft" | "publish" = draft.status === "publish" ? "publish" : "draft";
     let updatedHistory = null;
 
     if (typeof historyId === "number") {
@@ -87,6 +111,7 @@ export async function POST(req: NextRequest) {
           wp_url: draft.link,
           wp_last_published_at: new Date().toISOString(),
           wp_last_sync_action: syncAction,
+          wp_publish_state: resolvedPublishState,
         }) ?? null;
       }
     }
@@ -102,6 +127,7 @@ export async function POST(req: NextRequest) {
       action: syncAction,
       postId: draft.id,
       status: draft.status,
+      publishState: resolvedPublishState,
       url: draft.link,
       title: draft.title?.rendered || finalTitle,
       history: updatedHistory,

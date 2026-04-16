@@ -65,17 +65,70 @@ function joinTagValues(tags: string[]): string {
   return parseTagValues(tags).join(", ");
 }
 
+function getDraftBadgeClassName(row: HistoryRow): string {
+  if (row.wp_publish_state === "failed") {
+    return "text-red-300 border-red-400/20";
+  }
+  if (row.wp_publish_state === "publish") {
+    return "text-fuchsia-300 border-fuchsia-400/20";
+  }
+  return "text-green-300 border-green-400/20";
+}
+
+function getDraftInlineClassName(row: HistoryRow): string {
+  if (row.wp_publish_state === "failed") {
+    return "text-red-300/75";
+  }
+  if (row.wp_publish_state === "publish") {
+    return "text-fuchsia-300/75";
+  }
+  return "text-green-300/75";
+}
+
+function getDraftDetailClassName(row: HistoryRow): string {
+  if (row.wp_publish_state === "failed") {
+    return "text-red-300/90";
+  }
+  if (row.wp_publish_state === "publish") {
+    return "text-fuchsia-300/90";
+  }
+  if (row.wp_post_id) {
+    return "text-green-300/90";
+  }
+  return "text-muted/70";
+}
+
 function getDraftBadgeLabel(row: HistoryRow) {
+  if (row.wp_publish_state === "failed") {
+    return "Publish Failed";
+  }
+
   if (!row.wp_post_id) {
     return null;
+  }
+
+  if (row.wp_publish_state === "publish") {
+    return "Published Live";
   }
 
   return row.wp_last_sync_action === "updated" ? "Updated" : "Draft Linked";
 }
 
 function getDraftStatusText(row: HistoryRow) {
+  if (row.wp_publish_state === "failed") {
+    return row.wp_error_message
+      ? `Publish failed: ${row.wp_error_message}`
+      : "Last publish attempt failed";
+  }
+
   if (!row.wp_post_id) {
     return "Never published to WordPress";
+  }
+
+  if (row.wp_publish_state === "publish") {
+    return row.wp_last_published_at
+      ? `Published live ${formatDate(row.wp_last_published_at)}`
+      : "Published live";
   }
 
   if (row.wp_last_sync_action === "updated") {
@@ -118,7 +171,7 @@ interface HistoryFilterPreset {
   tagFilters: string[];
   tagFilter?: string;
   searchQuery: string;
-  statusFilter: "all" | "never-published" | "draft-linked" | "draft-updated";
+  statusFilter: "all" | "never-published" | "draft-linked" | "draft-updated" | "published-live" | "publish-failed";
   dateFrom: string;
   dateTo: string;
   sortBy: "newest" | "oldest" | "title-az" | "title-za";
@@ -143,7 +196,7 @@ export default function HistoryPage() {
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [tagFilterInput, setTagFilterInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "never-published" | "draft-linked" | "draft-updated">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "never-published" | "draft-linked" | "draft-updated" | "published-live" | "publish-failed">("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title-az" | "title-za">("newest");
@@ -1065,12 +1118,14 @@ export default function HistoryPage() {
             <select
               className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/60"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as "all" | "never-published" | "draft-linked" | "draft-updated")}
+              onChange={(e) => setStatusFilter(e.target.value as "all" | "never-published" | "draft-linked" | "draft-updated" | "published-live" | "publish-failed")}
             >
               <option value="all">All publish states</option>
               <option value="never-published">Never published</option>
               <option value="draft-linked">Draft linked</option>
               <option value="draft-updated">Draft updated</option>
+              <option value="published-live">Published live</option>
+              <option value="publish-failed">Publish failed</option>
             </select>
 
             <div className="bg-subtle border border-border rounded-lg p-3 space-y-3">
@@ -1342,7 +1397,7 @@ export default function HistoryPage() {
                           </div>
                         </div>
                         {draftBadgeLabel && (
-                          <span className="font-mono text-[10px] text-green-300 border border-green-400/20 rounded px-1.5 py-0.5">
+                          <span className={`font-mono text-[10px] border rounded px-1.5 py-0.5 ${getDraftBadgeClassName(row)}`}>
                             {draftBadgeLabel}
                           </span>
                         )}
@@ -1352,9 +1407,13 @@ export default function HistoryPage() {
                         <span className="font-mono text-xs text-muted/40">
                           {formatDate(row.created_at)}
                         </span>
-                        {row.wp_post_id && (
-                          <span className="font-mono text-xs text-green-300/75">
-                            {row.wp_last_sync_action === "updated" ? "Updated draft" : "Draft linked"}
+                        {(row.wp_post_id || row.wp_publish_state === "failed") && (
+                          <span className={`font-mono text-xs ${getDraftInlineClassName(row)}`}>
+                            {row.wp_publish_state === "failed"
+                              ? "Publish failed"
+                              : row.wp_publish_state === "publish"
+                                ? "Published live"
+                                : row.wp_last_sync_action === "updated" ? "Updated draft" : "Draft linked"}
                           </span>
                         )}
                       </div>
@@ -1422,7 +1481,7 @@ export default function HistoryPage() {
                     <span className="font-mono text-xs text-muted">{selected.tool_name}</span>
                     <span className="font-mono text-xs text-muted/50">{formatDate(selected.created_at)}</span>
                     <span className="font-mono text-xs text-muted/50">{selected.word_count} words</span>
-                    <span className={`font-mono text-xs ${selected.wp_post_id ? "text-green-300/90" : "text-muted/70"}`}>
+                    <span className={`font-mono text-xs ${getDraftDetailClassName(selected)}`}>
                       {getDraftStatusText(selected)}
                     </span>
                   </div>
@@ -1433,9 +1492,13 @@ export default function HistoryPage() {
                       href={selected.wp_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="font-mono text-xs px-3 py-1.5 rounded-md border border-green-400/20 text-green-300 hover:text-green-200 hover:border-green-400/40 transition-colors"
+                      className={`font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                        selected.wp_publish_state === "publish"
+                          ? "border-fuchsia-400/20 text-fuchsia-300 hover:text-fuchsia-200 hover:border-fuchsia-400/40"
+                          : "border-green-400/20 text-green-300 hover:text-green-200 hover:border-green-400/40"
+                      }`}
                     >
-                      View Draft
+                      {selected.wp_publish_state === "publish" ? "View Live" : "View Draft"}
                     </a>
                   )}
                   <Link
@@ -1449,7 +1512,13 @@ export default function HistoryPage() {
                     disabled={publishing === selected.id || !publishAllowed || !publishStatusLoaded}
                     className="font-mono text-xs px-3 py-1.5 rounded-md border border-border text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
                   >
-                    {publishing === selected.id ? (selected.wp_post_id ? "Updating..." : "Publishing...") : selected.wp_post_id ? "Update Draft" : "Publish Draft"}
+                    {publishing === selected.id
+                      ? (selected.wp_post_id ? "Updating..." : "Publishing...")
+                      : selected.wp_publish_state === "failed"
+                        ? "Retry Publish"
+                        : selected.wp_post_id
+                          ? "Update Draft"
+                          : "Publish Draft"}
                   </button>
                   <button
                     onClick={handleCopy}
@@ -1479,6 +1548,14 @@ export default function HistoryPage() {
                       Go to Settings →
                     </Link>
                   </div>
+                </div>
+              )}
+
+              {selected.wp_publish_state === "failed" && selected.wp_error_message && (
+                <div className="px-6 py-2 border-b border-border bg-red-400/5">
+                  <p className="text-[11px] text-red-300/90">
+                    Last publish attempt failed: {selected.wp_error_message}. Click <span className="text-white font-semibold">Retry Publish</span> above to try again without regenerating.
+                  </p>
                 </div>
               )}
 

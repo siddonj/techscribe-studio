@@ -52,6 +52,14 @@ function ensureHistorySchema(db: Database.Database) {
   if (!columnNames.has("tags")) {
     db.exec("ALTER TABLE history ADD COLUMN tags TEXT");
   }
+
+  if (!columnNames.has("wp_publish_state")) {
+    db.exec("ALTER TABLE history ADD COLUMN wp_publish_state TEXT");
+  }
+
+  if (!columnNames.has("wp_error_message")) {
+    db.exec("ALTER TABLE history ADD COLUMN wp_error_message TEXT");
+  }
 }
 
 function ensureSettingsSchema(db: Database.Database) {
@@ -163,7 +171,9 @@ function getDb(): Database.Database {
         wp_last_published_at TEXT,
         wp_last_sync_action TEXT,
         folder_name TEXT,
-        tags TEXT
+        tags TEXT,
+        wp_publish_state TEXT,
+        wp_error_message TEXT
       );
     `);
     ensureHistorySchema(_db);
@@ -200,12 +210,14 @@ export interface HistoryRow {
   wp_last_sync_action: "created" | "updated" | null;
   folder_name: string | null;
   tags: string | null;
+  wp_publish_state: "draft" | "publish" | "failed" | null;
+  wp_error_message: string | null;
 }
 
 export interface HistoryQueryOptions {
   toolSlug?: string;
   search?: string;
-  status?: "all" | "never-published" | "draft-linked" | "draft-updated";
+  status?: "all" | "never-published" | "draft-linked" | "draft-updated" | "publish-failed" | "published-live";
   dateFrom?: string;
   dateTo?: string;
   sortBy?: "newest" | "oldest" | "title-az" | "title-za";
@@ -336,9 +348,13 @@ function buildHistoryQueryParts(options: HistoryQueryOptions) {
   if (options.status === "never-published") {
     whereClauses.push("wp_post_id IS NULL");
   } else if (options.status === "draft-linked") {
-    whereClauses.push("wp_post_id IS NOT NULL AND (wp_last_sync_action IS NULL OR wp_last_sync_action = 'created')");
+    whereClauses.push("wp_post_id IS NOT NULL AND (wp_publish_state IS NULL OR wp_publish_state = 'draft') AND (wp_last_sync_action IS NULL OR wp_last_sync_action = 'created')");
   } else if (options.status === "draft-updated") {
-    whereClauses.push("wp_post_id IS NOT NULL AND wp_last_sync_action = 'updated'");
+    whereClauses.push("wp_post_id IS NOT NULL AND (wp_publish_state IS NULL OR wp_publish_state = 'draft') AND wp_last_sync_action = 'updated'");
+  } else if (options.status === "published-live") {
+    whereClauses.push("wp_post_id IS NOT NULL AND wp_publish_state = 'publish'");
+  } else if (options.status === "publish-failed") {
+    whereClauses.push("wp_publish_state = 'failed'");
   }
 
   if (options.dateFrom) {
@@ -384,7 +400,9 @@ export function saveHistory(entry: Omit<HistoryRow, "id">): HistoryRow {
       wp_last_published_at,
       wp_last_sync_action,
       folder_name,
-      tags
+      tags,
+      wp_publish_state,
+      wp_error_message
     )
     VALUES (
       @tool_slug,
@@ -402,7 +420,9 @@ export function saveHistory(entry: Omit<HistoryRow, "id">): HistoryRow {
       @wp_last_published_at,
       @wp_last_sync_action,
       @folder_name,
-      @tags
+      @tags,
+      @wp_publish_state,
+      @wp_error_message
     )
   `);
   const result = stmt.run(entry);
@@ -417,6 +437,7 @@ export function updateHistoryWordPressDraft(
     wp_url: string;
     wp_last_published_at: string;
     wp_last_sync_action: "created" | "updated";
+    wp_publish_state: "draft" | "publish";
   }
 ): HistoryRow | undefined {
   const db = getDb();
@@ -426,9 +447,30 @@ export function updateHistoryWordPressDraft(
         wp_status = @wp_status,
         wp_url = @wp_url,
       wp_last_published_at = @wp_last_published_at,
-      wp_last_sync_action = @wp_last_sync_action
+      wp_last_sync_action = @wp_last_sync_action,
+      wp_publish_state = @wp_publish_state,
+      wp_error_message = NULL
     WHERE id = @id
   `).run({ id, ...draft });
+
+  if (result.changes === 0) {
+    return undefined;
+  }
+
+  return getHistoryById(id);
+}
+
+export function markHistoryPublishFailed(
+  id: number,
+  errorMessage: string
+): HistoryRow | undefined {
+  const db = getDb();
+  const result = db.prepare(`
+    UPDATE history
+    SET wp_publish_state = 'failed',
+        wp_error_message = ?
+    WHERE id = ?
+  `).run(errorMessage, id);
 
   if (result.changes === 0) {
     return undefined;
