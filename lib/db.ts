@@ -238,7 +238,7 @@ export interface HistoryRow {
    * `"publish"` — these are normalised at read-time by
    * `lib/publish-state.resolvePublishState`.
    */
-  wp_publish_state: "draft_created" | "draft_updated" | "published" | "failed" | "draft" | "publish" | null;
+  wp_publish_state: "draft_created" | "draft_updated" | "published" | "scheduled" | "failed" | "draft" | "publish" | null;
   wp_error_message: string | null;
   wp_slug: string | null;
   wp_excerpt: string | null;
@@ -486,7 +486,7 @@ export function updateHistoryWordPressDraft(
     wp_url: string;
     wp_last_published_at: string;
     wp_last_sync_action: "created" | "updated";
-    wp_publish_state: "draft_created" | "draft_updated" | "published";
+    wp_publish_state: "draft_created" | "draft_updated" | "published" | "scheduled";
   }
 ): HistoryRow | undefined {
   const db = getDb();

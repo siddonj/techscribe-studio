@@ -18,6 +18,7 @@ export const PUBLISH_STATES = [
   "draft_created",
   "draft_updated",
   "published",
+  "scheduled",
   "failed",
 ] as const;
 
@@ -28,6 +29,8 @@ export const PUBLISH_STATES = [
  * - `draft_created`  — a WordPress draft was created for the first time
  * - `draft_updated`  — an existing WordPress draft was updated
  * - `published`      — the post is live on WordPress
+ * - `scheduled`      — the post is queued for future publication on WordPress
+ *                      (WordPress `future` status); WordPress owns the timing
  * - `failed`         — the last publish attempt failed; can be retried via the
  *                      "Retry Publish" action in the history view
  *
@@ -43,6 +46,7 @@ export const PUBLISH_STATE_LABELS: Record<PublishState, string> = {
   draft_created: "Draft Linked",
   draft_updated: "Draft Updated",
   published: "Published Live",
+  scheduled: "Scheduled",
   failed: "Publish Failed",
 };
 
@@ -53,6 +57,7 @@ export const PUBLISH_STATE_BADGE_CLASSES: Record<PublishState, string> = {
   draft_created: "text-green-300 border-green-400/20",
   draft_updated: "text-green-300 border-green-400/20",
   published: "text-fuchsia-300 border-fuchsia-400/20",
+  scheduled: "text-blue-300 border-blue-400/20",
   failed: "text-red-300 border-red-400/20",
 };
 
@@ -61,6 +66,7 @@ export const PUBLISH_STATE_INLINE_CLASSES: Record<PublishState, string> = {
   draft_created: "text-green-300/75",
   draft_updated: "text-green-300/75",
   published: "text-fuchsia-300/75",
+  scheduled: "text-blue-300/75",
   failed: "text-red-300/75",
 };
 
@@ -69,6 +75,7 @@ export const PUBLISH_STATE_DETAIL_CLASSES: Record<PublishState, string> = {
   draft_created: "text-green-300/90",
   draft_updated: "text-green-300/90",
   published: "text-fuchsia-300/90",
+  scheduled: "text-blue-300/90",
   failed: "text-red-300/90",
 };
 
@@ -92,6 +99,7 @@ export function normalizePublishState(
     case "draft_created":
     case "draft_updated":
     case "published":
+    case "scheduled":
     case "failed":
       return raw;
     // Legacy values
@@ -99,6 +107,9 @@ export function normalizePublishState(
       return syncAction === "updated" ? "draft_updated" : "draft_created";
     case "publish":
       return "published";
+    // WordPress native status values (may appear in legacy wp_status fields)
+    case "future":
+      return "scheduled";
     default:
       return null;
   }
@@ -162,6 +173,12 @@ export function getPublishStateStatusText(row: HistoryRow, formatIsoDate: (iso: 
     return row.wp_last_published_at
       ? `Published live ${formatIsoDate(row.wp_last_published_at)}`
       : "Published live";
+  }
+
+  if (state === "scheduled") {
+    return row.wp_last_published_at
+      ? `Scheduled on WordPress — queued ${formatIsoDate(row.wp_last_published_at)}`
+      : "Scheduled on WordPress";
   }
 
   if (state === "draft_updated") {

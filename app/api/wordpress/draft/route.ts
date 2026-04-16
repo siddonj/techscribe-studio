@@ -72,7 +72,20 @@ export async function POST(req: NextRequest) {
         : undefined;
 
     const publishIntent = resolvedCalendarEntry?.publish_intent ?? "draft";
-    const wpStatus = publishIntent === "publish" ? "publish" : "draft";
+
+    // Determine the WordPress post status.
+    // - "publish" intent → "publish" (live immediately, WordPress-owned)
+    // - "schedule" intent → "future" (WordPress-owned scheduled publish using
+    //   the calendar entry's scheduled_for date; WordPress controls when it goes live)
+    // - "draft" intent (default) → "draft"
+    let wpStatus: string;
+    if (publishIntent === "publish") {
+      wpStatus = "publish";
+    } else if (publishIntent === "schedule") {
+      wpStatus = "future";
+    } else {
+      wpStatus = "draft";
+    }
 
     // Build the post payload including optional publish metadata.
     // slug and excerpt are sent as plain strings when present.
@@ -86,6 +99,14 @@ export async function POST(req: NextRequest) {
       content: htmlContent,
       status: wpStatus,
     };
+
+    // When scheduling, pass the calendar entry's planned date to WordPress so it
+    // owns the exact publish time. WordPress requires the date in ISO 8601 format.
+    // We use noon UTC (T12:00:00Z) to avoid WordPress silently shifting the date
+    // due to timezone differences.
+    if (wpStatus === "future" && resolvedCalendarEntry?.scheduled_for) {
+      postPayload.date = `${resolvedCalendarEntry.scheduled_for}T12:00:00Z`;
+    }
 
     const wpSlug = existingHistory?.wp_slug?.trim();
     if (wpSlug) {
@@ -138,12 +159,14 @@ export async function POST(req: NextRequest) {
     }
 
     const draft = await response.json();
-    const resolvedPublishState: "draft_created" | "draft_updated" | "published" =
+    const resolvedPublishState: "draft_created" | "draft_updated" | "published" | "scheduled" =
       draft.status === "publish"
         ? "published"
-        : syncAction === "updated"
-          ? "draft_updated"
-          : "draft_created";
+        : draft.status === "future"
+          ? "scheduled"
+          : syncAction === "updated"
+            ? "draft_updated"
+            : "draft_created";
     let updatedHistory = null;
 
     if (typeof historyId === "number") {

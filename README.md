@@ -124,6 +124,35 @@ npm run dev
 
 Then open http://localhost:3000.
 
+## Publish Scheduling Ownership Model
+
+TechScribe Studio uses a **WordPress-owned scheduling** model. The app does not auto-publish or schedule posts on a timer. Publishing is always triggered manually from the tool page or the history archive.
+
+### What the app controls
+
+- **Publish intent** — set per calendar entry to one of three modes:
+  - `Draft` — sends the content to WordPress as a draft for review before publishing.
+  - `Publish` — makes the post live on WordPress immediately when the publish action is triggered.
+  - `Schedule` — sends the post to WordPress with `status: future` and the calendar entry's planned date. WordPress then owns the exact publish time.
+
+- **"Scheduled For" date** — an editorial planning date used to organise your content calendar. When publish intent is `Schedule`, this date is passed to WordPress as the intended publish date (defaulting to noon UTC on that day). The app does not poll or enforce this date itself.
+
+### What WordPress controls
+
+When publish intent is `Schedule`, WordPress receives the planned date and takes ownership of when the post actually goes live. If you change the timing after sending to WordPress, do so inside WordPress — the in-app date is only used at the moment the publish action is triggered.
+
+### Publish state tracking
+
+After a publish action the app records one of the following states:
+
+| State | Meaning |
+|---|---|
+| `Draft Linked` | A WordPress draft was created for the first time |
+| `Draft Updated` | An existing WordPress draft was updated |
+| `Scheduled` | The post is queued for future publication on WordPress (`future` status) |
+| `Published Live` | The post is live on WordPress |
+| `Publish Failed` | The last publish attempt failed; the action can be retried |
+
 ## WordPress Setup
 
 There are two supported ways to configure WordPress publishing:

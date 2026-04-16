@@ -6,7 +6,7 @@ export const CALENDAR_STATUSES = [
   "published",
 ] as const;
 
-export const CALENDAR_PUBLISH_INTENTS = ["draft", "publish"] as const;
+export const CALENDAR_PUBLISH_INTENTS = ["draft", "publish", "schedule"] as const;
 
 export type CalendarEntryStatus = (typeof CALENDAR_STATUSES)[number];
 export type CalendarPublishIntent = (typeof CALENDAR_PUBLISH_INTENTS)[number];
@@ -22,6 +22,7 @@ export const CALENDAR_STATUS_LABELS: Record<CalendarEntryStatus, string> = {
 export const CALENDAR_PUBLISH_INTENT_LABELS: Record<CalendarPublishIntent, string> = {
   draft: "Draft",
   publish: "Publish",
+  schedule: "Schedule",
 };
 
 export interface CalendarEntry {
