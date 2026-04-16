@@ -65,6 +65,39 @@ function joinTagValues(tags: string[]): string {
   return parseTagValues(tags).join(", ");
 }
 
+function getDraftBadgeClassName(row: HistoryRow): string {
+  if (row.wp_publish_state === "failed") {
+    return "text-red-300 border-red-400/20";
+  }
+  if (row.wp_publish_state === "publish") {
+    return "text-fuchsia-300 border-fuchsia-400/20";
+  }
+  return "text-green-300 border-green-400/20";
+}
+
+function getDraftInlineClassName(row: HistoryRow): string {
+  if (row.wp_publish_state === "failed") {
+    return "text-red-300/75";
+  }
+  if (row.wp_publish_state === "publish") {
+    return "text-fuchsia-300/75";
+  }
+  return "text-green-300/75";
+}
+
+function getDraftDetailClassName(row: HistoryRow): string {
+  if (row.wp_publish_state === "failed") {
+    return "text-red-300/90";
+  }
+  if (row.wp_publish_state === "publish") {
+    return "text-fuchsia-300/90";
+  }
+  if (row.wp_post_id) {
+    return "text-green-300/90";
+  }
+  return "text-muted/70";
+}
+
 function getDraftBadgeLabel(row: HistoryRow) {
   if (row.wp_publish_state === "failed") {
     return "Publish Failed";
@@ -1364,13 +1397,7 @@ export default function HistoryPage() {
                           </div>
                         </div>
                         {draftBadgeLabel && (
-                          <span className={`font-mono text-[10px] border rounded px-1.5 py-0.5 ${
-                            row.wp_publish_state === "failed"
-                              ? "text-red-300 border-red-400/20"
-                              : row.wp_publish_state === "publish"
-                                ? "text-fuchsia-300 border-fuchsia-400/20"
-                                : "text-green-300 border-green-400/20"
-                          }`}>
+                          <span className={`font-mono text-[10px] border rounded px-1.5 py-0.5 ${getDraftBadgeClassName(row)}`}>
                             {draftBadgeLabel}
                           </span>
                         )}
@@ -1381,7 +1408,7 @@ export default function HistoryPage() {
                           {formatDate(row.created_at)}
                         </span>
                         {(row.wp_post_id || row.wp_publish_state === "failed") && (
-                          <span className={`font-mono text-xs ${row.wp_publish_state === "failed" ? "text-red-300/75" : row.wp_publish_state === "publish" ? "text-fuchsia-300/75" : "text-green-300/75"}`}>
+                          <span className={`font-mono text-xs ${getDraftInlineClassName(row)}`}>
                             {row.wp_publish_state === "failed"
                               ? "Publish failed"
                               : row.wp_publish_state === "publish"
@@ -1454,7 +1481,7 @@ export default function HistoryPage() {
                     <span className="font-mono text-xs text-muted">{selected.tool_name}</span>
                     <span className="font-mono text-xs text-muted/50">{formatDate(selected.created_at)}</span>
                     <span className="font-mono text-xs text-muted/50">{selected.word_count} words</span>
-                    <span className={`font-mono text-xs ${selected.wp_publish_state === "failed" ? "text-red-300/90" : selected.wp_post_id ? "text-green-300/90" : "text-muted/70"}`}>
+                    <span className={`font-mono text-xs ${getDraftDetailClassName(selected)}`}>
                       {getDraftStatusText(selected)}
                     </span>
                   </div>
