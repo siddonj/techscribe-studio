@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getToolBySlug, Tool, ToolField } from "@/lib/tools";
+import { getHandoffActions, buildHandoffUrl } from "@/lib/handoff-registry";
 
 // Simple markdown renderer (no external deps)
 function renderMarkdown(text: string): string {
@@ -85,6 +86,7 @@ export default function ToolPage() {
   const tool: Tool | undefined = getToolBySlug(slug);
   const calendarIdParam = searchParams.get("calendarId");
   const calendarId = calendarIdParam ? Number.parseInt(calendarIdParam, 10) : null;
+  const handoffActions = getHandoffActions(slug);
 
   const [fields, setFields] = useState<Record<string, string>>({});
   const [output, setOutput] = useState("");
@@ -522,6 +524,22 @@ export default function ToolPage() {
                   >
                     Go to Settings →
                   </Link>
+                </div>
+              )}
+              {!loading && output && handoffActions.length > 0 && (
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className="font-mono text-[11px] text-muted uppercase tracking-wider">
+                    Launch with:
+                  </span>
+                  {handoffActions.map((action) => (
+                    <Link
+                      key={action.targetSlug}
+                      href={buildHandoffUrl(action, fields)}
+                      className="font-mono text-[11px] px-2.5 py-1 rounded-md border border-accent/30 text-accent hover:text-white hover:border-accent/60 transition-colors"
+                    >
+                      {action.label} →
+                    </Link>
+                  ))}
                 </div>
               )}
             </div>
