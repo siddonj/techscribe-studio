@@ -60,6 +60,22 @@ function ensureHistorySchema(db: Database.Database) {
   if (!columnNames.has("wp_error_message")) {
     db.exec("ALTER TABLE history ADD COLUMN wp_error_message TEXT");
   }
+
+  if (!columnNames.has("wp_slug")) {
+    db.exec("ALTER TABLE history ADD COLUMN wp_slug TEXT");
+  }
+
+  if (!columnNames.has("wp_excerpt")) {
+    db.exec("ALTER TABLE history ADD COLUMN wp_excerpt TEXT");
+  }
+
+  if (!columnNames.has("wp_categories")) {
+    db.exec("ALTER TABLE history ADD COLUMN wp_categories TEXT");
+  }
+
+  if (!columnNames.has("wp_tags")) {
+    db.exec("ALTER TABLE history ADD COLUMN wp_tags TEXT");
+  }
 }
 
 function ensureSettingsSchema(db: Database.Database) {
@@ -173,7 +189,11 @@ function getDb(): Database.Database {
         folder_name TEXT,
         tags TEXT,
         wp_publish_state TEXT,
-        wp_error_message TEXT
+        wp_error_message TEXT,
+        wp_slug TEXT,
+        wp_excerpt TEXT,
+        wp_categories TEXT,
+        wp_tags TEXT
       );
     `);
     ensureHistorySchema(_db);
@@ -220,6 +240,14 @@ export interface HistoryRow {
    */
   wp_publish_state: "draft_created" | "draft_updated" | "published" | "failed" | "draft" | "publish" | null;
   wp_error_message: string | null;
+  /** WordPress URL slug for the post. Sent to WP as `slug` when publishing. */
+  wp_slug: string | null;
+  /** WordPress post excerpt. Sent to WP as `excerpt` when publishing. */
+  wp_excerpt: string | null;
+  /** Comma-separated WordPress category names (reference only; IDs must be resolved in WP). */
+  wp_categories: string | null;
+  /** Comma-separated WordPress tag names (reference only; IDs must be resolved in WP). */
+  wp_tags: string | null;
 }
 
 export interface HistoryQueryOptions {
@@ -417,7 +445,11 @@ export function saveHistory(entry: Omit<HistoryRow, "id">): HistoryRow {
       folder_name,
       tags,
       wp_publish_state,
-      wp_error_message
+      wp_error_message,
+      wp_slug,
+      wp_excerpt,
+      wp_categories,
+      wp_tags
     )
     VALUES (
       @tool_slug,
@@ -437,7 +469,11 @@ export function saveHistory(entry: Omit<HistoryRow, "id">): HistoryRow {
       @folder_name,
       @tags,
       @wp_publish_state,
-      @wp_error_message
+      @wp_error_message,
+      @wp_slug,
+      @wp_excerpt,
+      @wp_categories,
+      @wp_tags
     )
   `);
   const result = stmt.run(entry);
@@ -500,6 +536,10 @@ export function updateHistoryMetadata(
     title: string;
     folder_name: string | null;
     tags: string | null;
+    wp_slug?: string | null;
+    wp_excerpt?: string | null;
+    wp_categories?: string | null;
+    wp_tags?: string | null;
   }
 ): HistoryRow | undefined {
   const db = getDb();
@@ -507,9 +547,22 @@ export function updateHistoryMetadata(
     UPDATE history
     SET title = @title,
         folder_name = @folder_name,
-        tags = @tags
+        tags = @tags,
+        wp_slug = @wp_slug,
+        wp_excerpt = @wp_excerpt,
+        wp_categories = @wp_categories,
+        wp_tags = @wp_tags
     WHERE id = @id
-  `).run({ id, ...metadata });
+  `).run({
+    id,
+    title: metadata.title,
+    folder_name: metadata.folder_name,
+    tags: metadata.tags,
+    wp_slug: metadata.wp_slug ?? null,
+    wp_excerpt: metadata.wp_excerpt ?? null,
+    wp_categories: metadata.wp_categories ?? null,
+    wp_tags: metadata.wp_tags ?? null,
+  });
 
   if (result.changes === 0) {
     return undefined;
