@@ -53,24 +53,32 @@ function parseBlogPostIdeas(raw: string): ParsedToolOutput {
   let summary = "";
   const keywords: string[] = [];
 
+  // Find the line for the first idea ("1. …") and extract its content.
+  // Lines before item 1 (e.g. an intro paragraph) are skipped via continue;
+  // the outer loop terminates with break as soon as item 1 is fully parsed.
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Match the first numbered idea: "1. **Title**" (bold) or "1. Title" (plain)
+    // Match the first numbered idea: "1. **Title**" (bold) or "1. Title" (plain).
+    // The bold pattern is tried first so the capture group returns the raw text
+    // inside the markers; the plain fallback handles unformatted output.
     const titleMatch = line.match(/^1\.\s+\*\*(.+)\*\*$/) ?? line.match(/^1\.\s+(.+)$/);
     if (!titleMatch) continue;
 
+    // Strip any residual leading/trailing asterisks from the plain-text branch
+    // (defensive – the bold branch already extracts clean text via the regex).
     title = titleMatch[1].replace(/^\*+|\*+$/g, "").trim();
 
-    // Search the following lines for description and keywords.
-    // Stop only when a new numbered item is encountered.
+    // Scan the lines that belong to this idea (until the next numbered item).
     for (let j = i + 1; j < lines.length; j++) {
       const next = lines[j];
 
       // Stop if we hit the next numbered item
       if (/^\d+\.\s/.test(next)) break;
 
-      // Keyword line: "Keywords: kw1, kw2, kw3" (case-insensitive)
+      // Keyword line – e.g. "Keywords: kw1, kw2, kw3" (case-insensitive).
+      // Asterisks are stripped defensively in case the AI wraps individual
+      // keywords in bold markers.
       const kwMatch = next.match(/^keywords?:?\s*(.+)/i);
       if (kwMatch) {
         keywords.push(
@@ -88,7 +96,7 @@ function parseBlogPostIdeas(raw: string): ParsedToolOutput {
       }
     }
 
-    break; // Only parse the first idea
+    break; // First idea fully parsed – no need to continue the outer loop
   }
 
   return {
@@ -96,9 +104,9 @@ function parseBlogPostIdeas(raw: string): ParsedToolOutput {
     summary,
     keywords,
     prefill: {
-      // "niche" matches the source key in the blog-post-ideas fieldMap so
-      // that buildHandoffUrl can forward the specific idea title as the
-      // "topic" parameter in downstream tools (e.g. article-writer).
+      // "niche" is the source field name declared in the blog-post-ideas
+      // HANDOFF_REGISTRY entry (lib/handoff-registry.ts).  Keep this in sync
+      // with that fieldMap if the registry entry is ever updated.
       niche: title,
     },
   };
