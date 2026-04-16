@@ -941,7 +941,7 @@ export default function CalendarPage() {
                         value={editorDraft.scheduled_for}
                         onChange={(event) => setEditorDraft((current) => current ? { ...current, scheduled_for: event.target.value } : current)}
                       />
-                      <p className="text-[10px] text-muted/60 mt-1">Planning date only — publishing to WordPress must be triggered manually from the tool or archive.</p>
+                      <p className="text-[10px] text-muted/60 mt-1">Editorial planning date. Also used as the WordPress publish date when publish intent is set to "Schedule". Publishing is always triggered manually.</p>
                     </div>
                   </div>
 
@@ -1031,8 +1031,9 @@ export default function CalendarPage() {
                         >
                           <option value="draft">Draft — send to WordPress as draft</option>
                           <option value="publish">Publish — make live on WordPress immediately</option>
+                          <option value="schedule">Schedule — queue on WordPress using the planned date (WordPress controls timing)</option>
                         </select>
-                        <p className="text-[10px] text-muted/60 mt-1">Controls whether the next publish action sends this as a draft or goes live. Triggered manually.</p>
+                        <p className="text-[10px] text-muted/60 mt-1">Controls what happens on the next manual publish action. Scheduling hands the publish date to WordPress — the app does not auto-publish.</p>
                       </div>
                       <div>
                         <p className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">WordPress Status</p>
