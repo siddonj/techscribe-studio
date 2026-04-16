@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { slug, fields, output, calendarId, wp_slug, wp_excerpt, wp_categories, wp_tags } = body;
+    const { slug, fields, output, calendarId } = body;
 
     if (!slug || !fields || !output) {
       return NextResponse.json({ error: "Missing slug, fields, or output" }, { status: 400 });
@@ -100,10 +100,6 @@ export async function POST(req: NextRequest) {
       tags: "",
       wp_publish_state: null,
       wp_error_message: null,
-      wp_slug: typeof wp_slug === "string" && wp_slug.trim() ? wp_slug.trim() : null,
-      wp_excerpt: typeof wp_excerpt === "string" && wp_excerpt.trim() ? wp_excerpt.trim() : null,
-      wp_categories: typeof wp_categories === "string" && wp_categories.trim() ? wp_categories.trim() : null,
-      wp_tags: typeof wp_tags === "string" && wp_tags.trim() ? wp_tags.trim() : null,
     });
 
     if (typeof calendarId === "number") {

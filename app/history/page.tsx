@@ -169,10 +169,6 @@ export default function HistoryPage() {
   const [editingFolder, setEditingFolder] = useState("");
   const [editingTags, setEditingTags] = useState("");
   const [editingTagDraft, setEditingTagDraft] = useState("");
-  const [editingWpSlug, setEditingWpSlug] = useState("");
-  const [editingWpExcerpt, setEditingWpExcerpt] = useState("");
-  const [editingWpCategories, setEditingWpCategories] = useState("");
-  const [editingWpTags, setEditingWpTags] = useState("");
   const [savingMetadata, setSavingMetadata] = useState(false);
   const [bulkFolderName, setBulkFolderName] = useState("");
   const [bulkTags, setBulkTags] = useState("");
@@ -280,10 +276,6 @@ export default function HistoryPage() {
       setEditingFolder("");
       setEditingTags("");
       setEditingTagDraft("");
-      setEditingWpSlug("");
-      setEditingWpExcerpt("");
-      setEditingWpCategories("");
-      setEditingWpTags("");
       return;
     }
 
@@ -291,10 +283,6 @@ export default function HistoryPage() {
     setEditingFolder(selected.folder_name ?? "");
     setEditingTags(selected.tags ?? "");
     setEditingTagDraft("");
-    setEditingWpSlug(selected.wp_slug ?? "");
-    setEditingWpExcerpt(selected.wp_excerpt ?? "");
-    setEditingWpCategories(selected.wp_categories ?? "");
-    setEditingWpTags(selected.wp_tags ?? "");
   }, [selected]);
 
   useEffect(() => {
@@ -402,8 +390,6 @@ export default function HistoryPage() {
           historyId: selected.id,
           title: selected.title,
           content: selected.output,
-          wp_slug: editingWpSlug || selected.wp_slug || undefined,
-          wp_excerpt: editingWpExcerpt || selected.wp_excerpt || undefined,
         }),
       });
 
@@ -438,8 +424,6 @@ export default function HistoryPage() {
         historyId: row.id,
         title: row.title,
         content: row.output,
-        wp_slug: row.wp_slug || undefined,
-        wp_excerpt: row.wp_excerpt || undefined,
       }),
     });
 
@@ -618,10 +602,6 @@ export default function HistoryPage() {
           title: editingTitle,
           folder_name: editingFolder,
           tags: editingTags,
-          wp_slug: editingWpSlug || null,
-          wp_excerpt: editingWpExcerpt || null,
-          wp_categories: editingWpCategories || null,
-          wp_tags: editingWpTags || null,
         }),
       });
 
@@ -1629,57 +1609,6 @@ export default function HistoryPage() {
                     {savingMetadata ? "Saving..." : "Save Metadata"}
                   </button>
                 </div>
-
-                {/* WordPress publish metadata */}
-                <div className="mb-3 rounded-lg border border-border bg-surface/50 p-3 space-y-3">
-                  <p className="text-[11px] font-mono text-muted uppercase tracking-wider">WordPress Publish Metadata</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Slug</label>
-                      <input
-                        type="text"
-                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
-                        value={editingWpSlug}
-                        onChange={(e) => setEditingWpSlug(e.target.value)}
-                        placeholder="my-post-url-slug"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Categories <span className="normal-case text-muted/60">(reference)</span></label>
-                      <input
-                        type="text"
-                        className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
-                        value={editingWpCategories}
-                        onChange={(e) => setEditingWpCategories(e.target.value)}
-                        placeholder="News, Tutorials"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Excerpt</label>
-                    <textarea
-                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60 resize-none"
-                      rows={2}
-                      value={editingWpExcerpt}
-                      onChange={(e) => setEditingWpExcerpt(e.target.value)}
-                      placeholder="Short summary shown in post listings…"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Tags <span className="normal-case text-muted/60">(reference)</span></label>
-                    <input
-                      type="text"
-                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
-                      value={editingWpTags}
-                      onChange={(e) => setEditingWpTags(e.target.value)}
-                      placeholder="seo, how-to, wordpress"
-                    />
-                  </div>
-                  <p className="text-[11px] text-muted/60">
-                    Slug and excerpt are sent to WordPress on publish. Categories and WP tags are stored as reference — assign them by ID in the WordPress editor.
-                  </p>
-                </div>
-
                 <p className="font-mono text-xs text-muted uppercase tracking-wider mb-2">Inputs</p>
                 <div className="flex flex-wrap gap-x-6 gap-y-1">
                   {Object.entries(JSON.parse(selected.fields) as Record<string, string>).map(([k, v]) =>

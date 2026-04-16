@@ -23,13 +23,11 @@ function deriveTitle(content: string, fallbackTitle?: string) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { content, title, historyId, calendarId, wp_slug, wp_excerpt } = body as {
+    const { content, title, historyId, calendarId } = body as {
       content?: string;
       title?: string;
       historyId?: number;
       calendarId?: number;
-      wp_slug?: string;
-      wp_excerpt?: string;
     };
 
     if (!content?.trim()) {
@@ -70,22 +68,11 @@ export async function POST(req: NextRequest) {
     // Build the post payload; categories and tags require resolved WP IDs so
     // they are not forwarded automatically — the planner stores them as
     // reference metadata for manual entry in the WordPress editor.
-    const resolvedSlug = wp_slug?.trim() || existingHistory?.wp_slug?.trim() || undefined;
-    const resolvedExcerpt = wp_excerpt?.trim() || existingHistory?.wp_excerpt?.trim() || undefined;
-
     const postPayload: Record<string, unknown> = {
       title: finalTitle,
       content: htmlContent,
       status: wpStatus,
     };
-
-    if (resolvedSlug) {
-      postPayload.slug = resolvedSlug;
-    }
-
-    if (resolvedExcerpt) {
-      postPayload.excerpt = resolvedExcerpt;
-    }
 
     const response = await fetch(endpoint, {
       method: "POST",
