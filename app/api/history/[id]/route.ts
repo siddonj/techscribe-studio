@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteHistory, getHistoryById, updateHistoryMetadata } from "@/lib/db";
+import { deleteHistory, getHistoryById, updateHistoryMetadata, updateHistoryOutput } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -50,6 +50,16 @@ export async function PATCH(
 
   try {
     const body = await req.json();
+
+    // If only output is being updated, handle that separately
+    if (body.output !== undefined && body.title === undefined) {
+      const updated = updateHistoryOutput(id, String(body.output));
+      if (!updated) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+      return NextResponse.json(updated);
+    }
+
     const title = String(body.title ?? "").trim();
     const folderName = String(body.folder_name ?? "").trim();
     const tags = Array.isArray(body.tags)
