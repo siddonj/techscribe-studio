@@ -112,12 +112,81 @@ function parseBlogPostIdeas(raw: string): ParsedToolOutput {
   };
 }
 
+/**
+ * Parser for the "outline-generator" tool.
+ *
+ * Expected output structure (Markdown outline):
+ *
+ *   # Complete Guide to REST APIs
+ *
+ *   ## Introduction
+ *   - What is REST?
+ *   - Why it matters
+ *
+ *   ## Core Concepts
+ *   ### HTTP Methods
+ *   …
+ *
+ * The parser extracts the H1 as the title, the first H2 section heading as
+ * the summary, and all H2/H3 headings as display keywords so they can be
+ * shown in the HandoffCard chips and forwarded to Article Writer.
+ */
+function parseOutlineGenerator(raw: string): ParsedToolOutput {
+  const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+
+  let title = "";
+  let summary = "";
+  const keywords: string[] = [];
+
+  for (const line of lines) {
+    // H1 → main title.
+    // Asterisks are stripped defensively in case the AI wraps the heading
+    // text in bold markers (e.g. "# **Title**").
+    if (!title) {
+      const h1Match = line.match(/^#\s+(.+)$/);
+      if (h1Match) {
+        title = h1Match[1].replace(/^\*+|\*+$/g, "").trim();
+        continue;
+      }
+    }
+
+    // H2/H3 headings → keyword chips.
+    // The first H2 is also used as the summary (a one-line preview of the
+    // outline's opening section).  Subsequent H2/H3s are collected only as
+    // chips so the summary stays focused on the main entry point.
+    const headingMatch = line.match(/^(#{2,3})\s+(.+)$/);
+    if (headingMatch) {
+      // Asterisks are stripped defensively (same reason as H1 above).
+      const heading = headingMatch[2].replace(/^\*+|\*+$/g, "").trim();
+      if (!summary && headingMatch[1] === "##") {
+        summary = heading;
+      }
+      if (heading && !keywords.includes(heading)) {
+        keywords.push(heading);
+      }
+    }
+  }
+
+  return {
+    title,
+    summary,
+    keywords,
+    prefill: {
+      // "topic" is the source field name declared in the outline-generator
+      // HANDOFF_REGISTRY entry (lib/handoff-registry.ts).  Keep this in sync
+      // with that fieldMap if the registry entry is ever updated.
+      topic: title,
+    },
+  };
+}
+
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 type OutputParser = (raw: string) => ParsedToolOutput;
 
 const PARSER_REGISTRY: Partial<Record<string, OutputParser>> = {
   "blog-post-ideas": parseBlogPostIdeas,
+  "outline-generator": parseOutlineGenerator,
 };
 
 // ── Public API ────────────────────────────────────────────────────────────────
