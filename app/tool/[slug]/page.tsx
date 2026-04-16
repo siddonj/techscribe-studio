@@ -8,7 +8,12 @@ import { getHandoffActions } from "@/lib/handoff-registry";
 import { parseToolOutput, ParsedToolOutput } from "@/lib/output-parsers";
 import HandoffCard from "@/components/HandoffCard";
 import type { PublishState } from "@/lib/publish-state";
-import { normalizePublishState } from "@/lib/publish-state";
+import {
+  normalizePublishState,
+  classifyPublishFailure,
+  getPublishFailureHint,
+  PUBLISH_FAILURE_CATEGORY_LABELS,
+} from "@/lib/publish-state";
 
 // Simple markdown renderer (no external deps)
 function renderMarkdown(text: string): string {
@@ -103,6 +108,7 @@ export default function ToolPage() {
   const [publishing, setPublishing] = useState(false);
   const [publishedDraftUrl, setPublishedDraftUrl] = useState<string | null>(null);
   const [publishState, setPublishState] = useState<PublishState | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [publishAllowed, setPublishAllowed] = useState(false);
   const [publishStatusLoaded, setPublishStatusLoaded] = useState(false);
   const [error, setError] = useState("");
@@ -136,6 +142,7 @@ export default function ToolPage() {
     setDraftPostId(null);
     setPublishedDraftUrl(null);
     setPublishState(null);
+    setPublishError(null);
     setArticleStep("input");
     setEditableOutline("");
   }, [searchParams, slug, tool]);
@@ -197,6 +204,7 @@ export default function ToolPage() {
     setDraftPostId(null);
     setPublishedDraftUrl(null);
     setPublishState(null);
+    setPublishError(null);
 
     const mode = isOutlineMode ? "outline" : undefined;
     if (isOutlineMode) setArticleStep("outline-streaming");
@@ -250,6 +258,7 @@ export default function ToolPage() {
     setDraftPostId(null);
     setPublishedDraftUrl(null);
     setPublishState(null);
+    setPublishError(null);
     setArticleStep("article-streaming");
 
     try {
@@ -323,6 +332,7 @@ export default function ToolPage() {
 
     setPublishing(true);
     setError("");
+    setPublishError(null);
 
     try {
       let currentHistoryId = historyId;
@@ -343,9 +353,15 @@ export default function ToolPage() {
 
       const publishData = await publishRes.json();
       if (!publishRes.ok) {
-        throw new Error(publishData.error || "WordPress publish failed");
+        const errMsg = publishData.error || "WordPress publish failed";
+        setPublishError(errMsg);
+        if (currentHistoryId) {
+          setHistoryId(currentHistoryId);
+        }
+        throw new Error(errMsg);
       }
 
+      setPublishError(null);
       setDraftPostId(publishData.postId ?? null);
       setPublishedDraftUrl(publishData.url ?? null);
       // normalizePublishState returns null for missing/unrecognised values, which
@@ -355,7 +371,11 @@ export default function ToolPage() {
         setHistoryId(currentHistoryId);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "WordPress publish failed");
+      // publishError is already set above; suppress generic error for publish
+      // failures so the inline banner is the primary feedback channel.
+      if (!publishError) {
+        setError(err instanceof Error ? err.message : "WordPress publish failed");
+      }
     } finally {
       setPublishing(false);
     }
@@ -370,6 +390,7 @@ export default function ToolPage() {
     setDraftPostId(null);
     setPublishedDraftUrl(null);
     setPublishState(null);
+    setPublishError(null);
     setArticleStep("input");
     setEditableOutline("");
   };
@@ -434,6 +455,7 @@ export default function ToolPage() {
                   setHistoryId(null);
                   setPublishedDraftUrl(null);
                   setPublishState(null);
+                  setPublishError(null);
                 }}
                 className="w-full text-muted text-xs border border-border py-2 rounded-lg hover:text-white hover:border-white/20 transition-colors"
               >
@@ -521,13 +543,19 @@ export default function ToolPage() {
                     <button
                       onClick={handlePublishDraft}
                       disabled={publishing || !publishAllowed || !publishStatusLoaded}
-                      className="flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border border-border text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                      className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border transition-colors disabled:opacity-50 ${
+                        publishError
+                          ? "border-red-400/30 text-red-300 hover:text-red-200 hover:border-red-400/50"
+                          : "border-border text-muted hover:text-white hover:border-accent/40"
+                      }`}
                     >
                       {publishing
                         ? (draftPostId ? "Updating..." : "Publishing...")
-                        : draftPostId
-                          ? (publishState === "published" ? "Re-publish Live" : "Update Draft")
-                          : "Publish Draft"}
+                        : publishError
+                          ? "Retry Publish"
+                          : draftPostId
+                            ? (publishState === "published" ? "Re-publish Live" : "Update Draft")
+                            : "Publish Draft"}
                     </button>
                   )}
                   {!loading && (
@@ -553,7 +581,24 @@ export default function ToolPage() {
                   </Link>
                 </div>
               )}
-
+              {publishAllowed && publishError && (
+                <div className="mt-2">
+                  {(() => {
+                    const category = classifyPublishFailure(publishError);
+                    const categoryLabel = PUBLISH_FAILURE_CATEGORY_LABELS[category];
+                    const hint = getPublishFailureHint(category);
+                    return (
+                      <div className="flex flex-col gap-0.5 bg-red-400/5 border border-red-400/15 rounded-md px-3 py-2">
+                        <p className="text-[11px] text-red-300/90">
+                          <span className="font-semibold text-red-300">{categoryLabel}:</span>{" "}
+                          {publishError}
+                        </p>
+                        <p className="text-[11px] text-red-300/60">{hint}</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
 

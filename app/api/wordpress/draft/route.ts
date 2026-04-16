@@ -126,12 +126,13 @@ export async function POST(req: NextRequest) {
       const errorMessage = `WordPress publish failed: ${message}`;
 
       // Record the failure on the history row so it is retryable
+      let failedHistory = null;
       if (typeof historyId === "number") {
-        markHistoryPublishFailed(historyId, errorMessage);
+        failedHistory = markHistoryPublishFailed(historyId, errorMessage) ?? null;
       }
 
       return NextResponse.json(
-        { error: errorMessage },
+        { error: errorMessage, httpStatus: response.status, history: failedHistory },
         { status: response.status }
       );
     }
