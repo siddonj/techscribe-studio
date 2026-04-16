@@ -2,6 +2,8 @@
 
 This guide covers everything needed to deploy, operate, and recover TechScribe Studio as a self-hosted production service. A new operator should be able to go from zero to a running instance without reading any implementation code.
 
+For detailed recovery procedures covering missing env vars, SQLite problems, and WordPress failures, see the companion **[Failure Recovery Guide](recovery.md)**.
+
 ---
 
 ## Table of Contents
@@ -247,7 +249,7 @@ Caddy manages TLS automatically via Let's Encrypt.
 All persistent state lives in a single SQLite database file:
 
 ```
-data/techscribe.db
+data/history.db
 ```
 
 This file holds:
@@ -264,13 +266,13 @@ There are no other data files to track. The `.next/` directory is a build artifa
 
 ```bash
 # Daily backup to a timestamped file
-cp data/techscribe.db backups/techscribe-$(date +%Y%m%d).db
+cp data/history.db backups/history-$(date +%Y%m%d).db
 ```
 
 **With SQLite's online backup (safe while the app is running):**
 
 ```bash
-sqlite3 data/techscribe.db ".backup backups/techscribe-$(date +%Y%m%d).db"
+sqlite3 data/history.db ".backup backups/history-$(date +%Y%m%d).db"
 ```
 
 `sqlite3`'s `.backup` command uses the SQLite backup API, which produces a consistent snapshot even while the app has the database open.
@@ -278,24 +280,24 @@ sqlite3 data/techscribe.db ".backup backups/techscribe-$(date +%Y%m%d).db"
 **Retention:** keep at least 7 daily backups. Rotate old files with:
 
 ```bash
-find backups/ -name "techscribe-*.db" -mtime +7 -delete
+find backups/ -name "history-*.db" -mtime +7 -delete
 ```
 
 **Cron example (daily at 02:00):**
 
 ```cron
-0 2 * * * cd /opt/techscribe-studio && sqlite3 data/techscribe.db ".backup backups/techscribe-$(date +\%Y\%m\%d).db" && find backups/ -name "techscribe-*.db" -mtime +7 -delete
+0 2 * * * cd /opt/techscribe-studio && sqlite3 data/history.db ".backup backups/history-$(date +\%Y\%m\%d).db" && find backups/ -name "history-*.db" -mtime +7 -delete
 ```
 
 ### Recovery from backup
 
 1. Stop the app.
-2. Replace `data/techscribe.db` with your backup copy.
+2. Replace `data/history.db` with your backup copy.
 3. Start the app.
 
 ```bash
 sudo systemctl stop techscribe-studio
-cp backups/techscribe-20240101.db data/techscribe.db
+cp backups/history-20240101.db data/history.db
 sudo systemctl start techscribe-studio
 ```
 
@@ -311,15 +313,19 @@ If you deploy to a platform with ephemeral storage (Docker without a volume, ser
 
 ## 7. Failure Recovery
 
+For full, step-by-step recovery procedures covering missing environment variables, SQLite persistence problems, and WordPress verification and publish failures, see **[docs/recovery.md](recovery.md)**.
+
+The sections below cover the most urgent triage steps for getting a stopped or degraded instance back online quickly.
+
 ### App does not start
 
 **Symptom:** `npm run start` exits immediately or the process manager shows the service as failed.
 
 1. Check for missing environment variables:
    ```bash
-   node -e "require('./.env.local')" 2>&1 || echo "Check .env.local"
+   grep ANTHROPIC_API_KEY .env.local 2>/dev/null || echo "Not in .env.local — check process manager config"
    ```
-   Confirm `ANTHROPIC_API_KEY` is set.
+   Confirm `ANTHROPIC_API_KEY` starts with `sk-ant-`.
 
 2. Check for port conflicts:
    ```bash
@@ -347,41 +353,27 @@ If you deploy to a platform with ephemeral storage (Docker without a volume, ser
 - Check server logs for `AnthropicError` entries.
 - Confirm the app is running with the correct environment (`NODE_ENV=production` for production builds).
 
+See [Section 1 of the recovery guide](recovery.md#1-missing-or-invalid-environment-variables) for detailed diagnosis steps.
+
 ### WordPress publishing fails
 
-**Symptom:** Publish action shows "Publish Failed" state in history.
+**Symptom:** Publish action shows a failure badge on the history entry.
 
 1. Go to **Settings** and use the **Test Connection** button. This isolates whether the issue is credentials versus a transient WordPress error.
-2. If the test passes, retry the publish action from the History screen using the retry button on the failed entry.
-3. If the test fails:
-   - Confirm the WordPress Application Password has not been revoked.
-   - Confirm the site URL does not have a trailing slash mismatch.
-   - Confirm the WordPress REST API is accessible: `curl https://your-site.com/wp-json/wp/v2/posts` should return JSON, not an error page.
-4. If environment variables are used instead of saved settings, confirm the variables are set and that the `WORDPRESS_*` values do not have quoting issues.
+2. If the test passes, retry the publish from the History screen using the retry button on the failed entry.
+3. If the test fails, see [Section 3 of the recovery guide](recovery.md#3-wordpress-connection-verification-failures) for detailed diagnosis by error type.
 
 ### Database is locked or corrupt
 
 **Symptom:** API calls return 500 errors with SQLite error messages in the logs.
 
-**Locked (`SQLITE_BUSY`):** Only one process should open the database at a time. If you run multiple instances of the app against the same `data/` directory, you will see lock errors. Ensure only one process is running.
+**Locked (`SQLITE_BUSY`):** Only one process should open `data/history.db` at a time. If you run multiple instances of the app against the same `data/` directory, you will see lock errors. Ensure only one process is running.
 
-**Corrupt:** A corrupt database is uncommon but can happen after an unclean shutdown during a write. To recover:
-
-1. Stop the app.
-2. Try to export the database to SQL:
-   ```bash
-   sqlite3 data/techscribe.db .dump > /tmp/techscribe-dump.sql
-   ```
-3. If the dump succeeds, rebuild the database:
-   ```bash
-   mv data/techscribe.db data/techscribe.db.bak
-   sqlite3 data/techscribe.db < /tmp/techscribe-dump.sql
-   ```
-4. If the dump fails, restore from the most recent backup (see [Recovery from backup](#recovery-from-backup)).
+**Corrupt:** See [Section 2.3 of the recovery guide](recovery.md#23--database-is-corrupt) for the dump-and-rebuild procedure.
 
 ### History or calendar data appears missing
 
-- Confirm the `data/techscribe.db` file exists and is not empty: `ls -lh data/techscribe.db`.
+- Confirm the `data/history.db` file exists and is not empty: `ls -lh data/history.db`.
 - Confirm the running process has the correct working directory — the database path is relative to the project root.
 - If you recently restored a backup, check that the backup file was not zero-length.
 
