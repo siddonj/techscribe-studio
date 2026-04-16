@@ -242,6 +242,8 @@ For the pre-release smoke-test checklist that covers generate, save, history, pl
 
 For a complete reference on what SQLite data matters, where it lives, data directory requirements, and backup procedures, see **[docs/data-persistence.md](docs/data-persistence.md)**.
 
+For upgrade and migration guidance — including how schema migrations work, how to handle persistence-sensitive releases, and rollback procedures — see **[docs/upgrade.md](docs/upgrade.md)**.
+
 ## Data and Security Notes
 
 - `.env.local` is ignored and should never be committed.
