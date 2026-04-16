@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getToolBySlug, Tool, ToolField } from "@/lib/tools";
 import { getHandoffActions, buildHandoffUrl } from "@/lib/handoff-registry";
+import { parseToolOutput, ParsedToolOutput } from "@/lib/output-parsers";
 
 // Simple markdown renderer (no external deps)
 function renderMarkdown(text: string): string {
@@ -90,6 +91,7 @@ export default function ToolPage() {
 
   const [fields, setFields] = useState<Record<string, string>>({});
   const [output, setOutput] = useState("");
+  const [parsedOutput, setParsedOutput] = useState<ParsedToolOutput | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -123,6 +125,7 @@ export default function ToolPage() {
     });
     setFields(defaults);
     setOutput("");
+    setParsedOutput(null);
     setError("");
     setSaved(false);
     setHistoryId(null);
@@ -182,6 +185,7 @@ export default function ToolPage() {
 
     setLoading(true);
     setOutput("");
+    setParsedOutput(null);
     setError("");
     setSaved(false);
     setHistoryId(null);
@@ -220,6 +224,8 @@ export default function ToolPage() {
       if (isOutlineMode) {
         setEditableOutline(accumulated);
         setArticleStep("outline-editing");
+      } else {
+        setParsedOutput(parseToolOutput(tool.slug, accumulated));
       }
     } catch (err) {
       setError(String(err));
@@ -347,6 +353,7 @@ export default function ToolPage() {
 
   const handleClear = () => {
     setOutput("");
+    setParsedOutput(null);
     setError("");
     setSaved(false);
     setHistoryId(null);
@@ -534,7 +541,7 @@ export default function ToolPage() {
                   {handoffActions.map((action) => (
                     <Link
                       key={action.targetSlug}
-                      href={buildHandoffUrl(action, fields)}
+                      href={buildHandoffUrl(action, fields, parsedOutput)}
                       className="font-mono text-[11px] px-2.5 py-1 rounded-md border border-accent/30 text-accent hover:text-white hover:border-accent/60 transition-colors"
                     >
                       {action.label} →

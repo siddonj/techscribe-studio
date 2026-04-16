@@ -17,6 +17,8 @@
  * and renders the appropriate "Launch with…" buttons automatically.
  */
 
+import type { ParsedToolOutput } from "@/lib/output-parsers";
+
 export interface HandoffAction {
   /** Text displayed on the launch button. */
   label: string;
@@ -62,16 +64,29 @@ export function getHandoffActions(slug: string): HandoffAction[] {
 
 /**
  * Builds the URL for a handoff action given the current set of field values
- * from the upstream tool.  Only fields present in the action's fieldMap are
- * forwarded; absent or empty values are omitted from the query string.
+ * from the upstream tool.
+ *
+ * When `parsedOutput` is provided its `prefill` values are merged with the
+ * raw input `fields` before the fieldMap is applied.  The parsed output
+ * values take precedence over raw input so that richer, output-derived data
+ * (e.g. a specific idea title) is forwarded rather than the original prompt.
+ * Only fields present in the action's fieldMap are forwarded; absent or empty
+ * values are omitted from the query string.
  */
 export function buildHandoffUrl(
   action: HandoffAction,
-  fields: Record<string, string | undefined>
+  fields: Record<string, string | undefined>,
+  parsedOutput?: ParsedToolOutput | null
 ): string {
   const params = new URLSearchParams();
+  // Merge input fields with parsed-output prefill values.
+  // parsedOutput.prefill takes precedence when both supply the same key.
+  const merged: Record<string, string | undefined> = {
+    ...fields,
+    ...(parsedOutput?.prefill ?? {}),
+  };
   for (const [sourceField, targetField] of Object.entries(action.fieldMap)) {
-    const value = fields[sourceField]?.trim();
+    const value = merged[sourceField]?.trim();
     if (value) {
       params.set(targetField, value);
     }
