@@ -99,6 +99,8 @@ function FieldInput({
 }
 
 // ── Add Knowledge modal ───────────────────────────────────────────────────────
+const TEXT_PREVIEW_MAX_LENGTH = 60;
+
 function KnowledgeModal({
   onAdd,
   onClose,
@@ -108,9 +110,11 @@ function KnowledgeModal({
 }) {
   const [tab, setTab] = useState<KnowledgeType>("url");
   const [urlValue, setUrlValue] = useState("");
+  const [urlError, setUrlError] = useState("");
   const [textValue, setTextValue] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadContent, setUploadContent] = useState("");
+  const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const inputBase =
@@ -120,27 +124,46 @@ function KnowledgeModal({
     const file = e.target.files?.[0] ?? null;
     setUploadFile(file);
     setUploadContent("");
+    setUploadError("");
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => setUploadContent(String(ev.target?.result ?? ""));
+    reader.onerror = () => {
+      setUploadFile(null);
+      setUploadError("Failed to read the file. Please try a different file.");
+    };
     reader.readAsText(file);
+  };
+
+  const isValidUrl = (value: string): boolean => {
+    try {
+      const url = new URL(value.trim());
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
   };
 
   const canAdd =
     (tab === "url" && urlValue.trim() !== "") ||
-    (tab === "upload" && uploadFile !== null) ||
+    (tab === "upload" && uploadFile !== null && uploadContent !== "") ||
     (tab === "text" && textValue.trim() !== "");
 
   const handleAdd = () => {
     if (!canAdd) return;
     let source: KnowledgeSource;
     if (tab === "url") {
+      if (!isValidUrl(urlValue)) {
+        setUrlError("Please enter a valid URL starting with http:// or https://");
+        return;
+      }
       source = { id: crypto.randomUUID(), type: "url", label: urlValue.trim(), content: urlValue.trim() };
     } else if (tab === "upload") {
       source = { id: crypto.randomUUID(), type: "upload", label: uploadFile!.name, content: uploadContent };
     } else {
-      const preview = textValue.trim().slice(0, 60);
-      source = { id: crypto.randomUUID(), type: "text", label: preview + (textValue.length > 60 ? "…" : ""), content: textValue.trim() };
+      const trimmed = textValue.trim();
+      const preview = trimmed.slice(0, TEXT_PREVIEW_MAX_LENGTH);
+      source = { id: crypto.randomUUID(), type: "text", label: preview + (trimmed.length > TEXT_PREVIEW_MAX_LENGTH ? "…" : ""), content: trimmed };
     }
     onAdd(source);
   };
@@ -188,7 +211,7 @@ function KnowledgeModal({
           {tab === "url" && (
             <>
               <p className="text-muted text-xs leading-relaxed">
-                Extract knowledge from a URL to a webpage, blog post, YouTube video, image, spreadsheet, or PDF document.
+                Add a URL as a reference source. The AI will use it as context when generating your article.
               </p>
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
@@ -197,12 +220,15 @@ function KnowledgeModal({
                 </label>
                 <input
                   type="url"
-                  className={inputBase}
-                  placeholder="example.com/my-article"
+                  className={`${inputBase} ${urlError ? "border-red-400/60" : ""}`}
+                  placeholder="https://example.com/my-article"
                   value={urlValue}
-                  onChange={(e) => setUrlValue(e.target.value)}
+                  onChange={(e) => { setUrlValue(e.target.value); setUrlError(""); }}
                   autoFocus
                 />
+                {urlError && (
+                  <p className="text-red-400 text-xs mt-1">{urlError}</p>
+                )}
               </div>
             </>
           )}
@@ -210,7 +236,7 @@ function KnowledgeModal({
           {tab === "upload" && (
             <>
               <p className="text-muted text-xs leading-relaxed">
-                Upload a text file (.txt, .md, .csv, .json) to include as research context.
+                Upload a text file (.txt, .md, .csv, .json, .html, .xml) to include as research context.
               </p>
               <div
                 onClick={() => fileInputRef.current?.click()}
@@ -232,10 +258,13 @@ function KnowledgeModal({
                   <div className="space-y-2">
                     <p className="text-4xl opacity-30">📄</p>
                     <p className="text-muted text-sm">Click to choose a file</p>
-                    <p className="text-muted text-xs">.txt, .md, .csv, .json, .html</p>
+                    <p className="text-muted text-xs">.txt, .md, .csv, .json, .html, .xml</p>
                   </div>
                 )}
               </div>
+              {uploadError && (
+                <p className="text-red-400 text-xs mt-1">{uploadError}</p>
+              )}
             </>
           )}
 

@@ -12,16 +12,29 @@ interface ResearchItem {
   content: string;
 }
 
-function buildResearchSection(research: ResearchItem[]): string {
-  if (!research || research.length === 0) return "";
+function buildResearchSection(research: unknown): string {
+  if (!Array.isArray(research) || research.length === 0) return "";
+  const items = research.filter(
+    (item): item is ResearchItem =>
+      item !== null &&
+      typeof item === "object" &&
+      typeof (item as ResearchItem).type === "string" &&
+      typeof (item as ResearchItem).content === "string"
+  );
+  if (items.length === 0) {
+    console.warn("[generate] research provided but no valid items after validation");
+    return "";
+  }
+  // Sanitize content so embedded "---" lines cannot break the section delimiters.
+  const sanitize = (s: string) => String(s).replace(/^---$/gm, "- - -");
   const lines: string[] = ["\n\n---\nResearch Sources:\n"];
-  for (const item of research) {
+  for (const item of items) {
     if (item.type === "url") {
-      lines.push(`[URL] ${item.content}`);
+      lines.push(`[URL] ${sanitize(item.content)}`);
     } else if (item.type === "upload") {
-      lines.push(`[File: ${item.label}]\n${item.content}`);
+      lines.push(`[File: ${sanitize(item.label ?? "")}]\n${sanitize(item.content)}`);
     } else {
-      lines.push(`[Note]\n${item.content}`);
+      lines.push(`[Note]\n${sanitize(item.content)}`);
     }
   }
   lines.push("---");
@@ -47,7 +60,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const researchSection = buildResearchSection(research as ResearchItem[]);
+    const researchSection = buildResearchSection(research);
 
     let systemPrompt: string;
     let userPrompt: string;
