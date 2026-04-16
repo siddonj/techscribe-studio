@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CALENDAR_PUBLISH_INTENTS,
+  CALENDAR_PUBLISH_INTENT_LABELS,
   CALENDAR_STATUSES,
   CALENDAR_STATUS_LABELS,
   type CalendarEntry,
@@ -603,7 +604,7 @@ export default function CalendarPage() {
                 >
                   <option value="all">All intents</option>
                   {CALENDAR_PUBLISH_INTENTS.map((intent) => (
-                    <option key={intent} value={intent}>{intent === "publish" ? "Publish" : "Draft"}</option>
+                    <option key={intent} value={intent}>{CALENDAR_PUBLISH_INTENT_LABELS[intent]}</option>
                   ))}
                 </select>
               </div>
