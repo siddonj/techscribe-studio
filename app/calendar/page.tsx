@@ -58,6 +58,26 @@ function getFutureDateValue(days: number) {
     .slice(0, 10);
 }
 
+function getWeekDates(offset: number): string[] {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setDate(now.getDate() - now.getDay() + offset * 7);
+  startDate.setHours(0, 0, 0, 0);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + i);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  });
+}
+
+function formatWeekRange(dates: string[]): string {
+  if (dates.length === 0) return "";
+  const first = new Date(`${dates[0]}T00:00:00`);
+  const last = new Date(`${dates[dates.length - 1]}T00:00:00`);
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+  return `${first.toLocaleDateString(undefined, opts)} – ${last.toLocaleDateString(undefined, { ...opts, year: "numeric" })}`;
+}
+
 function formatDateLabel(value: string) {
   return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
     weekday: "short",
@@ -146,6 +166,9 @@ export default function CalendarPage() {
   const [editorDraft, setEditorDraft] = useState<CalendarDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "week">("list");
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [quickRescheduling, setQuickRescheduling] = useState(false);
 
   const fetchCalendar = useCallback(async (preferredId?: number | null) => {
     setLoading(true);
@@ -252,6 +275,24 @@ export default function CalendarPage() {
     return sections;
   }, [rows]);
 
+  const weekDates = useMemo(
+    () => (viewMode === "week" ? getWeekDates(weekOffset) : []),
+    [viewMode, weekOffset],
+  );
+
+  const weekItemsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEntry[]>();
+    for (const date of weekDates) {
+      map.set(date, rows.filter((r) => r.scheduled_for === date));
+    }
+    return map;
+  }, [weekDates, rows]);
+
+  const weekUnscheduled = useMemo(
+    () => (viewMode === "week" ? rows.filter((r) => !r.scheduled_for) : []),
+    [viewMode, rows],
+  );
+
   async function handleCreateEntry() {
     setCreating(true);
     setError(null);
@@ -335,6 +376,28 @@ export default function CalendarPage() {
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete calendar entry");
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function handleQuickReschedule(dateValue: string) {
+    if (!selectedEntry) return;
+    setQuickRescheduling(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/calendar/${selectedEntry.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...toPayload(toDraft(selectedEntry)), scheduled_for: dateValue }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to reschedule");
+      setMessage(`Moved to ${formatDateLabel(dateValue)}.`);
+      await fetchCalendar(selectedEntry.id);
+    } catch (rescheduleError) {
+      setError(rescheduleError instanceof Error ? rescheduleError.message : "Failed to reschedule");
+    } finally {
+      setQuickRescheduling(false);
     }
   }
 
@@ -445,8 +508,54 @@ export default function CalendarPage() {
         )}
 
         <div className="flex-1 min-h-0 flex gap-6 overflow-hidden">
-          <aside className="w-[28rem] shrink-0 border border-border rounded-2xl bg-card overflow-hidden flex flex-col">
+          {/* Left panel: List view or Week view */}
+          <div className={`${viewMode === "list" ? "w-[28rem] shrink-0" : "flex-1"} border border-border rounded-2xl bg-card overflow-hidden flex flex-col`}>
+            {/* Panel controls */}
             <div className="p-4 border-b border-border space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                {/* View mode toggle */}
+                <div className="flex gap-1 bg-subtle rounded-lg p-0.5">
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${viewMode === "list" ? "bg-card text-white shadow-sm" : "text-muted hover:text-white"}`}
+                  >
+                    List
+                  </button>
+                  <button
+                    onClick={() => setViewMode("week")}
+                    className={`px-3 py-1.5 rounded-md text-xs font-mono transition-colors ${viewMode === "week" ? "bg-card text-white shadow-sm" : "text-muted hover:text-white"}`}
+                  >
+                    Week
+                  </button>
+                </div>
+                {/* Week navigation */}
+                {viewMode === "week" && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setWeekOffset((n) => n - 1)}
+                      className="text-muted hover:text-white text-sm px-2 py-1 border border-border rounded-lg transition-colors"
+                    >
+                      ‹
+                    </button>
+                    <span className="text-xs text-muted font-mono">{formatWeekRange(weekDates)}</span>
+                    <button
+                      onClick={() => setWeekOffset((n) => n + 1)}
+                      className="text-muted hover:text-white text-sm px-2 py-1 border border-border rounded-lg transition-colors"
+                    >
+                      ›
+                    </button>
+                    {weekOffset !== 0 && (
+                      <button
+                        onClick={() => setWeekOffset(0)}
+                        className="text-xs text-accent hover:text-accent/80 px-2 py-1 transition-colors"
+                      >
+                        Today
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <select
                   className={inputClassName}
@@ -469,68 +578,193 @@ export default function CalendarPage() {
                   ))}
                 </select>
               </div>
-              <p className="text-xs text-muted">View the schedule by due date, then open a card to edit the plan or jump straight into a tool.</p>
+              {viewMode === "list" && (
+                <p className="text-xs text-muted">View the schedule by due date, then open a card to edit the plan or jump straight into a tool.</p>
+              )}
+              {viewMode === "week" && selectedEntry && (
+                <p className="text-xs text-accent/80">
+                  <span className="font-mono">↑ Click any day to instantly move</span> <span className="text-white">{selectedEntry.title}</span> <span className="text-muted">to that date.</span>
+                </p>
+              )}
             </div>
 
-            <div className="flex-1 overflow-y-auto">
-              {loading && (
-                <div className="p-6 text-sm text-muted font-mono animate-pulse">Loading calendar...</div>
-              )}
+            {/* List view */}
+            {viewMode === "list" && (
+              <div className="flex-1 overflow-y-auto">
+                {loading && (
+                  <div className="p-6 text-sm text-muted font-mono animate-pulse">Loading calendar...</div>
+                )}
 
-              {!loading && rows.length === 0 && (
-                <div className="p-6 text-center">
-                  <div className="text-4xl opacity-30 mb-3">🗓️</div>
-                  <p className="text-sm text-muted">No planned content yet.</p>
-                  <p className="text-xs text-muted/70 mt-1">Add your first scheduled item above to start building the queue.</p>
-                </div>
-              )}
-
-              {!loading && groupedSections.map((section) => (
-                <section key={section.id} className="border-b border-border/60 last:border-b-0">
-                  <div className="px-4 py-3 bg-subtle/50 flex items-center justify-between">
-                    <p className="font-mono text-xs text-muted uppercase tracking-wider">{section.title}</p>
-                    <span className="text-[11px] text-muted">{section.rows.length} items</span>
+                {!loading && rows.length === 0 && (
+                  <div className="p-6 text-center">
+                    <div className="text-4xl opacity-30 mb-3">🗓️</div>
+                    <p className="text-sm text-muted">No planned content yet.</p>
+                    <p className="text-xs text-muted/70 mt-1">Add your first scheduled item above to start building the queue.</p>
                   </div>
+                )}
 
-                  <div className="p-2 space-y-2">
-                    {section.rows.map((row) => {
-                      const tool = getToolBySlug(row.tool_slug);
-                      const selected = row.id === selectedId;
+                {!loading && groupedSections.map((section) => (
+                  <section key={section.id} className="border-b border-border/60 last:border-b-0">
+                    <div className="px-4 py-3 bg-subtle/50 flex items-center justify-between">
+                      <p className="font-mono text-xs text-muted uppercase tracking-wider">{section.title}</p>
+                      <span className="text-[11px] text-muted">{section.rows.length} items</span>
+                    </div>
 
-                      return (
-                        <button
-                          key={row.id}
-                          onClick={() => setSelectedId(row.id)}
-                          className={`w-full text-left border rounded-xl p-3 transition-colors ${selected ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/20 hover:bg-subtle/40"}`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm text-white font-medium truncate">{row.title}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs">{tool?.icon ?? "📝"}</span>
-                                <span className="text-xs text-muted truncate">{tool?.name ?? row.tool_slug}</span>
+                    <div className="p-2 space-y-2">
+                      {section.rows.map((row) => {
+                        const tool = getToolBySlug(row.tool_slug);
+                        const selected = row.id === selectedId;
+
+                        return (
+                          <button
+                            key={row.id}
+                            onClick={() => setSelectedId(row.id)}
+                            className={`w-full text-left border rounded-xl p-3 transition-colors ${selected ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/20 hover:bg-subtle/40"}`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm text-white font-medium truncate">{row.title}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs">{tool?.icon ?? "📝"}</span>
+                                  <span className="text-xs text-muted truncate">{tool?.name ?? row.tool_slug}</span>
+                                </div>
                               </div>
+                              <span className={`text-[11px] font-mono border rounded px-2 py-1 shrink-0 ${getStatusBadgeClass(row.status)}`}>
+                                {CALENDAR_STATUS_LABELS[row.status]}
+                              </span>
                             </div>
-                            <span className={`text-[11px] font-mono border rounded px-2 py-1 shrink-0 ${getStatusBadgeClass(row.status)}`}>
-                              {CALENDAR_STATUS_LABELS[row.status]}
-                            </span>
-                          </div>
-                          {row.keywords && (
-                            <p className="text-xs text-muted mt-2 truncate">Keywords: {row.keywords}</p>
-                          )}
-                          {row.brief && (
-                            <p className="text-xs text-muted/80 mt-1 line-clamp-2">{row.brief}</p>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
-            </div>
-          </aside>
+                            {row.keywords && (
+                              <p className="text-xs text-muted mt-2 truncate">Keywords: {row.keywords}</p>
+                            )}
+                            {row.brief && (
+                              <p className="text-xs text-muted/80 mt-1 line-clamp-2">{row.brief}</p>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
 
-          <section className="flex-1 border border-border rounded-2xl bg-card overflow-hidden flex flex-col min-w-0">
+            {/* Week view */}
+            {viewMode === "week" && (
+              <div className="flex-1 overflow-auto p-3">
+                {loading && (
+                  <div className="p-6 text-sm text-muted font-mono animate-pulse">Loading calendar...</div>
+                )}
+
+                {!loading && (
+                  <>
+                    <div className="grid grid-cols-7 gap-2 min-h-[420px]">
+                      {weekDates.map((dateValue) => {
+                        const dayItems = weekItemsByDate.get(dateValue) ?? [];
+                        const isToday = dateValue === getTodayValue();
+                        const isSelected = selectedEntry?.scheduled_for === dateValue;
+                        const canMove = !!selectedEntry && dateValue !== selectedEntry.scheduled_for;
+                        const dayNumber = new Date(`${dateValue}T00:00:00`).getDate();
+                        const weekdayLabel = new Date(`${dateValue}T00:00:00`).toLocaleDateString(undefined, { weekday: "short" });
+
+                        return (
+                          <div
+                            key={dateValue}
+                            className={`flex flex-col border rounded-xl overflow-hidden transition-colors ${isToday ? "border-accent/50" : isSelected ? "border-accent/30" : "border-border"}`}
+                          >
+                            {/* Day header — click to quick-reschedule */}
+                            <button
+                              type="button"
+                              disabled={!canMove || quickRescheduling}
+                              onClick={() => canMove && void handleQuickReschedule(dateValue)}
+                              className={`w-full p-2 text-center border-b transition-colors
+                                ${isToday ? "bg-accent/10 border-accent/30" : "bg-subtle/30 border-border"}
+                                ${canMove ? "cursor-pointer hover:bg-accent/20" : "cursor-default"}
+                              `}
+                            >
+                              <p className="text-[10px] font-mono text-muted uppercase">{weekdayLabel}</p>
+                              <p className={`text-xl font-bold mt-0.5 ${isToday ? "text-accent" : "text-white"}`}>{dayNumber}</p>
+                              {canMove && (
+                                <p className="text-[9px] text-accent/60 mt-0.5">Move here</p>
+                              )}
+                            </button>
+
+                            {/* Items in this day */}
+                            <div className="flex-1 p-1.5 space-y-1.5 overflow-y-auto">
+                              {dayItems.map((row) => {
+                                const tool = getToolBySlug(row.tool_slug);
+                                const selected = row.id === selectedId;
+                                return (
+                                  <button
+                                    key={row.id}
+                                    onClick={() => setSelectedId(row.id)}
+                                    className={`w-full text-left border rounded-lg p-2 transition-colors ${selected ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/20 hover:bg-subtle/40"}`}
+                                  >
+                                    <p className="text-[11px] text-white font-medium leading-snug line-clamp-2">{row.title}</p>
+                                    <div className="flex items-center justify-between mt-1.5 gap-1">
+                                      <span className="text-xs">{tool?.icon ?? "📝"}</span>
+                                      <span className={`text-[9px] font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
+                                        {CALENDAR_STATUS_LABELS[row.status]}
+                                      </span>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+
+                              {/* Empty-day drop target when an item is selected */}
+                              {canMove && dayItems.length === 0 && (
+                                <button
+                                  type="button"
+                                  disabled={quickRescheduling}
+                                  onClick={() => void handleQuickReschedule(dateValue)}
+                                  className="w-full text-center text-[10px] text-muted border border-dashed border-border rounded-lg py-4 hover:border-accent/50 hover:text-accent transition-colors disabled:opacity-40"
+                                >
+                                  + Move here
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Unscheduled row */}
+                    {weekUnscheduled.length > 0 && (
+                      <div className="mt-4 border border-border rounded-xl overflow-hidden">
+                        <div className="px-4 py-2 bg-subtle/50 border-b border-border flex items-center justify-between">
+                          <p className="font-mono text-xs text-muted uppercase tracking-wider">Unscheduled</p>
+                          <span className="text-[11px] text-muted">{weekUnscheduled.length} items</span>
+                        </div>
+                        <div className="p-2 flex flex-wrap gap-2">
+                          {weekUnscheduled.map((row) => {
+                            const tool = getToolBySlug(row.tool_slug);
+                            const selected = row.id === selectedId;
+                            return (
+                              <button
+                                key={row.id}
+                                onClick={() => setSelectedId(row.id)}
+                                className={`text-left border rounded-lg p-2.5 transition-colors w-48 ${selected ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/20 hover:bg-subtle/40"}`}
+                              >
+                                <p className="text-xs text-white font-medium truncate">{row.title}</p>
+                                <div className="flex items-center justify-between mt-1.5 gap-1">
+                                  <span className="text-xs">{tool?.icon ?? "📝"}</span>
+                                  <span className={`text-[9px] font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
+                                    {CALENDAR_STATUS_LABELS[row.status]}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Editor panel */}
+          <section className={`${viewMode === "list" ? "flex-1" : "w-80 shrink-0"} border border-border rounded-2xl bg-card overflow-hidden flex flex-col min-w-0`}>
             {!selectedEntry || !editorDraft ? (
               <div className="flex-1 flex items-center justify-center text-center p-8">
                 <div>
