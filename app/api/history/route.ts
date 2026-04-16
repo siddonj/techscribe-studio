@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { countHistory, linkCalendarEntryToHistory, saveHistory, listHistory } from "@/lib/db";
+import { countHistory, getCalendarEntryById, linkCalendarEntryToHistory, saveHistory, listHistory } from "@/lib/db";
 import { getToolBySlug } from "@/lib/tools";
 
 export const runtime = "nodejs";
@@ -81,6 +81,10 @@ export async function POST(req: NextRequest) {
       (fields.videoTitle as string) ||
       "Untitled";
 
+    // Carry over publish metadata from a linked calendar entry so that the
+    // history row inherits the pre-planned wp_category / wp_tags reference values.
+    const linkedCalendar = typeof calendarId === "number" ? getCalendarEntryById(calendarId) : undefined;
+
     const entry = saveHistory({
       tool_slug: tool.slug,
       tool_name: tool.name,
@@ -100,6 +104,10 @@ export async function POST(req: NextRequest) {
       tags: "",
       wp_publish_state: null,
       wp_error_message: null,
+      wp_slug: null,
+      wp_excerpt: null,
+      wp_categories: linkedCalendar?.wp_category ?? null,
+      wp_tags: linkedCalendar?.wp_tags ?? null,
     });
 
     if (typeof calendarId === "number") {
