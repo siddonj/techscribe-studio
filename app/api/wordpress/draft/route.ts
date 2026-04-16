@@ -77,7 +77,8 @@ export async function POST(req: NextRequest) {
     // Build the post payload including optional publish metadata.
     // slug and excerpt are sent as plain strings when present.
     // categories and tags require resolved WP term IDs; the user enters
-    // these as comma-separated integers in the history metadata panel.
+    // these as comma-separated integers in the history detail panel or the
+    // calendar entry editor.
     // When the history row has no categories/tags, fall back to the calendar
     // entry's reference values (also parsed as IDs).
     const postPayload: Record<string, unknown> = {

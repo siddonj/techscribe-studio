@@ -242,9 +242,9 @@ export interface HistoryRow {
   wp_error_message: string | null;
   wp_slug: string | null;
   wp_excerpt: string | null;
-  /** Comma-separated WordPress category IDs (e.g. "1,5,12"). */
+  /** Comma-separated WordPress category IDs (e.g. "1, 5, 12"). */
   wp_categories: string | null;
-  /** Comma-separated WordPress tag IDs (e.g. "3,7"). */
+  /** Comma-separated WordPress tag IDs (e.g. "3, 7"). */
   wp_tags: string | null;
 }
 
