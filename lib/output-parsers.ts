@@ -180,12 +180,63 @@ function parseOutlineGenerator(raw: string): ParsedToolOutput {
   };
 }
 
+/**
+ * Parser for the "headline-generator" tool.
+ *
+ * Expected output structure (numbered list of headlines):
+ *
+ *   1. How to Master GitHub Copilot: 7 Tips for Developers
+ *   2. Why Every Developer Needs GitHub Copilot in 2025
+ *   3. 10 Reasons to Try GitHub Copilot Today
+ *   …
+ *
+ * The parser extracts the first headline as the title and collects all
+ * headlines as keyword chips so the user can see the full set at a glance.
+ * The first headline is placed in `prefill.topic` so downstream tools like
+ * Article Writer and Outline Generator open with it pre-filled.
+ */
+function parseHeadlineGenerator(raw: string): ParsedToolOutput {
+  const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+
+  const headlines: string[] = [];
+
+  for (const line of lines) {
+    // Match numbered list items: "1. Headline text" or "1) Headline text".
+    // Bold markers around the text are stripped defensively.
+    const match = line.match(/^\d+[.)]\s+(.+)$/);
+    if (match) {
+      const text = match[1].replace(/^\*+|\*+$/g, "").trim();
+      if (text) headlines.push(text);
+    }
+  }
+
+  const title = headlines[0] ?? "";
+  // Show a count of all headlines generated as the summary so the card
+  // conveys how many options are available without implying the second
+  // headline is a description of the first.
+  const summary =
+    headlines.length > 1 ? `${headlines.length} headlines generated` : "";
+
+  return {
+    title,
+    summary,
+    keywords: headlines,
+    prefill: {
+      // "topic" is the source field name declared in the headline-generator
+      // HANDOFF_REGISTRY entry (lib/handoff-registry.ts).  Keep this in sync
+      // with that fieldMap if the registry entry is ever updated.
+      topic: title,
+    },
+  };
+}
+
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 type OutputParser = (raw: string) => ParsedToolOutput;
 
 const PARSER_REGISTRY: Partial<Record<string, OutputParser>> = {
   "blog-post-ideas": parseBlogPostIdeas,
+  "headline-generator": parseHeadlineGenerator,
   "outline-generator": parseOutlineGenerator,
 };
 
