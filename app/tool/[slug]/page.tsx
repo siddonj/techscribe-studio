@@ -8,6 +8,7 @@ import { getHandoffActions } from "@/lib/handoff-registry";
 import { parseToolOutput, ParsedToolOutput } from "@/lib/output-parsers";
 import HandoffCard from "@/components/HandoffCard";
 import type { PublishState } from "@/lib/publish-state";
+import { normalizePublishState } from "@/lib/publish-state";
 
 // Simple markdown renderer (no external deps)
 function renderMarkdown(text: string): string {
@@ -347,13 +348,7 @@ export default function ToolPage() {
 
       setDraftPostId(publishData.postId ?? null);
       setPublishedDraftUrl(publishData.url ?? null);
-      setPublishState(
-        publishData.publishState === "published" || publishData.publishState === "publish"
-          ? "published"
-          : publishData.publishState === "draft_updated"
-            ? "draft_updated"
-            : "draft_created"
-      );
+      setPublishState(normalizePublishState(publishData.publishState) ?? "draft_created");
       if (currentHistoryId) {
         setHistoryId(currentHistoryId);
       }

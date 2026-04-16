@@ -354,7 +354,7 @@ function buildHistoryQueryParts(options: HistoryQueryOptions) {
   }
 
   if (options.status === "never-published") {
-    whereClauses.push("wp_post_id IS NULL AND (wp_publish_state IS NULL OR wp_publish_state != 'failed')");
+    whereClauses.push("(wp_publish_state IS NULL OR wp_publish_state <> 'failed') AND wp_post_id IS NULL");
   } else if (options.status === "draft-linked") {
     // Matches both new ("draft_created") and legacy ("draft" + created action) stored values
     whereClauses.push("wp_post_id IS NOT NULL AND (wp_publish_state = 'draft_created' OR ((wp_publish_state IS NULL OR wp_publish_state = 'draft') AND (wp_last_sync_action IS NULL OR wp_last_sync_action = 'created')))");

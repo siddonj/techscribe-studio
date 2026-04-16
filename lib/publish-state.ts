@@ -146,7 +146,7 @@ export function getPublishStateBadgeLabel(row: HistoryRow): string | null {
 }
 
 /** Returns a full human-readable status description for a history row. */
-export function getPublishStateStatusText(row: HistoryRow, formatDate: (iso: string) => string): string {
+export function getPublishStateStatusText(row: HistoryRow, formatIsoDate: (iso: string) => string): string {
   const state = resolvePublishState(row);
 
   if (state === "failed") {
@@ -161,18 +161,18 @@ export function getPublishStateStatusText(row: HistoryRow, formatDate: (iso: str
 
   if (state === "published") {
     return row.wp_last_published_at
-      ? `Published live ${formatDate(row.wp_last_published_at)}`
+      ? `Published live ${formatIsoDate(row.wp_last_published_at)}`
       : "Published live";
   }
 
   if (state === "draft_updated") {
     return row.wp_last_published_at
-      ? `Draft updated ${formatDate(row.wp_last_published_at)}`
+      ? `Draft updated ${formatIsoDate(row.wp_last_published_at)}`
       : "Draft updated";
   }
 
   return row.wp_last_published_at
-    ? `Draft linked ${formatDate(row.wp_last_published_at)}`
+    ? `Draft linked ${formatIsoDate(row.wp_last_published_at)}`
     : "Draft linked";
 }
 
