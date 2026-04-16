@@ -382,23 +382,24 @@ export default function CalendarPage() {
   async function handleQuickRescheduleById(id: number, dateValue: string) {
     const entry = rows.find((r) => r.id === id);
     if (!entry) return;
+    const newDate = dateValue.trim() || null;
     setQuickRescheduling(true);
     setError(null);
     setMessage(null);
     // Optimistic update — reflect the new date in the UI immediately
     setRows((current) =>
-      current.map((r) => (r.id === id ? { ...r, scheduled_for: dateValue } : r))
+      current.map((r) => (r.id === id ? { ...r, scheduled_for: newDate } : r))
     );
     setSelectedId(id);
     try {
       const res = await fetch(`/api/calendar/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...toPayload(toDraft(entry)), scheduled_for: dateValue }),
+        body: JSON.stringify({ ...toPayload(toDraft(entry)), scheduled_for: newDate }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to reschedule");
-      setMessage(`Moved to ${formatDateLabel(dateValue)}.`);
+      setMessage(newDate ? `Moved to ${formatDateLabel(newDate)}.` : "Item unscheduled.");
       await fetchCalendar(id);
     } catch (rescheduleError) {
       setError(rescheduleError instanceof Error ? rescheduleError.message : "Failed to reschedule");
@@ -662,13 +663,13 @@ export default function CalendarPage() {
                               <span className="text-[10px] text-muted">📅</span>
                               <input
                                 type="date"
-                                title="Reschedule"
+                                aria-label="Reschedule date"
                                 value={row.scheduled_for ?? ""}
                                 disabled={quickRescheduling}
                                 onChange={(e) => {
-                                  if (e.target.value) void handleQuickRescheduleById(row.id, e.target.value);
+                                  void handleQuickRescheduleById(row.id, e.target.value);
                                 }}
-                                className="text-[11px] text-muted bg-transparent border-0 p-0 focus:outline-none cursor-pointer hover:text-accent transition-colors disabled:opacity-40 [color-scheme:dark]"
+                                className="text-[11px] text-muted bg-transparent border-0 p-0 focus:outline-none focus:ring-1 focus:ring-accent rounded cursor-pointer hover:text-accent transition-colors disabled:opacity-40 [color-scheme:dark]"
                               />
                               {!row.scheduled_for && (
                                 <span className="text-[10px] text-muted/50 italic">unscheduled</span>
