@@ -130,10 +130,8 @@ export function getPublishStateInlineClass(row: HistoryRow): string {
 /** Returns the detail-panel text CSS class for a history row. */
 export function getPublishStateDetailClass(row: HistoryRow): string {
   const state = resolvePublishState(row);
-  if (state === "failed") return PUBLISH_STATE_DETAIL_CLASSES.failed;
-  if (state === "published") return PUBLISH_STATE_DETAIL_CLASSES.published;
-  if (row.wp_post_id) return "text-green-300/90";
-  return "text-muted/70";
+  if (!state) return "text-muted/70";
+  return PUBLISH_STATE_DETAIL_CLASSES[state];
 }
 
 /** Returns the badge label for a history row, or `null` when no state exists. */

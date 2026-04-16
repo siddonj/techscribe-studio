@@ -348,7 +348,7 @@ export default function ToolPage() {
 
       setDraftPostId(publishData.postId ?? null);
       setPublishedDraftUrl(publishData.url ?? null);
-      setPublishState(normalizePublishState(publishData.publishState) ?? "draft_created");
+      setPublishState(normalizePublishState(publishData.publishState));
       if (currentHistoryId) {
         setHistoryId(currentHistoryId);
       }
