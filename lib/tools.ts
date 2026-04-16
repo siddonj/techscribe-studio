@@ -230,6 +230,22 @@ export const TOOLS: Tool[] = [
     userPromptTemplate: `Generate {count} FAQ questions and answers for a blog post about: {topic}\n\nFocus on real questions people search for. Answers should be 2-4 sentences, clear, and complete enough for a featured snippet.`,
   },
 
+  {
+    slug: "keyword-research-brief",
+    name: "Keyword Research Brief",
+    category: "SEO & Keywords",
+    description: "Transform external keyword research data into an actionable content brief.",
+    icon: "🔬",
+    fields: [
+      { name: "topic", label: "Content Topic", type: "text", placeholder: "e.g. Python web scraping", required: true },
+      { name: "researchNotes", label: "Keyword Research Data", type: "textarea", placeholder: "Paste keyword data from Ahrefs, SEMrush, Google Keyword Planner, or your own research notes. Include keywords, search volumes, difficulties, and any competitor insights...", required: true, rows: 8 },
+      { name: "audience", label: "Target Audience", type: "text", placeholder: "e.g. Beginner Python developers" },
+      { name: "intent", label: "Primary Search Intent", type: "select", options: ["Informational", "Commercial", "Navigational", "Transactional"] },
+    ],
+    systemPrompt: `You are an expert SEO content strategist. Analyze raw keyword research data and produce a structured, actionable content brief that guides a writer to produce a high-ranking article. Synthesize the research into a clear strategy with primary keyword, secondary keywords, content angle, recommended title, outline structure, and internal linking opportunities. Format the brief in clean Markdown.`,
+    userPromptTemplate: `Create a detailed SEO content brief from this keyword research data.\n\nContent Topic: {topic}\nTarget Audience: {audience}\nPrimary Search Intent: {intent}\n\nKeyword Research Data:\n{researchNotes}\n\nDeliver a complete content brief including:\n1. **Recommended Title** (SEO-optimized, under 60 chars)\n2. **Primary Keyword** and monthly search volume\n3. **Secondary Keywords** (5-10 supporting terms)\n4. **LSI Keywords** (semantic variations to include naturally)\n5. **Content Angle** — the unique positioning or hook\n6. **Recommended Word Count** based on keyword difficulty\n7. **Content Outline** (H2/H3 structure)\n8. **Key Points to Cover** (what top-ranking pages include)\n9. **CTA Recommendation**\n\nFormat clearly so a writer can act on it immediately.`,
+  },
+
   // ── EDITING & REWRITING ──────────────────────────────────────
   {
     slug: "rewriter",
@@ -383,6 +399,25 @@ export const TOOLS: Tool[] = [
   },
 
   // ── VIDEO CONTENT ────────────────────────────────────────────
+  {
+    slug: "youtube-to-blog",
+    name: "YouTube to Blog Post",
+    category: "Video Content",
+    description: "Convert a YouTube video transcript or description into a full blog post.",
+    icon: "▶️",
+    fields: [
+      { name: "videoTitle", label: "Video Title", type: "text", placeholder: "e.g. Building a REST API with Node.js and Express", required: true },
+      { name: "transcript", label: "Transcript or Description", type: "textarea", placeholder: "Paste the video transcript, auto-captions, or a detailed description of the video content...", required: true, rows: 8 },
+      { name: "keywords", label: "Target Keywords (optional)", type: "text", placeholder: "e.g. Node.js API, Express tutorial, REST API" },
+      { name: "tone", label: "Blog Tone", type: "select", options: ["Informative", "Conversational", "Professional", "Enthusiastic"] },
+      { name: "length", label: "Post Length", type: "select", options: ["Short (~800 words)", "Medium (~1500 words)", "Long (~2500 words)"] },
+    ],
+    systemPrompt: `You are an expert content repurposing specialist who transforms video content into high-quality blog posts. Convert transcripts or descriptions into well-structured, SEO-friendly articles that read naturally as written content — not a transcript. Expand on ideas, add context, and format as proper Markdown with headings, subheadings, and clear sections. Preserve all key insights from the original video but present them in a blog-native format.`,
+    userPromptTemplate: `Convert the following YouTube video content into a {length} blog post.\n\nVideo Title: {videoTitle}\nTarget Keywords: {keywords}\nTone: {tone}\n\nVideo Content:\n{transcript}\n\nWrite a complete blog post that:\n1. Starts with a compelling introduction (not "In this video...")\n2. Uses clear H2/H3 headings to structure the content\n3. Expands on key points with additional context and examples\n4. Integrates the target keywords naturally\n5. Ends with a strong conclusion and CTA\n\nFormat in Markdown. Do not reference the video directly — write as original blog content.`,
+    outlineSystemPrompt: `You are a content strategist who creates blog post outlines from video content. Analyse the video transcript and produce a well-structured Markdown outline that captures all key points and organises them logically for a written article. Return ONLY the outline.`,
+    outlineUserPromptTemplate: `Create a blog post outline from this YouTube video content.\n\nVideo Title: {videoTitle}\nTarget Keywords: {keywords}\nTarget Length: {length}\n\nVideo Content:\n{transcript}\n\nStructure the outline as:\n# Blog Post Title (SEO-optimised, not the video title)\n## Introduction\n## [Main Section 1]\n### [Subsection if needed]\n## [Main Section 2]\n...\n## Conclusion\n\nReturn only the outline — no body content.`,
+    articleWithOutlinePromptTemplate: `Write a {length} blog post based on this YouTube video content.\n\nVideo Title: {videoTitle}\nTarget Keywords: {keywords}\nTone: {tone}\n\nVideo Content:\n{transcript}\n\nFollow this outline exactly:\n{outline}\n\nWrite as original blog content — do not reference "the video" directly. Expand every section with full paragraphs, examples, and insights. Format in Markdown.`,
+  },
   {
     slug: "video-title",
     name: "Video Title Generator",

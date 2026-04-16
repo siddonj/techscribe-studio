@@ -45,6 +45,14 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 - Copy, iterate on, and publish saved outputs without leaving the app
 - Outline-to-article workflow for long-form article generation
 - Open a tool from the calendar with planning fields prefilled into the writing flow
+- **YouTube-to-blog**: paste a video transcript and generate a full blog post (with optional outline step)
+- **Batch generation API** (`POST /api/generate/batch`): trigger multiple tool jobs programmatically from cron jobs, CI pipelines, or external schedulers
+
+### External research inputs
+
+- **Keyword Research Brief** tool accepts raw data from Ahrefs, SEMrush, Google Keyword Planner, or hand-collected notes and converts it into a structured content brief
+- The brief includes a recommended title, primary and secondary keywords, LSI terms, content angle, outline, and word-count guidance
+- Handoff buttons open downstream tools (Article Writer, Outline Generator, Headline Generator) pre-filled from the brief
 
 ### History and organization
 
@@ -68,11 +76,11 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 |---|---|
 | Content Creation | Article Writer, Listicle Writer, Introduction Writer, Conclusion Writer, Paragraph Writer, Content Expander |
 | Ideas & Planning | Blog Post Ideas, Headline Generator, Outline Generator |
-| SEO & Keywords | Meta Title Generator, Meta Description Generator, Keyword Cluster Generator, FAQ Writer |
+| SEO & Keywords | Meta Title Generator, Meta Description Generator, Keyword Cluster Generator, FAQ Writer, Keyword Research Brief |
 | Editing & Rewriting | Content Rewriter, Content Shortener, Summarizer, Explain Like I'm 5 |
 | Social Media | Tweet / X Post Ideas, LinkedIn Post, Facebook Post, Pinterest Pin Description |
 | Email & Marketing | Email Subject Line, Call-to-Action Writer, AIDA Copywriter |
-| Video Content | Video Title Generator, Video Description, Video Script Outline |
+| Video Content | YouTube to Blog Post, Video Title Generator, Video Description, Video Script Outline |
 
 ## Quick Start
 
@@ -114,6 +122,12 @@ Optional WordPress fallback variables:
 WORDPRESS_SITE_URL=https://your-site.com
 WORDPRESS_USERNAME=your-wordpress-username
 WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx xxxx xxxx
+```
+
+Optional batch generation secret (required to enable the batch API):
+
+```env
+BATCH_API_SECRET=your-secret-token-here
 ```
 
 ### 4. Start the app
@@ -266,6 +280,13 @@ TechScribe Studio supports structured handoffs between tools. When a supported u
 | Headline Generator | Article Writer | First headline → topic |
 | Headline Generator | Outline Generator | First headline → topic |
 | Outline Generator | Article Writer | Outline title → topic; input keywords → keywords; input audience → audience |
+| YouTube to Blog Post | Meta Title Generator | Video title → topic; keywords → keyword |
+| YouTube to Blog Post | Meta Description Generator | Video title → topic; keywords → keyword |
+| YouTube to Blog Post | Tweet / X Post Ideas | Video title → topic |
+| YouTube to Blog Post | LinkedIn Post | Video title → topic |
+| Keyword Research Brief | Article Writer | Brief topic → topic |
+| Keyword Research Brief | Outline Generator | Brief topic → topic |
+| Keyword Research Brief | Headline Generator | Brief topic → topic |
 
 ### Fallback rendering
 
@@ -317,6 +338,92 @@ Example:
 }
 ```
 
+## Batch Generation API
+
+The `POST /api/generate/batch` endpoint enables automated content generation from external schedulers, CI pipelines, or cron jobs.
+
+### Setup
+
+1. Set `BATCH_API_SECRET` in your environment to a long random string. The endpoint returns `503` if this variable is not set.
+
+2. Include the secret as a Bearer token in every request:
+   ```
+   Authorization: Bearer your-secret-token-here
+   ```
+
+### Request format
+
+```json
+POST /api/generate/batch
+Content-Type: application/json
+Authorization: Bearer your-secret-token-here
+
+{
+  "jobs": [
+    {
+      "slug": "article-writer",
+      "fields": {
+        "topic": "10 best VS Code extensions in 2025",
+        "tone": "Conversational",
+        "length": "Medium (~1500 words)",
+        "keywords": "VS Code, extensions, developer tools",
+        "audience": "Web developers"
+      }
+    },
+    {
+      "slug": "meta-title",
+      "fields": {
+        "topic": "VS Code extensions for developers",
+        "keyword": "VS Code extensions",
+        "count": "5"
+      }
+    }
+  ]
+}
+```
+
+Maximum batch size is 20 jobs per request. Jobs are processed sequentially.
+
+### Response format
+
+```json
+{
+  "results": [
+    {
+      "slug": "article-writer",
+      "status": "success",
+      "output": "# 10 Best VS Code Extensions in 2025\n\n..."
+    },
+    {
+      "slug": "meta-title",
+      "status": "success",
+      "output": "1. Best VS Code Extensions for Developers (2025) — 54 chars\n..."
+    }
+  ]
+}
+```
+
+A per-job failure (unknown slug, upstream error) sets `status: "error"` and adds an `error` field. It does not abort remaining jobs.
+
+### Example: GitHub Actions cron workflow
+
+```yaml
+name: Weekly content generation
+on:
+  schedule:
+    - cron: "0 8 * * 1"   # Every Monday at 08:00 UTC
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run batch generation
+        run: |
+          curl -sf -X POST https://your-techscribe.example.com/api/generate/batch \
+            -H "Authorization: Bearer ${{ secrets.BATCH_API_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"jobs":[{"slug":"blog-post-ideas","fields":{"niche":"DevOps","count":"10","format":"Mixed"}}]}'
+```
+
 ## Phase 2 Status
 
 Completed so far in Phase 2:
@@ -327,13 +434,13 @@ Completed so far in Phase 2:
 - Calendar sync when linked WordPress drafts are created or updated
 - WordPress planning metadata on calendar items, including target category, tags, and publish intent
 - Production deployment hardening and operational documentation ([docs/operations.md](docs/operations.md))
+- YouTube-to-blog workflow — convert any video transcript or description into a full blog post with the outline-first option
+- External keyword research inputs — Keyword Research Brief tool accepts Ahrefs/SEMrush/Google Keyword Planner data and produces actionable content briefs
+- Automated generation API — `POST /api/generate/batch` endpoint for scheduler-driven content jobs (requires `BATCH_API_SECRET`)
 
 Still open for later:
 
 - Richer weekly board or month-grid calendar views
-- Scheduled or automated generation jobs
-- External keyword research integrations
-- YouTube-to-blog workflows
 - Richer publishing workflows beyond draft creation
 
 ## License
