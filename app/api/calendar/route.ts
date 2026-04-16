@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  computeCalendarSummary,
   createCalendarEntry,
-  getCalendarSummary,
   listCalendarEntries,
   normalizeCalendarPublishIntent,
 } from "@/lib/db";
@@ -34,7 +34,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       rows,
-      summary: getCalendarSummary(),
+      // Summary is computed from the already-filtered rows so that summary
+      // cards always reflect the active filter state rather than all entries.
+      summary: computeCalendarSummary(rows),
     });
   } catch (error) {
     console.error("Calendar GET error:", error);

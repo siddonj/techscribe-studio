@@ -884,8 +884,13 @@ export function deleteCalendarEntry(id: number): boolean {
   return result.changes > 0;
 }
 
-export function getCalendarSummary(): CalendarSummary {
-  const rows = listCalendarEntries();
+/**
+ * Computes a CalendarSummary from an arbitrary list of calendar entries.
+ * Use this to produce summary metrics that match whatever filtered set of
+ * rows the caller already holds, so that summary cards stay aligned with
+ * the active view/filter state.
+ */
+export function computeCalendarSummary(rows: CalendarEntry[]): CalendarSummary {
   const today = new Date().toISOString().slice(0, 10);
   const weekAhead = new Date();
   weekAhead.setUTCDate(weekAhead.getUTCDate() + 7);
@@ -925,6 +930,11 @@ export function getCalendarSummary(): CalendarSummary {
   }
 
   return summary;
+}
+
+/** Returns a CalendarSummary computed from all (unfiltered) calendar entries. */
+export function getCalendarSummary(): CalendarSummary {
+  return computeCalendarSummary(listCalendarEntries());
 }
 
 export function linkCalendarEntryToHistory(calendarId: number, historyId: number): CalendarEntry | undefined {
