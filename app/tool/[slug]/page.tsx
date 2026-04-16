@@ -15,6 +15,16 @@ import {
   PUBLISH_FAILURE_CATEGORY_LABELS,
 } from "@/lib/publish-state";
 
+// ── Knowledge / Research types ────────────────────────────────────────────────
+type KnowledgeType = "url" | "upload" | "text";
+
+interface KnowledgeSource {
+  id: string;
+  type: KnowledgeType;
+  label: string;
+  content: string;
+}
+
 // Simple markdown renderer (no external deps)
 function renderMarkdown(text: string): string {
   return text
@@ -88,6 +98,215 @@ function FieldInput({
   );
 }
 
+// ── Add Knowledge modal ───────────────────────────────────────────────────────
+const TEXT_PREVIEW_MAX_LENGTH = 60;
+
+function KnowledgeModal({
+  onAdd,
+  onClose,
+}: {
+  onAdd: (source: KnowledgeSource) => void;
+  onClose: () => void;
+}) {
+  const [tab, setTab] = useState<KnowledgeType>("url");
+  const [urlValue, setUrlValue] = useState("");
+  const [urlError, setUrlError] = useState("");
+  const [textValue, setTextValue] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadContent, setUploadContent] = useState("");
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const inputBase =
+    "w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60 transition-colors";
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setUploadFile(file);
+    setUploadContent("");
+    setUploadError("");
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setUploadContent(String(ev.target?.result ?? ""));
+    reader.onerror = () => {
+      setUploadFile(null);
+      setUploadError("Failed to read the file. Please try a different file.");
+    };
+    reader.readAsText(file);
+  };
+
+  const isValidUrl = (value: string): boolean => {
+    try {
+      const url = new URL(value.trim());
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+
+  const canAdd =
+    (tab === "url" && urlValue.trim() !== "") ||
+    (tab === "upload" && uploadFile !== null && uploadContent !== "") ||
+    (tab === "text" && textValue.trim() !== "");
+
+  const handleAdd = () => {
+    if (!canAdd) return;
+    let source: KnowledgeSource;
+    if (tab === "url") {
+      if (!isValidUrl(urlValue)) {
+        setUrlError("Please enter a valid URL starting with http:// or https://");
+        return;
+      }
+      source = { id: crypto.randomUUID(), type: "url", label: urlValue.trim(), content: urlValue.trim() };
+    } else if (tab === "upload") {
+      source = { id: crypto.randomUUID(), type: "upload", label: uploadFile!.name, content: uploadContent };
+    } else {
+      const trimmed = textValue.trim();
+      const preview = trimmed.slice(0, TEXT_PREVIEW_MAX_LENGTH);
+      source = { id: crypto.randomUUID(), type: "text", label: preview + (trimmed.length > TEXT_PREVIEW_MAX_LENGTH ? "…" : ""), content: trimmed };
+    }
+    onAdd(source);
+  };
+
+  const TABS: { id: KnowledgeType; label: string }[] = [
+    { id: "url", label: "URL" },
+    { id: "upload", label: "Upload" },
+    { id: "text", label: "Text" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-bg border border-border rounded-2xl w-full max-w-md mx-4 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h2 className="text-white font-semibold text-base">Add Knowledge Source</h2>
+          <button
+            onClick={onClose}
+            className="text-muted hover:text-white transition-colors text-lg leading-none"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 px-6 pt-4">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                tab === t.id
+                  ? "border-accent text-accent bg-accent/10"
+                  : "border-border text-muted hover:text-white hover:border-white/20"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-5 space-y-4">
+          {tab === "url" && (
+            <>
+              <p className="text-muted text-xs leading-relaxed">
+                Add a URL as a reference source. The AI will use it as context when generating your article.
+              </p>
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+                  Knowledge Source URL
+                  <span className="text-muted border border-border rounded-full w-4 h-4 text-[9px] flex items-center justify-center flex-shrink-0">i</span>
+                </label>
+                <input
+                  type="url"
+                  className={`${inputBase} ${urlError ? "border-red-400/60" : ""}`}
+                  placeholder="https://example.com/my-article"
+                  value={urlValue}
+                  onChange={(e) => { setUrlValue(e.target.value); setUrlError(""); }}
+                  autoFocus
+                />
+                {urlError && (
+                  <p className="text-red-400 text-xs mt-1">{urlError}</p>
+                )}
+              </div>
+            </>
+          )}
+
+          {tab === "upload" && (
+            <>
+              <p className="text-muted text-xs leading-relaxed">
+                Upload a text file (.txt, .md, .csv, .json, .html, .xml) to include as research context.
+              </p>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-border rounded-xl px-6 py-8 text-center cursor-pointer hover:border-accent/40 transition-colors"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept=".txt,.md,.csv,.json,.html,.xml"
+                  onChange={handleFileChange}
+                />
+                {uploadFile ? (
+                  <div className="space-y-1">
+                    <p className="text-white text-sm font-medium">{uploadFile.name}</p>
+                    <p className="text-muted text-xs">{(uploadFile.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-4xl opacity-30">📄</p>
+                    <p className="text-muted text-sm">Click to choose a file</p>
+                    <p className="text-muted text-xs">.txt, .md, .csv, .json, .html, .xml</p>
+                  </div>
+                )}
+              </div>
+              {uploadError && (
+                <p className="text-red-400 text-xs mt-1">{uploadError}</p>
+              )}
+            </>
+          )}
+
+          {tab === "text" && (
+            <>
+              <p className="text-muted text-xs leading-relaxed">
+                Paste notes, excerpts, or any text you want the AI to use as research context.
+              </p>
+              <textarea
+                className={`${inputBase} resize-none`}
+                rows={6}
+                placeholder="Paste your research notes here…"
+                value={textValue}
+                onChange={(e) => setTextValue(e.target.value)}
+                autoFocus
+              />
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 px-6 pb-5">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-muted border border-border rounded-lg hover:text-white hover:border-white/20 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleAdd}
+            disabled={!canAdd}
+            className="px-5 py-2 text-sm font-semibold bg-white text-bg rounded-lg hover:bg-white/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Add Knowledge
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function ToolPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -114,6 +333,10 @@ export default function ToolPage() {
   const [publishStatusLoaded, setPublishStatusLoaded] = useState(false);
   const [error, setError] = useState("");
   const outputRef = useRef<HTMLDivElement>(null);
+
+  // Knowledge / research sources
+  const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([]);
+  const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
 
   // Outline flow state (only used for tools with outlineSystemPrompt)
   type ArticleStep = "input" | "outline-streaming" | "outline-editing" | "article-streaming" | "article-done";
@@ -222,7 +445,7 @@ export default function ToolPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: tool.slug, fields, mode }),
+        body: JSON.stringify({ slug: tool.slug, fields, mode, research: knowledgeSources.map((s) => ({ type: s.type, label: s.label, content: s.content })) }),
       });
 
       if (!res.ok) {
@@ -275,7 +498,7 @@ export default function ToolPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: tool.slug, fields, mode: "article", outline: editableOutline }),
+        body: JSON.stringify({ slug: tool.slug, fields, mode: "article", outline: editableOutline, research: knowledgeSources.map((s) => ({ type: s.type, label: s.label, content: s.content })) }),
       });
 
       if (!res.ok) {
@@ -503,6 +726,40 @@ export default function ToolPage() {
                   />
                 </div>
               ))}
+
+              {/* Knowledge / Research section */}
+              <div className="flex flex-col gap-2">
+                {knowledgeSources.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {knowledgeSources.map((src) => (
+                      <span
+                        key={src.id}
+                        className="flex items-center gap-1 text-xs bg-accent/10 border border-accent/20 text-accent rounded-full px-2.5 py-1 max-w-[200px]"
+                      >
+                        <span className="truncate">
+                          {src.type === "url" ? "🔗" : src.type === "upload" ? "📄" : "📝"}{" "}
+                          {src.label}
+                        </span>
+                        <button
+                          onClick={() =>
+                            setKnowledgeSources((prev) => prev.filter((s) => s.id !== src.id))
+                          }
+                          className="text-accent/60 hover:text-accent transition-colors flex-shrink-0 ml-0.5"
+                          aria-label={`Remove ${src.label}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowKnowledgeModal(true)}
+                  className="flex items-center justify-center gap-1.5 text-sm text-muted border border-border rounded-full py-1.5 px-4 hover:text-white hover:border-white/20 transition-colors self-center"
+                >
+                  <span className="text-base leading-none">+</span> Add Knowledge
+                </button>
+              </div>
 
               {error && (
                 <div className="text-red-400 text-xs bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
@@ -767,6 +1024,17 @@ export default function ToolPage() {
           </div>
         </div>
       </div>
+
+      {/* Knowledge modal */}
+      {showKnowledgeModal && (
+        <KnowledgeModal
+          onAdd={(src) => {
+            setKnowledgeSources((prev) => [...prev, src]);
+            setShowKnowledgeModal(false);
+          }}
+          onClose={() => setShowKnowledgeModal(false)}
+        />
+      )}
     </div>
   );
 }

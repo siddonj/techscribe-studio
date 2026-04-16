@@ -6,9 +6,44 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+interface ResearchItem {
+  type: "url" | "upload" | "text";
+  label: string;
+  content: string;
+}
+
+function buildResearchSection(research: unknown): string {
+  if (!Array.isArray(research) || research.length === 0) return "";
+  const items = research.filter(
+    (item): item is ResearchItem =>
+      item !== null &&
+      typeof item === "object" &&
+      typeof (item as ResearchItem).type === "string" &&
+      typeof (item as ResearchItem).content === "string"
+  );
+  if (items.length === 0) {
+    console.warn("[generate] research provided but no valid items after validation");
+    return "";
+  }
+  // Sanitize content so embedded "---" lines cannot break the section delimiters.
+  const sanitize = (s: string) => String(s).replace(/^---$/gm, "- - -");
+  const lines: string[] = ["\n\n---\nResearch Sources:\n"];
+  for (const item of items) {
+    if (item.type === "url") {
+      lines.push(`[URL] ${sanitize(item.content)}`);
+    } else if (item.type === "upload") {
+      lines.push(`[File: ${sanitize(item.label ?? "")}]\n${sanitize(item.content)}`);
+    } else {
+      lines.push(`[Note]\n${sanitize(item.content)}`);
+    }
+  }
+  lines.push("---");
+  return lines.join("\n");
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { slug, fields, mode, outline } = await req.json();
+    const { slug, fields, mode, outline, research } = await req.json();
 
     if (!slug || !fields) {
       return new Response(JSON.stringify({ error: "Missing slug or fields" }), {
@@ -24,6 +59,8 @@ export async function POST(req: NextRequest) {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    const researchSection = buildResearchSection(research);
 
     let systemPrompt: string;
     let userPrompt: string;
@@ -51,6 +88,9 @@ export async function POST(req: NextRequest) {
         userPrompt = userPrompt.replaceAll(`{${key}}`, String(value || ""));
       }
     }
+
+    // Append research sources to the user prompt
+    userPrompt += researchSection;
 
     // Stream the response
     const stream = await client.messages.stream({
