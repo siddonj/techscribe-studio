@@ -290,6 +290,9 @@ TechScribe Studio supports structured handoffs between tools. When a supported u
 | Headline Generator | Article Writer | First headline → topic |
 | Headline Generator | Outline Generator | First headline → topic |
 | Outline Generator | Article Writer | Outline title → topic; input keywords → keywords; input audience → audience |
+| YouTube to Blog Post | Headline Generator | Blog post title → topic |
+| YouTube to Blog Post | Outline Generator | Blog post title → topic; input keywords → keywords |
+| YouTube to Blog Post | Content Calendar | Blog post title → title; input keywords → keywords |
 | YouTube to Blog Post | Meta Title Generator | Video title → topic; keywords → keyword |
 | YouTube to Blog Post | Meta Description Generator | Video title → topic; keywords → keyword |
 | YouTube to Blog Post | Tweet / X Post Ideas | Video title → topic |
@@ -470,7 +473,7 @@ Completed so far in Phase 2:
 - Calendar sync when linked WordPress drafts are created or updated
 - WordPress planning metadata on calendar items, including target category, tags, and publish intent
 - Production deployment hardening and operational documentation ([docs/operations.md](docs/operations.md))
-- YouTube-to-blog workflow — convert any video transcript or description into a full blog post with the outline-first option
+- YouTube-to-blog workflow — convert any video transcript or description into a full blog post with the outline-first option; blog planning handoffs (Headline Generator, Outline Generator, Content Calendar) let the generated post title drive downstream planning without re-entering the topic
 - External keyword research inputs — Keyword Research Brief tool accepts Ahrefs/SEMrush/Google Keyword Planner data and produces actionable content briefs; briefs now forward researched keywords to Article Writer and Outline Generator, and a "Plan in Calendar" handoff lets users queue the planned content directly from the brief result
 - Automated generation API — `POST /api/generate/batch` endpoint for scheduler-driven content jobs (requires `BATCH_API_SECRET`); supports optional history persistence, content calendar linkage, folder, and tag assignment per job — see [docs/automation.md](docs/automation.md) for full requirements and design
 
