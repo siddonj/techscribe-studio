@@ -234,6 +234,10 @@ Deployment notes:
 - Set `ANTHROPIC_API_KEY` in the deployment environment even if you also use a local `.env.local` during development.
 - For a production install, treat the app as a stateful service rather than a static frontend deployment.
 
+### Full operations guide
+
+For step-by-step instructions covering process management, reverse proxy setup, backups, failure recovery, and a pre-release smoke-test checklist, see **[docs/operations.md](docs/operations.md)**.
+
 ## Data and Security Notes
 
 - `.env.local` is ignored and should never be committed.
@@ -316,6 +320,7 @@ Completed so far in Phase 2:
 - Calendar-to-history linkage when planned drafts are saved
 - Calendar sync when linked WordPress drafts are created or updated
 - WordPress planning metadata on calendar items, including target category, tags, and publish intent
+- Production deployment hardening and operational documentation ([docs/operations.md](docs/operations.md))
 
 Still open for later:
 
@@ -324,7 +329,6 @@ Still open for later:
 - External keyword research integrations
 - YouTube-to-blog workflows
 - Richer publishing workflows beyond draft creation
-- Production deployment hardening and operational docs
 
 ## License
 

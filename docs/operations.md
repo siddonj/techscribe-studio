@@ -1,0 +1,463 @@
+# TechScribe Studio — Operations Guide
+
+This guide covers everything needed to deploy, operate, and recover TechScribe Studio as a self-hosted production service. A new operator should be able to go from zero to a running instance without reading any implementation code.
+
+---
+
+## Table of Contents
+
+1. [Prerequisites](#1-prerequisites)
+2. [First-Time Deployment](#2-first-time-deployment)
+3. [Environment Configuration Reference](#3-environment-configuration-reference)
+4. [Process Management](#4-process-management)
+5. [Reverse Proxy Setup](#5-reverse-proxy-setup)
+6. [Data Persistence and Backup](#6-data-persistence-and-backup)
+7. [Failure Recovery](#7-failure-recovery)
+8. [Smoke-Test Checklist](#8-smoke-test-checklist)
+9. [Upgrading](#9-upgrading)
+
+---
+
+## 1. Prerequisites
+
+| Requirement | Notes |
+|---|---|
+| Node.js 20+ | Use [nvm](https://github.com/nvm-sh/nvm) or a system package manager |
+| npm 10+ | Bundled with Node.js 20 |
+| Persistent disk | The `data/` directory must survive process restarts |
+| Anthropic API key | Required for all AI generation features |
+| WordPress (optional) | Application password required; see [WordPress Setup](../README.md#wordpress-setup) |
+
+Confirm your Node.js version before proceeding:
+
+```bash
+node --version   # must be >= 20.0.0
+npm --version    # must be >= 10.0.0
+```
+
+---
+
+## 2. First-Time Deployment
+
+### Step 1 — Clone the repository
+
+```bash
+git clone https://github.com/siddonj/techscribe-studio.git
+cd techscribe-studio
+```
+
+### Step 2 — Install dependencies
+
+```bash
+npm install
+```
+
+`better-sqlite3` includes a native addon. If you see build errors here, ensure you have a C/C++ build toolchain installed (`build-essential` on Debian/Ubuntu, `xcode-select --install` on macOS).
+
+### Step 3 — Configure environment variables
+
+```bash
+cp .env.local.example .env.local
+```
+
+Open `.env.local` and set your Anthropic API key:
+
+```env
+ANTHROPIC_API_KEY=sk-ant-YOUR_KEY_HERE
+```
+
+Optionally add WordPress fallback credentials (you can also configure these in-app later):
+
+```env
+WORDPRESS_SITE_URL=https://your-site.com
+WORDPRESS_USERNAME=your-wordpress-username
+WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx xxxx xxxx
+```
+
+### Step 4 — Create the data directory
+
+The app auto-creates the SQLite database on first run, but the directory must exist and be writable:
+
+```bash
+mkdir -p data
+```
+
+### Step 5 — Build the production bundle
+
+```bash
+npm run build
+```
+
+This creates an optimised Next.js build under `.next/`. Expect this to take 30–90 seconds.
+
+### Step 6 — Start the production server
+
+```bash
+npm run start
+```
+
+The app listens on `http://localhost:3000` by default. To change the port:
+
+```bash
+PORT=8080 npm run start
+```
+
+### Step 7 — Verify the deployment
+
+Open `http://localhost:3000` (or your configured port) in a browser. The dashboard should load. Run the [Smoke-Test Checklist](#8-smoke-test-checklist) to confirm all subsystems are working.
+
+---
+
+## 3. Environment Configuration Reference
+
+| Variable | Required | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | **Yes** | API key for Claude. All generation requests fail without this. |
+| `WORDPRESS_SITE_URL` | No | Full root URL of your WordPress site (e.g. `https://example.com`). Fallback for publishing when no saved in-app settings exist. |
+| `WORDPRESS_USERNAME` | No | WordPress username with author or editor role. |
+| `WORDPRESS_APP_PASSWORD` | No | Application password created in WordPress under User → Security. Spaces are allowed. |
+| `PORT` | No | HTTP port for `npm run start`. Defaults to `3000`. |
+
+**Important:** `.env.local` is loaded automatically by Next.js in development and production. For process-manager-managed deployments (systemd, PM2), set environment variables in the unit configuration file rather than relying on `.env.local`, or ensure the working directory is the project root so that Next.js can locate the file.
+
+---
+
+## 4. Process Management
+
+Running `npm run start` directly means the process terminates when your shell closes. Use a process manager to keep the app running across restarts and reboots.
+
+### Option A — systemd (Linux, recommended)
+
+Create a unit file at `/etc/systemd/system/techscribe-studio.service`:
+
+```ini
+[Unit]
+Description=TechScribe Studio
+After=network.target
+
+[Service]
+Type=simple
+User=techscribe
+WorkingDirectory=/opt/techscribe-studio
+ExecStart=/usr/bin/node node_modules/.bin/next start
+Restart=on-failure
+RestartSec=5s
+Environment=NODE_ENV=production
+Environment=ANTHROPIC_API_KEY=sk-ant-YOUR_KEY_HERE
+# Add other variables here, or use EnvironmentFile= to point at a file
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable techscribe-studio
+sudo systemctl start techscribe-studio
+sudo systemctl status techscribe-studio
+```
+
+View logs:
+
+```bash
+journalctl -u techscribe-studio -f
+```
+
+### Option B — PM2
+
+Install PM2 globally and start the app:
+
+```bash
+npm install -g pm2
+pm2 start "npm run start" --name techscribe-studio
+pm2 save
+pm2 startup    # follow the printed command to register PM2 at boot
+```
+
+View logs:
+
+```bash
+pm2 logs techscribe-studio
+```
+
+Restart after an update:
+
+```bash
+pm2 restart techscribe-studio
+```
+
+---
+
+## 5. Reverse Proxy Setup
+
+Running the app behind nginx or Caddy allows you to serve it on port 80/443 with TLS.
+
+### nginx
+
+```nginx
+server {
+    listen 80;
+    server_name techscribe.example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name techscribe.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/techscribe.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/techscribe.example.com/privkey.pem;
+
+    location / {
+        proxy_pass         http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection 'upgrade';
+        proxy_set_header   Host $host;
+        proxy_cache_bypass $http_upgrade;
+        # Streaming generation responses — disable buffering
+        proxy_buffering    off;
+        proxy_read_timeout 120s;
+    }
+}
+```
+
+> **Streaming note:** The generate endpoint streams output using server-sent events. `proxy_buffering off` and an adequate `proxy_read_timeout` are required for the output to appear incrementally in the browser.
+
+### Caddy
+
+```caddy
+techscribe.example.com {
+    reverse_proxy 127.0.0.1:3000 {
+        flush_interval -1
+    }
+}
+```
+
+Caddy manages TLS automatically via Let's Encrypt.
+
+---
+
+## 6. Data Persistence and Backup
+
+### What is stored
+
+All persistent state lives in a single SQLite database file:
+
+```
+data/techscribe.db
+```
+
+This file holds:
+
+- All saved history entries (generated content, metadata, folders, tags)
+- Content calendar entries
+- In-app WordPress settings (site URL, username, application password)
+
+There are no other data files to track. The `.next/` directory is a build artifact and can be regenerated by running `npm run build`.
+
+### Backup strategy
+
+**Minimum viable:** copy the database file on a schedule.
+
+```bash
+# Daily backup to a timestamped file
+cp data/techscribe.db backups/techscribe-$(date +%Y%m%d).db
+```
+
+**With SQLite's online backup (safe while the app is running):**
+
+```bash
+sqlite3 data/techscribe.db ".backup backups/techscribe-$(date +%Y%m%d).db"
+```
+
+`sqlite3`'s `.backup` command uses the SQLite backup API, which produces a consistent snapshot even while the app has the database open.
+
+**Retention:** keep at least 7 daily backups. Rotate old files with:
+
+```bash
+find backups/ -name "techscribe-*.db" -mtime +7 -delete
+```
+
+**Cron example (daily at 02:00):**
+
+```cron
+0 2 * * * cd /opt/techscribe-studio && sqlite3 data/techscribe.db ".backup backups/techscribe-$(date +\%Y\%m\%d).db" && find backups/ -name "techscribe-*.db" -mtime +7 -delete
+```
+
+### Recovery from backup
+
+1. Stop the app.
+2. Replace `data/techscribe.db` with your backup copy.
+3. Start the app.
+
+```bash
+sudo systemctl stop techscribe-studio
+cp backups/techscribe-20240101.db data/techscribe.db
+sudo systemctl start techscribe-studio
+```
+
+### Ephemeral / container deployments
+
+If you deploy to a platform with ephemeral storage (Docker without a volume, serverless, etc.):
+
+- Mount a persistent volume at the project root's `data/` path.
+- Without a persistent volume, history, calendar entries, and saved WordPress settings are lost on every restart.
+- The app does not currently support an external database; all storage goes through the local SQLite file.
+
+---
+
+## 7. Failure Recovery
+
+### App does not start
+
+**Symptom:** `npm run start` exits immediately or the process manager shows the service as failed.
+
+1. Check for missing environment variables:
+   ```bash
+   node -e "require('./.env.local')" 2>&1 || echo "Check .env.local"
+   ```
+   Confirm `ANTHROPIC_API_KEY` is set.
+
+2. Check for port conflicts:
+   ```bash
+   lsof -i :3000
+   ```
+   Kill the conflicting process or change the `PORT` variable.
+
+3. Check build artifacts exist:
+   ```bash
+   ls .next/
+   ```
+   If the directory is empty or missing, run `npm run build` again.
+
+4. Check the `data/` directory is writable:
+   ```bash
+   ls -la data/
+   touch data/.write-test && rm data/.write-test
+   ```
+
+### Generation returns an error
+
+**Symptom:** The generate page shows an error banner or the stream ends with an error message.
+
+- Verify the `ANTHROPIC_API_KEY` is valid and has available credits.
+- Check server logs for `AnthropicError` entries.
+- Confirm the app is running with the correct environment (`NODE_ENV=production` for production builds).
+
+### WordPress publishing fails
+
+**Symptom:** Publish action shows "Publish Failed" state in history.
+
+1. Go to **Settings** and use the **Test Connection** button. This isolates whether the issue is credentials versus a transient WordPress error.
+2. If the test passes, retry the publish action from the History screen using the retry button on the failed entry.
+3. If the test fails:
+   - Confirm the WordPress Application Password has not been revoked.
+   - Confirm the site URL does not have a trailing slash mismatch.
+   - Confirm the WordPress REST API is accessible: `curl https://your-site.com/wp-json/wp/v2/posts` should return JSON, not an error page.
+4. If environment variables are used instead of saved settings, confirm the variables are set and that the `WORDPRESS_*` values do not have quoting issues.
+
+### Database is locked or corrupt
+
+**Symptom:** API calls return 500 errors with SQLite error messages in the logs.
+
+**Locked (`SQLITE_BUSY`):** Only one process should open the database at a time. If you run multiple instances of the app against the same `data/` directory, you will see lock errors. Ensure only one process is running.
+
+**Corrupt:** A corrupt database is uncommon but can happen after an unclean shutdown during a write. To recover:
+
+1. Stop the app.
+2. Try to export the database to SQL:
+   ```bash
+   sqlite3 data/techscribe.db .dump > /tmp/techscribe-dump.sql
+   ```
+3. If the dump succeeds, rebuild the database:
+   ```bash
+   mv data/techscribe.db data/techscribe.db.bak
+   sqlite3 data/techscribe.db < /tmp/techscribe-dump.sql
+   ```
+4. If the dump fails, restore from the most recent backup (see [Recovery from backup](#recovery-from-backup)).
+
+### History or calendar data appears missing
+
+- Confirm the `data/techscribe.db` file exists and is not empty: `ls -lh data/techscribe.db`.
+- Confirm the running process has the correct working directory — the database path is relative to the project root.
+- If you recently restored a backup, check that the backup file was not zero-length.
+
+---
+
+## 8. Smoke-Test Checklist
+
+Run this checklist before any release or after deploying to a new environment. It takes under five minutes and exercises every major subsystem.
+
+### Infrastructure
+
+- [ ] `http://localhost:3000` (or your domain) loads the dashboard without errors
+- [ ] No JavaScript console errors on the dashboard page
+
+### AI Generation
+
+- [ ] Navigate to any tool (e.g. **Blog Post Ideas** at `/tool/blog-post-ideas`)
+- [ ] Fill in the required field and submit the form
+- [ ] Confirm output streams progressively into the page (not a blank page or spinner that never resolves)
+- [ ] Confirm the output renders as formatted text when generation completes
+
+### History
+
+- [ ] After a successful generation, click **Save**
+- [ ] Navigate to `/history` and confirm the saved entry appears
+- [ ] Open the entry and confirm the content is intact
+
+### WordPress (if configured)
+
+- [ ] Navigate to `/settings`
+- [ ] Click **Test Connection** and confirm it returns a success state
+- [ ] From a saved history entry, trigger **Publish as Draft**
+- [ ] Confirm the history entry status changes to `Draft Linked`
+- [ ] Open the WordPress admin and confirm the draft was created
+
+### Content Calendar
+
+- [ ] Navigate to `/calendar`
+- [ ] Create a new calendar entry with a title and planned date
+- [ ] Confirm the entry appears in the calendar view
+- [ ] Open the entry and click **Open in Tool** to confirm the tool page pre-fills correctly
+
+### Settings persistence
+
+- [ ] Save WordPress settings on the Settings page
+- [ ] Restart the app (`npm run start` or via your process manager)
+- [ ] Navigate back to `/settings` and confirm the credentials are still present
+
+---
+
+## 9. Upgrading
+
+1. Pull the latest code:
+   ```bash
+   git pull origin main
+   ```
+
+2. Install any new dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Rebuild the production bundle:
+   ```bash
+   npm run build
+   ```
+
+4. Restart the app:
+   ```bash
+   # systemd
+   sudo systemctl restart techscribe-studio
+
+   # PM2
+   pm2 restart techscribe-studio
+   ```
+
+5. Run the [Smoke-Test Checklist](#8-smoke-test-checklist) to confirm the upgrade succeeded.
+
+**Database migrations:** The app applies schema migrations automatically on startup. You do not need to run any migration commands manually. Back up `data/techscribe.db` before upgrading as a precaution.
