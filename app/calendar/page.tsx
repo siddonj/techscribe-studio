@@ -379,26 +379,38 @@ export default function CalendarPage() {
     }
   }
 
-  async function handleQuickReschedule(dateValue: string) {
-    if (!selectedEntry) return;
+  async function handleQuickRescheduleById(id: number, dateValue: string) {
+    const entry = rows.find((r) => r.id === id);
+    if (!entry) return;
     setQuickRescheduling(true);
     setError(null);
     setMessage(null);
+    // Optimistic update — reflect the new date in the UI immediately
+    setRows((current) =>
+      current.map((r) => (r.id === id ? { ...r, scheduled_for: dateValue } : r))
+    );
+    setSelectedId(id);
     try {
-      const res = await fetch(`/api/calendar/${selectedEntry.id}`, {
+      const res = await fetch(`/api/calendar/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...toPayload(toDraft(selectedEntry)), scheduled_for: dateValue }),
+        body: JSON.stringify({ ...toPayload(toDraft(entry)), scheduled_for: dateValue }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to reschedule");
       setMessage(`Moved to ${formatDateLabel(dateValue)}.`);
-      await fetchCalendar(selectedEntry.id);
+      await fetchCalendar(id);
     } catch (rescheduleError) {
       setError(rescheduleError instanceof Error ? rescheduleError.message : "Failed to reschedule");
+      await fetchCalendar();
     } finally {
       setQuickRescheduling(false);
     }
+  }
+
+  async function handleQuickReschedule(dateValue: string) {
+    if (!selectedEntry) return;
+    await handleQuickRescheduleById(selectedEntry.id, dateValue);
   }
 
   return (
@@ -616,30 +628,53 @@ export default function CalendarPage() {
                         const selected = row.id === selectedId;
 
                         return (
-                          <button
+                          <div
                             key={row.id}
-                            onClick={() => setSelectedId(row.id)}
-                            className={`w-full text-left border rounded-xl p-3 transition-colors ${selected ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/20 hover:bg-subtle/40"}`}
+                            className={`border rounded-xl p-3 transition-colors ${selected ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/20 hover:bg-subtle/40"}`}
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-sm text-white font-medium truncate">{row.title}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-xs">{tool?.icon ?? "📝"}</span>
-                                  <span className="text-xs text-muted truncate">{tool?.name ?? row.tool_slug}</span>
+                            {/* Main selection area */}
+                            <button
+                              onClick={() => setSelectedId(row.id)}
+                              className="w-full text-left"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm text-white font-medium truncate">{row.title}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs">{tool?.icon ?? "📝"}</span>
+                                    <span className="text-xs text-muted truncate">{tool?.name ?? row.tool_slug}</span>
+                                  </div>
                                 </div>
+                                <span className={`text-[11px] font-mono border rounded px-2 py-1 shrink-0 ${getStatusBadgeClass(row.status)}`}>
+                                  {CALENDAR_STATUS_LABELS[row.status]}
+                                </span>
                               </div>
-                              <span className={`text-[11px] font-mono border rounded px-2 py-1 shrink-0 ${getStatusBadgeClass(row.status)}`}>
-                                {CALENDAR_STATUS_LABELS[row.status]}
-                              </span>
+                              {row.keywords && (
+                                <p className="text-xs text-muted mt-2 truncate">Keywords: {row.keywords}</p>
+                              )}
+                              {row.brief && (
+                                <p className="text-xs text-muted/80 mt-1 line-clamp-2">{row.brief}</p>
+                              )}
+                            </button>
+
+                            {/* Inline quick-reschedule */}
+                            <div className="mt-2 flex items-center gap-1.5 border-t border-border/40 pt-2">
+                              <span className="text-[10px] text-muted">📅</span>
+                              <input
+                                type="date"
+                                title="Reschedule"
+                                value={row.scheduled_for ?? ""}
+                                disabled={quickRescheduling}
+                                onChange={(e) => {
+                                  if (e.target.value) void handleQuickRescheduleById(row.id, e.target.value);
+                                }}
+                                className="text-[11px] text-muted bg-transparent border-0 p-0 focus:outline-none cursor-pointer hover:text-accent transition-colors disabled:opacity-40 [color-scheme:dark]"
+                              />
+                              {!row.scheduled_for && (
+                                <span className="text-[10px] text-muted/50 italic">unscheduled</span>
+                              )}
                             </div>
-                            {row.keywords && (
-                              <p className="text-xs text-muted mt-2 truncate">Keywords: {row.keywords}</p>
-                            )}
-                            {row.brief && (
-                              <p className="text-xs text-muted/80 mt-1 line-clamp-2">{row.brief}</p>
-                            )}
-                          </button>
+                          </div>
                         );
                       })}
                     </div>
