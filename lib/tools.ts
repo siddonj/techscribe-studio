@@ -24,6 +24,8 @@ export interface Tool {
   outlineUserPromptTemplate?: string;
   /** Used for the second step when generating the article from an approved outline */
   articleWithOutlinePromptTemplate?: string;
+  /** When true, the Input Studio shows an "+ Add Knowledge" research panel */
+  supportsResearch?: boolean;
 }
 
 export const CATEGORIES = [
@@ -47,15 +49,17 @@ export const TOOLS: Tool[] = [
     fields: [
       { name: "topic", label: "Article Topic", type: "text", placeholder: "e.g. Best JavaScript frameworks in 2025", required: true },
       { name: "keywords", label: "Target Keywords (comma-separated)", type: "text", placeholder: "e.g. JS frameworks, React, Vue, frontend" },
+      { name: "context", label: "Context / Brief", type: "textarea", placeholder: "Key angle, summary, or editorial brief for the article", rows: 3 },
       { name: "tone", label: "Tone", type: "select", options: ["Informative", "Conversational", "Professional", "Enthusiastic", "Authoritative"] },
       { name: "length", label: "Length", type: "select", options: ["Short (~800 words)", "Medium (~1500 words)", "Long (~2500 words)"] },
       { name: "audience", label: "Target Audience", type: "text", placeholder: "e.g. Beginner developers, tech enthusiasts" },
     ],
     systemPrompt: `You are an expert SEO content writer for a tech blog called TechScribe. Write comprehensive, well-structured blog articles that are informative, engaging, and optimized for search engines. Use clear headings (H2, H3), short paragraphs, and include practical examples. Format output in Markdown.`,
-    userPromptTemplate: `Write a {length} blog article about: {topic}\n\nTarget keywords: {keywords}\nTone: {tone}\nTarget audience: {audience}\n\nInclude: compelling intro, structured body with H2/H3 headings, practical tips, and a strong conclusion with a CTA.`,
+    userPromptTemplate: `Write a {length} blog article about: {topic}\n\nTarget keywords: {keywords}\nTone: {tone}\nTarget audience: {audience}{contextSection}\n\nInclude: compelling intro, structured body with H2/H3 headings, practical tips, and a strong conclusion with a CTA.`,
     outlineSystemPrompt: `You are an expert content strategist for a tech blog called TechScribe. Your job is to produce a clear, well-structured article outline using Markdown headings. Return ONLY the outline — no article body, no explanations, just the structure.`,
-    outlineUserPromptTemplate: `Create a detailed blog article outline for:\nTopic: {topic}\nTarget keywords: {keywords}\nTone: {tone}\nLength: {length}\nAudience: {audience}\n\nStructure the outline as:\n# Suggested Article Title\n## Introduction\n## [Main Section 1] (4-6 main sections total)\n### [Subsection]\n### [Subsection]\n## [Main Section 2]\n...\n## Conclusion\n\nReturn only the outline — no body content.`,
-    articleWithOutlinePromptTemplate: `Write a {length} blog article about: {topic}\n\nTarget keywords: {keywords}\nTone: {tone}\nTarget audience: {audience}\n\nFollow this outline exactly:\n{outline}\n\nExpand every section with full paragraphs. Include a compelling introduction, practical examples throughout, and a strong conclusion with a CTA. Format in Markdown.`,
+    outlineUserPromptTemplate: `Create a detailed blog article outline for:\nTopic: {topic}\nTarget keywords: {keywords}\nTone: {tone}\nLength: {length}\nAudience: {audience}{contextSection}\n\nStructure the outline as:\n# Suggested Article Title\n## Introduction\n## [Main Section 1] (4-6 main sections total)\n### [Subsection]\n### [Subsection]\n## [Main Section 2]\n...\n## Conclusion\n\nReturn only the outline — no body content.`,
+    articleWithOutlinePromptTemplate: `Write a {length} blog article about: {topic}\n\nTarget keywords: {keywords}\nTone: {tone}\nTarget audience: {audience}{contextSection}\n\nFollow this outline exactly:\n{outline}\n\nExpand every section with full paragraphs. Include a compelling introduction, practical examples throughout, and a strong conclusion with a CTA. Format in Markdown.`,
+    supportsResearch: true,
   },
   {
     slug: "listicle-writer",
