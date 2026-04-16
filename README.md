@@ -156,9 +156,13 @@ techscribe-studio/
 │   ├── page.tsx                      # Dashboard
 │   └── globals.css                   # Design tokens and global styles
 ├── data/                             # Local SQLite storage at runtime
+├── components/
+│   └── HandoffCard.tsx               # Result card with downstream launch actions
 ├── lib/
 │   ├── calendar.ts                   # Calendar types and shared constants
 │   ├── db.ts                         # SQLite schema and data access
+│   ├── handoff-registry.ts           # Upstream → downstream handoff definitions
+│   ├── output-parsers.ts             # Structured parsers for handoff-enabled tools
 │   ├── tools.ts                      # Tool catalog and prompts
 │   └── wordpress.ts                  # WordPress helpers and config resolution
 ├── .env.local.example
@@ -208,6 +212,38 @@ Deployment notes:
 - Saved WordPress settings are stored locally for this self-hosted app.
 - The Anthropic API key is only used server-side.
 - If WordPress credentials were exposed outside your local environment, rotate the application password.
+
+## Tool Handoffs
+
+TechScribe Studio supports structured handoffs between tools. When a supported upstream tool finishes generating output, the tool page parses the result and displays a result card with action buttons that open downstream tools pre-filled with data from the current output.
+
+### Supported handoffs
+
+| Upstream tool | Downstream tool | Pre-filled in downstream |
+|---|---|---|
+| Blog Post Ideas | Article Writer | First idea title → topic |
+| Blog Post Ideas | Headline Generator | First idea title → topic |
+| Blog Post Ideas | Outline Generator | First idea title → topic |
+| Headline Generator | Article Writer | First headline → topic |
+| Headline Generator | Outline Generator | First headline → topic |
+| Outline Generator | Article Writer | Outline title → topic; input keywords → keywords; input audience → audience |
+
+### Fallback rendering
+
+When output parsing fails or no parser is registered for a tool, the tool page silently falls back to plain markdown rendering. The handoff result card and action buttons are not shown. Fallback rendering never blocks or interrupts output display — `null` from the parser is treated as "no structured data available".
+
+### Extending the handoff system
+
+To add a new upstream-to-downstream handoff:
+
+1. **Register the handoff** in `lib/handoff-registry.ts`. Add an entry to `HANDOFF_REGISTRY` keyed by the upstream tool's slug. Each `HandoffAction` needs:
+   - `label` — button text shown in the UI
+   - `targetSlug` — slug of the downstream tool to open
+   - `fieldMap` — maps source input field names to destination query parameter names used for pre-filling
+
+2. **Add an output parser** in `lib/output-parsers.ts` if the upstream tool does not already have one. Write a `(raw: string) => ParsedToolOutput` function and register it in `PARSER_REGISTRY` under the upstream tool's slug. The `prefill` keys returned by the parser must match the source field names declared in the `fieldMap` so that `buildHandoffUrl` can forward them correctly.
+
+3. No routing or page-level changes are needed. The tool page reads the registry automatically and renders the appropriate action buttons once output is fully generated.
 
 ## Adding New Tools
 
