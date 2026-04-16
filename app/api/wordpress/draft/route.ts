@@ -65,26 +65,14 @@ export async function POST(req: NextRequest) {
     const publishIntent = resolvedCalendarEntry?.publish_intent ?? "draft";
     const wpStatus = publishIntent === "publish" ? "publish" : "draft";
 
-    // Build the post payload with optional metadata from calendar
+    // Build the post payload; categories and tags require resolved WP IDs so
+    // they are not forwarded automatically — the planner stores them as
+    // reference metadata for manual entry in the WordPress editor.
     const postPayload: Record<string, unknown> = {
       title: finalTitle,
       content: htmlContent,
       status: wpStatus,
     };
-
-    if (resolvedCalendarEntry?.wp_category) {
-      postPayload.categories = resolvedCalendarEntry.wp_category
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
-
-    if (resolvedCalendarEntry?.wp_tags) {
-      postPayload.tags = resolvedCalendarEntry.wp_tags
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
 
     const response = await fetch(endpoint, {
       method: "POST",

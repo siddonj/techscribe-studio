@@ -1006,14 +1006,18 @@ export default function CalendarPage() {
                           onChange={async (event) => {
                             const newIntent = event.target.value as CalendarPublishIntent;
                             try {
-                              await fetch(`/api/calendar/${selectedEntry.id}`, {
+                              const res = await fetch(`/api/calendar/${selectedEntry.id}`, {
                                 method: "PATCH",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ ...toPayload(editorDraft), publish_intent: newIntent }),
                               });
+                              const data = await res.json();
+                              if (!res.ok) {
+                                throw new Error(data.error || "Failed to update publish intent");
+                              }
                               await fetchCalendar(selectedEntry.id);
-                            } catch {
-                              // ignore
+                            } catch (intentError) {
+                              setError(intentError instanceof Error ? intentError.message : "Failed to update publish intent");
                             }
                           }}
                         >
