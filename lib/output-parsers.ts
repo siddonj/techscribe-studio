@@ -289,38 +289,76 @@ function parseYoutubeToBlog(raw: string): ParsedToolOutput {
  *
  * Expected output structure (Markdown content brief):
  *
- *   1. **Recommended Title**
- *   2. **Primary Keyword** …
- *   3. **Secondary Keywords** …
+ *   1. **Recommended Title**: How to Web Scrape with Python in 2025
+ *   2. **Primary Keyword**: python web scraping (12,000/mo)
+ *   3. **Secondary Keywords**: web scraping python tutorial, scrapy python, …
+ *   4. **LSI Keywords**: html parsing, http requests python, …
  *   …
  *
- * The parser extracts the recommended title (first bold heading in a
- * numbered list), the primary keyword, and secondary keywords as chips.
+ * The parser extracts the recommended title, primary keyword, and secondary
+ * keywords as chips, then forwards the full keyword set as a comma-separated
+ * string so downstream tools (Article Writer, Outline Generator) can receive
+ * them pre-filled.  The parsed data also powers the "Plan in Calendar" handoff
+ * so the content brief can be queued for writing without leaving the tool.
  */
 function parseKeywordResearchBrief(raw: string): ParsedToolOutput {
   const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
 
+  // Matches trailing search-volume annotations like "(12,000/mo)" or "(High)".
+  const VOLUME_ANNOTATION = /\([^)]*\)$/;
+
   let title = "";
   let summary = "";
-  const keywords: string[] = [];
+  let primaryKeyword = "";
+  const secondaryKeywords: string[] = [];
+  const lsiKeywords: string[] = [];
+
+  // Track which numbered section we are currently inside.
+  type Section = "none" | "title" | "primary" | "secondary" | "lsi" | "other";
+  let currentSection: Section = "none";
 
   for (const line of lines) {
-    // Match "1. **Recommended Title**" header
-    const sectionMatch = line.match(/^\d+\.\s+\*\*(.+?)\*\*/);
+    // Match numbered section headers like "1. **Recommended Title**" or
+    // "2. **Primary Keyword**: python web scraping (12,000/mo)".
+    const sectionMatch = line.match(/^\d+\.\s+\*\*([^*]+)\*\*[:\s]*(.*)?$/);
     if (sectionMatch) {
       const sectionName = sectionMatch[1].toLowerCase();
-      // The line after "Recommended Title" section header contains the actual title
-      if (sectionName.includes("recommended title") || sectionName.includes("title")) {
-        // Title may be on the same line after the section label, or inlined
-        const inlineTitle = line.replace(/^\d+\.\s+\*\*[^*]+\*\*[:\s]*/, "").trim();
-        if (inlineTitle && !title) {
-          title = inlineTitle.replace(/^\*+|\*+$/g, "").trim();
+      const rest = (sectionMatch[2] ?? "").replace(/^\*+|\*+$/g, "").trim();
+
+      if (sectionName.includes("title")) {
+        currentSection = "title";
+        if (rest && !title) {
+          title = rest;
         }
+      } else if (sectionName.includes("primary keyword")) {
+        currentSection = "primary";
+        if (rest && !primaryKeyword) {
+          // Strip trailing search-volume annotation, e.g. "(12,000/mo)".
+          primaryKeyword = rest.replace(VOLUME_ANNOTATION, "").trim();
+        }
+      } else if (sectionName.includes("secondary keyword")) {
+        currentSection = "secondary";
+        if (rest) {
+          rest.split(/[,;]+/).forEach((k) => {
+            const kw = k.trim();
+            if (kw && !secondaryKeywords.includes(kw)) secondaryKeywords.push(kw);
+          });
+        }
+      } else if (sectionName.includes("lsi")) {
+        currentSection = "lsi";
+        if (rest) {
+          rest.split(/[,;]+/).forEach((k) => {
+            const kw = k.trim();
+            if (kw && !lsiKeywords.includes(kw)) lsiKeywords.push(kw);
+          });
+        }
+      } else {
+        currentSection = "other";
       }
       continue;
     }
 
-    // H1 or H2 headings in the output can also carry the title
+    // H1 heading as title fallback (some AI outputs lead with a Markdown H1).
     if (!title) {
       const h1Match = line.match(/^#\s+(.+)$/);
       if (h1Match) {
@@ -329,30 +367,61 @@ function parseKeywordResearchBrief(raw: string): ParsedToolOutput {
       }
     }
 
-    // Keyword lines – "Primary Keyword:", "Secondary Keywords:", LSI lines
-    const kwMatch = line.match(/^(?:[-*•]\s*)?(.+)$/);
-    if (kwMatch) {
-      const text = kwMatch[1].replace(/^\*+|\*+$/g, "").trim();
-      if (text && text.length < 80 && !summary) {
+    // Continuation lines within the current section.
+    if (currentSection === "primary" && !primaryKeyword) {
+      primaryKeyword = line.replace(/^\*+|\*+$/g, "").replace(VOLUME_ANNOTATION, "").trim();
+    } else if (currentSection === "secondary") {
+      line.split(/[,;]+/).forEach((k) => {
+        const kw = k.replace(/^[-*•\s]+/, "").replace(/^\*+|\*+$/g, "").trim();
+        if (kw && !secondaryKeywords.includes(kw)) secondaryKeywords.push(kw);
+      });
+    } else if (currentSection === "lsi") {
+      line.split(/[,;]+/).forEach((k) => {
+        const kw = k.replace(/^[-*•\s]+/, "").replace(/^\*+|\*+$/g, "").trim();
+        if (kw && !lsiKeywords.includes(kw)) lsiKeywords.push(kw);
+      });
+    }
+
+    // First meaningful line that isn't a section header becomes the summary.
+    if (!summary && currentSection !== "none") {
+      const text = line.replace(/^\*+|\*+$/g, "").trim();
+      if (text && text.length < 120) {
         summary = text;
-      }
-      if (text && text.length < 60) {
-        if (!keywords.includes(text)) keywords.push(text);
       }
     }
   }
 
-  // Fallback: use first non-empty line as title if none found
+  // Fallback: first non-empty line as title when none was found via section headers.
   if (!title && lines.length > 0) {
     title = lines[0].replace(/^[#*\d.\s]+/, "").trim();
   }
 
+  // Build keyword chips: primary → secondary → LSI (capped at 12 for display).
+  const allKeywords = [
+    ...(primaryKeyword ? [primaryKeyword] : []),
+    ...secondaryKeywords,
+    ...lsiKeywords.filter((k) => !secondaryKeywords.includes(k)),
+  ].filter(Boolean).slice(0, 12);
+
+  // Comma-separated keyword string forwarded to downstream writing tools.
+  // Primary keyword leads, followed by up to 7 secondary keywords.
+  const keywordsPrefill = [primaryKeyword, ...secondaryKeywords]
+    .filter(Boolean)
+    .slice(0, 8)
+    .join(", ");
+
   return {
     title,
     summary,
-    keywords: keywords.slice(0, 12),
+    keywords: allKeywords,
     prefill: {
+      // "topic" is the source field name declared in the keyword-research-brief
+      // HANDOFF_REGISTRY entry (lib/handoff-registry.ts).  Keep this in sync
+      // with that fieldMap if the registry entry is ever updated.
       topic: title,
+      // "keywords" enables downstream tools (Article Writer, Outline Generator)
+      // to receive the researched keyword set pre-filled.
+      ...(keywordsPrefill ? { keywords: keywordsPrefill } : {}),
     },
   };
 }

@@ -182,6 +182,26 @@ export default function CalendarPage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [quickRescheduling, setQuickRescheduling] = useState(false);
 
+  // When arriving via a "Plan in Calendar" handoff from a keyword research
+  // brief, URL params pre-fill the Quick Plan form so the user can schedule
+  // the planned content without re-typing the researched title and keywords.
+  // window.location.search is read on the client side only (inside useEffect)
+  // so no Suspense boundary is required.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const prefillTitle = params.get("title")?.trim() ?? "";
+    const prefillKeywords = params.get("keywords")?.trim() ?? "";
+    const prefillAudience = params.get("audience")?.trim() ?? "";
+    if (prefillTitle || prefillKeywords || prefillAudience) {
+      setCreateDraft((current) => ({
+        ...current,
+        ...(prefillTitle ? { title: prefillTitle } : {}),
+        ...(prefillKeywords ? { keywords: prefillKeywords } : {}),
+        ...(prefillAudience ? { audience: prefillAudience } : {}),
+      }));
+    }
+  }, []);
+
   const fetchCalendar = useCallback(async (preferredId?: number | null) => {
     setLoading(true);
     setError(null);
