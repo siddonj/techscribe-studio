@@ -58,6 +58,7 @@ export interface CalendarSummary {
   dueThisWeek: number;
   unscheduled: number;
   byStatus: Record<CalendarEntryStatus, number>;
+  byPublishIntent: Record<CalendarPublishIntent, number>;
 }
 
 export function isCalendarStatus(value: string): value is CalendarEntryStatus {

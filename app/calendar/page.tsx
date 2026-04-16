@@ -441,17 +441,18 @@ export default function CalendarPage() {
       </header>
 
       <div className="p-8 max-w-7xl w-full mx-auto flex-1 overflow-hidden flex flex-col gap-6">
-        <section className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <section className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {[
-            { label: "Total Items", value: summary?.total ?? rows.length },
-            { label: "Due This Week", value: summary?.dueThisWeek ?? 0 },
-            { label: "Overdue", value: summary?.overdue ?? 0 },
-            { label: "Unscheduled", value: summary?.unscheduled ?? 0 },
-            { label: "Published", value: summary?.byStatus.published ?? 0 },
+            { label: "Total Items", value: summary?.total ?? rows.length, colorClass: "text-accent" },
+            { label: "Due This Week", value: summary?.dueThisWeek ?? 0, colorClass: "text-accent" },
+            { label: "Overdue", value: summary?.overdue ?? 0, colorClass: "text-accent" },
+            { label: "Unscheduled", value: summary?.unscheduled ?? 0, colorClass: "text-accent" },
+            { label: "Ready to Publish", value: summary?.byStatus.ready ?? 0, colorClass: "text-emerald-300" },
+            { label: "Published", value: summary?.byStatus.published ?? 0, colorClass: "text-fuchsia-300" },
           ].map((stat) => (
             <div key={stat.label} className="bg-card border border-border rounded-xl px-5 py-4">
               <p className="font-mono text-xs text-muted uppercase tracking-wider">{stat.label}</p>
-              <p className="text-3xl text-accent font-mono mt-2">{stat.value}</p>
+              <p className={`text-3xl font-mono mt-2 ${stat.colorClass}`}>{stat.value}</p>
             </div>
           ))}
         </section>

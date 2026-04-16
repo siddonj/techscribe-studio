@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import type { HistoryFolderSummary, HistoryRow, HistoryTagSummary } from "@/lib/db";
 import { TOOLS } from "@/lib/tools";
@@ -14,6 +14,8 @@ import {
   classifyPublishFailure,
   getPublishFailureHint,
   PUBLISH_FAILURE_CATEGORY_LABELS,
+  PUBLISH_STATE_LABELS,
+  PUBLISH_STATE_BADGE_CLASSES,
 } from "@/lib/publish-state";
 
 // Simple markdown renderer (same as tool page)
@@ -851,6 +853,23 @@ export default function HistoryPage() {
     .slice(0, 12);
   const editingTagList = parseTagValues(editingTags);
 
+  const publishStateCounts = useMemo(
+    () =>
+      rows.reduce(
+        (acc, row) => {
+          const state = resolvePublishState(row);
+          if (!state) {
+            acc.unpublished += 1;
+          } else {
+            acc[state] = (acc[state] ?? 0) + 1;
+          }
+          return acc;
+        },
+        { draft_created: 0, draft_updated: 0, published: 0, scheduled: 0, failed: 0, unpublished: 0 }
+      ),
+    [rows]
+  );
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top bar */}
@@ -865,6 +884,43 @@ export default function HistoryPage() {
           {rows.length}/{totalRows || rows.length} loaded
         </span>
       </header>
+
+      {/* Publish State Summary */}
+      {!loading && rows.length > 0 && (
+        <div className="border-b border-border px-8 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <p className="font-mono text-xs text-muted uppercase tracking-wider shrink-0">Publish States</p>
+          {publishStateCounts.failed > 0 && (
+            <span className={`text-xs font-mono border rounded px-2 py-0.5 ${PUBLISH_STATE_BADGE_CLASSES.failed}`}>
+              {PUBLISH_STATE_LABELS.failed}: {publishStateCounts.failed}
+            </span>
+          )}
+          {publishStateCounts.published > 0 && (
+            <span className="text-xs font-mono text-fuchsia-300/75">
+              {PUBLISH_STATE_LABELS.published}: {publishStateCounts.published}
+            </span>
+          )}
+          {publishStateCounts.scheduled > 0 && (
+            <span className="text-xs font-mono text-blue-300/75">
+              {PUBLISH_STATE_LABELS.scheduled}: {publishStateCounts.scheduled}
+            </span>
+          )}
+          {publishStateCounts.draft_updated > 0 && (
+            <span className="text-xs font-mono text-green-300/75">
+              {PUBLISH_STATE_LABELS.draft_updated}: {publishStateCounts.draft_updated}
+            </span>
+          )}
+          {publishStateCounts.draft_created > 0 && (
+            <span className="text-xs font-mono text-green-300/75">
+              {PUBLISH_STATE_LABELS.draft_created}: {publishStateCounts.draft_created}
+            </span>
+          )}
+          {publishStateCounts.unpublished > 0 && (
+            <span className="text-xs font-mono text-muted/70">
+              Never Published: {publishStateCounts.unpublished}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* List panel */}

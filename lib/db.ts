@@ -1016,11 +1016,20 @@ export function computeCalendarSummary(rows: CalendarEntry[]): CalendarSummary {
       ready: 0,
       published: 0,
     },
+    byPublishIntent: {
+      draft: 0,
+      publish: 0,
+      schedule: 0,
+    },
   };
 
   for (const row of rows) {
     if (CALENDAR_STATUSES.includes(row.status)) {
       summary.byStatus[row.status as CalendarEntryStatus] += 1;
+    }
+
+    if (row.publish_intent && CALENDAR_PUBLISH_INTENTS.includes(row.publish_intent)) {
+      summary.byPublishIntent[row.publish_intent] += 1;
     }
 
     if (!row.scheduled_for) {
