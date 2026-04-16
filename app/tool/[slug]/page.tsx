@@ -114,7 +114,7 @@ function EditableOutput({
   }
   return (
     <div
-      className={`markdown-output max-w-3xl ${loading && !value ? "cursor-blink" : ""} ${loading && value ? "cursor-blink" : ""}`}
+      className={`markdown-output max-w-3xl ${loading ? "cursor-blink" : ""}`}
       dangerouslySetInnerHTML={{ __html: renderMarkdown(value) }}
     />
   );
@@ -338,6 +338,11 @@ export default function ToolPage() {
     await navigator.clipboard.writeText(output);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleOutputChange = (v: string) => {
+    setOutput(v);
+    setSaved(false);
   };
 
   const handleSave = async (): Promise<number | null> => {
@@ -585,10 +590,7 @@ export default function ToolPage() {
                   </button>
                   {!loading && (
                     <button
-                      onClick={() => {
-                        setIsEditing((prev) => !prev);
-                        setSaved(false);
-                      }}
+                      onClick={() => setIsEditing((prev) => !prev)}
                       className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
                         isEditing
                           ? "border-accent/60 text-accent hover:text-white hover:border-accent"
@@ -716,7 +718,7 @@ export default function ToolPage() {
                 isEditing={isEditing && articleStep === "article-done"}
                 loading={loading}
                 value={output}
-                onChange={(v) => { setOutput(v); setSaved(false); }}
+                onChange={handleOutputChange}
                 placeholder="Edit your article here…"
               />
             )}
@@ -727,7 +729,7 @@ export default function ToolPage() {
                 isEditing={isEditing}
                 loading={loading}
                 value={output}
-                onChange={(v) => { setOutput(v); setSaved(false); }}
+                onChange={handleOutputChange}
                 placeholder="Edit your content here…"
               />
             )}
