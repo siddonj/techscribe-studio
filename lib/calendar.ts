@@ -41,6 +41,7 @@ export interface CalendarEntry {
 export interface CalendarQueryOptions {
   status?: CalendarEntryStatus;
   toolSlug?: string;
+  publishIntent?: CalendarPublishIntent;
   scheduledFrom?: string;
   scheduledTo?: string;
 }

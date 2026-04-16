@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  CALENDAR_PUBLISH_INTENTS,
   CALENDAR_STATUSES,
   CALENDAR_STATUS_LABELS,
   type CalendarEntry,
   type CalendarEntryStatus,
+  type CalendarPublishIntent,
   type CalendarSummary,
 } from "@/lib/calendar";
 import { TOOLS, getToolBySlug } from "@/lib/tools";
@@ -158,6 +160,7 @@ export default function CalendarPage() {
   const [deleting, setDeleting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [toolFilter, setToolFilter] = useState<string>("all");
+  const [publishIntentFilter, setPublishIntentFilter] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [createDraft, setCreateDraft] = useState<CalendarDraft>(() => ({
     ...createEmptyDraft(),
@@ -181,6 +184,9 @@ export default function CalendarPage() {
       }
       if (toolFilter !== "all") {
         params.set("tool", toolFilter);
+      }
+      if (publishIntentFilter !== "all") {
+        params.set("publish_intent", publishIntentFilter);
       }
 
       const res = await fetch(`/api/calendar?${params.toString()}`);
@@ -207,7 +213,7 @@ export default function CalendarPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, toolFilter]);
+  }, [statusFilter, toolFilter, publishIntentFilter]);
 
   useEffect(() => {
     void fetchCalendar();
@@ -569,7 +575,7 @@ export default function CalendarPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <select
                   className={inputClassName}
                   value={statusFilter}
@@ -590,6 +596,16 @@ export default function CalendarPage() {
                     <option key={tool.slug} value={tool.slug}>{tool.name}</option>
                   ))}
                 </select>
+                <select
+                  className={inputClassName}
+                  value={publishIntentFilter}
+                  onChange={(event) => setPublishIntentFilter(event.target.value)}
+                >
+                  <option value="all">All intents</option>
+                  {CALENDAR_PUBLISH_INTENTS.map((intent) => (
+                    <option key={intent} value={intent}>{intent === "publish" ? "Publish" : "Draft"}</option>
+                  ))}
+                </select>
               </div>
               {viewMode === "list" && (
                 <p className="text-xs text-muted">View the schedule by due date, then open a card to edit the plan or jump straight into a tool.</p>
@@ -608,7 +624,20 @@ export default function CalendarPage() {
                   <div className="p-6 text-sm text-muted font-mono animate-pulse">Loading calendar...</div>
                 )}
 
-                {!loading && rows.length === 0 && (
+                {!loading && rows.length === 0 && (statusFilter !== "all" || toolFilter !== "all" || publishIntentFilter !== "all") && (
+                  <div className="p-6 text-center">
+                    <div className="text-4xl opacity-30 mb-3">🔍</div>
+                    <p className="text-sm text-muted">No items match the active filters.</p>
+                    <button
+                      onClick={() => { setStatusFilter("all"); setToolFilter("all"); setPublishIntentFilter("all"); }}
+                      className="text-xs text-accent hover:text-accent/80 mt-2 transition-colors"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+
+                {!loading && rows.length === 0 && statusFilter === "all" && toolFilter === "all" && publishIntentFilter === "all" && (
                   <div className="p-6 text-center">
                     <div className="text-4xl opacity-30 mb-3">🗓️</div>
                     <p className="text-sm text-muted">No planned content yet.</p>
@@ -691,7 +720,28 @@ export default function CalendarPage() {
                   <div className="p-6 text-sm text-muted font-mono animate-pulse">Loading calendar...</div>
                 )}
 
-                {!loading && (
+                {!loading && rows.length === 0 && (statusFilter !== "all" || toolFilter !== "all" || publishIntentFilter !== "all") && (
+                  <div className="p-6 text-center">
+                    <div className="text-4xl opacity-30 mb-3">🔍</div>
+                    <p className="text-sm text-muted">No items match the active filters.</p>
+                    <button
+                      onClick={() => { setStatusFilter("all"); setToolFilter("all"); setPublishIntentFilter("all"); }}
+                      className="text-xs text-accent hover:text-accent/80 mt-2 transition-colors"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+
+                {!loading && rows.length === 0 && statusFilter === "all" && toolFilter === "all" && publishIntentFilter === "all" && (
+                  <div className="p-6 text-center">
+                    <div className="text-4xl opacity-30 mb-3">🗓️</div>
+                    <p className="text-sm text-muted">No planned content yet.</p>
+                    <p className="text-xs text-muted/70 mt-1">Add your first scheduled item above to start building the queue.</p>
+                  </div>
+                )}
+
+                {!loading && rows.length > 0 && (
                   <>
                     <div className="grid grid-cols-7 gap-2 min-h-[420px]">
                       {weekDates.map((dateValue) => {
