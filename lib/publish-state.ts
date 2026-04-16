@@ -28,7 +28,8 @@ export const PUBLISH_STATES = [
  * - `draft_created`  — a WordPress draft was created for the first time
  * - `draft_updated`  — an existing WordPress draft was updated
  * - `published`      — the post is live on WordPress
- * - `failed`         — the last publish attempt failed (retryable)
+ * - `failed`         — the last publish attempt failed; can be retried via the
+ *                      "Retry Publish" action in the history view
  *
  * `null` (the absence of a state) means the item has never been published
  * to WordPress ("unpublished").
@@ -169,6 +170,7 @@ export function getPublishStateStatusText(row: HistoryRow, formatIsoDate: (iso: 
       : "Draft updated";
   }
 
+  // state === "draft_created" or any unrecognised value with a post ID
   return row.wp_last_published_at
     ? `Draft linked ${formatIsoDate(row.wp_last_published_at)}`
     : "Draft linked";

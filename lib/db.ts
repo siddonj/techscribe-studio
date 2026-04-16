@@ -354,6 +354,10 @@ function buildHistoryQueryParts(options: HistoryQueryOptions) {
   }
 
   if (options.status === "never-published") {
+    // Rows that have never had a successful publish attempt: no wp_post_id and
+    // not in a "failed" state.  Failed rows are intentionally excluded because
+    // they represent items that had at least one attempted (but unsuccessful)
+    // publish — they belong to the "publish-failed" bucket instead.
     whereClauses.push("(wp_publish_state IS NULL OR wp_publish_state <> 'failed') AND wp_post_id IS NULL");
   } else if (options.status === "draft-linked") {
     // Matches both new ("draft_created") and legacy ("draft" + created action) stored values

@@ -348,6 +348,8 @@ export default function ToolPage() {
 
       setDraftPostId(publishData.postId ?? null);
       setPublishedDraftUrl(publishData.url ?? null);
+      // normalizePublishState returns null for missing/unrecognised values, which
+      // correctly keeps the UI in an "unset" state until the next publish action.
       setPublishState(normalizePublishState(publishData.publishState));
       if (currentHistoryId) {
         setHistoryId(currentHistoryId);
