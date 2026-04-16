@@ -4,6 +4,7 @@ This document explains what data TechScribe Studio persists, where it lives on d
 
 For deployment steps, process management, and reverse proxy setup, see **[docs/operations.md](operations.md)**.
 For recovery procedures when the database is missing, locked, or corrupt, see **[docs/recovery.md](recovery.md)**.
+For upgrade procedures, schema migration details, and rollback steps, see **[docs/upgrade.md](upgrade.md)**.
 
 ---
 
@@ -184,6 +185,16 @@ ls data/history.db   # run from the project root
 ---
 
 ## 5. Backup guidance
+
+### Pre-upgrade backups
+
+Always take a named backup before upgrading to a new version of TechScribe Studio. The app applies schema migrations automatically on startup, and while those migrations are non-destructive, a pre-upgrade backup gives you a restore point:
+
+```bash
+sqlite3 data/history.db ".backup backups/history-pre-upgrade-$(date +%Y%m%d).db"
+```
+
+See **[docs/upgrade.md](upgrade.md)** for the full upgrade procedure and rollback steps.
 
 ### Minimum viable backup
 

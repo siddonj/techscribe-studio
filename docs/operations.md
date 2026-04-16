@@ -4,6 +4,7 @@ This guide covers everything needed to deploy, operate, and recover TechScribe S
 
 For detailed recovery procedures covering missing env vars, SQLite problems, and WordPress failures, see the companion **[Failure Recovery Guide](recovery.md)**.
 For a full reference on SQLite storage, data directory requirements, and backup procedures, see **[Data Persistence and Backup](data-persistence.md)**.
+For the full upgrade and migration reference — including how schema migrations work, persistence-sensitive change guidance, and rollback procedures — see **[Upgrade and Migration Guide](upgrade.md)**.
 
 ---
 
@@ -18,6 +19,7 @@ For a full reference on SQLite storage, data directory requirements, and backup 
 7. [Failure Recovery](#7-failure-recovery)
 8. [Smoke-Test Checklist](#8-smoke-test-checklist)
 9. [Upgrading](#9-upgrading)
+10. [Upgrade and Migration Reference](#10-upgrade-and-migration-reference)
 
 ---
 
@@ -353,30 +355,52 @@ It covers infrastructure, AI generation, save and history, content planner linka
 
 ## 9. Upgrading
 
-1. Pull the latest code:
+> **Before upgrading:** back up `data/history.db`. The app applies schema migrations automatically on startup, but a backup gives you a restore point if anything goes wrong.
+
+```bash
+sqlite3 data/history.db ".backup backups/history-pre-upgrade-$(date +%Y%m%d).db"
+```
+
+1. Stop the app:
+   ```bash
+   sudo systemctl stop techscribe-studio   # or: pm2 stop techscribe-studio
+   ```
+
+2. Pull the latest code:
    ```bash
    git pull origin main
    ```
 
-2. Install any new dependencies:
+3. Install any new or updated dependencies:
    ```bash
    npm install
    ```
 
-3. Rebuild the production bundle:
+4. Rebuild the production bundle:
    ```bash
    npm run build
    ```
 
-4. Restart the app:
+5. Start the app:
    ```bash
-   # systemd
-   sudo systemctl restart techscribe-studio
-
-   # PM2
-   pm2 restart techscribe-studio
+   sudo systemctl start techscribe-studio  # or: pm2 start techscribe-studio
    ```
 
-5. Run the [Smoke-Test Checklist](#8-smoke-test-checklist) to confirm the upgrade succeeded.
+6. Run the [Smoke-Test Checklist](#8-smoke-test-checklist) to confirm the upgrade succeeded, and verify that existing history entries and calendar items are still visible.
 
-**Database migrations:** The app applies schema migrations automatically on startup. You do not need to run any migration commands manually. Back up `data/history.db` before upgrading as a precaution.
+**Database migrations:** The app applies schema migrations (column additions) automatically on startup. You do not need to run migration commands manually. See [Section 10](#10-upgrade-and-migration-reference) for a full explanation of how migrations work and what to do when a release includes persistence-sensitive changes.
+
+---
+
+## 10. Upgrade and Migration Reference
+
+For the complete upgrade reference — including how automatic schema migrations work, how to identify and handle persistence-sensitive releases, rollback procedures, and post-upgrade verification steps — see:
+
+**[docs/upgrade.md](upgrade.md)**
+
+Key points summarised here:
+
+- Schema migrations are **additive only** (column additions). Existing rows are never altered or deleted.
+- Every upgrade should be preceded by a backup of `data/history.db`.
+- Release notes will explicitly call out any **persistence-sensitive change** (data format change, column default change, or table restructure) that requires special handling beyond the standard procedure.
+- To roll back: restore the pre-upgrade backup, check out the previous code, reinstall, rebuild, and restart.
