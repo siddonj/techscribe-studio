@@ -4,7 +4,7 @@ TechScribe Studio is a self-hosted AI writing workspace for content teams, solo 
 
 Built with Next.js, Claude, and SQLite, it packages a broad tool library for blog writing, idea generation, SEO support, rewriting, social content, email copy, video workflows, and editorial planning into a single local-first application.
 
-Phase 1 is complete, and the first Phase 2 planning layer is now in place. The product covers the core content loop end to end: plan, generate, refine, save, organize, and publish drafts to WordPress from one interface.
+Phase 1 is complete, the Phase 2 planning layer is in place, and the first Phase 3 operations layer now sits on top of it. The product covers the core content loop end to end: plan, generate, refine, save, organize, review, automate, and publish drafts to WordPress from one interface.
 
 The current UI uses a darker control-room shell with a persistent tool sidebar, workflow status strips, and linked planning surfaces so the app feels closer to a live editorial system than a loose collection of individual generators.
 
@@ -29,6 +29,7 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 - A dedicated content calendar at `/calendar` for backlog and scheduled work
 - Quick planning flow with title, assigned tool, target date, brief, keywords, audience, and notes
 - Calendar entries now track owner, reviewer, approval status, blocked reason, review due date, and a lightweight production checklist
+- Checklist items support completion state, so editorial steps can be tracked as open `[ ]` and complete `[x]`
 - Calendar entries can carry WordPress planning metadata such as target category, tags, and publish intent
 - Saving generated output from a planned item links the resulting history entry back into the calendar
 - Publishing a linked draft updates the calendar item with the associated WordPress draft ID
@@ -75,12 +76,14 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 - Bulk metadata updates, export, delete, and publish actions for batch workflows
 - Track WordPress draft linkage and last sync status at the entry level
 - Each history row keeps a publish sync timeline so failed retries, draft updates, scheduled pushes, and live publishes are visible in one place
+- Failed WordPress publish attempts remain retryable from the History screen without regenerating content
 
 ### Automation operations
 
 - A dedicated automation page at `/automation` for saved batch templates and recent run history
 - Batch runs are logged with success/error counts, trigger source, and template linkage when applicable
 - Saved automation templates can be referenced by `template_id` when calling `POST /api/generate/batch`
+- Templates can be used as scheduler-safe stored payloads instead of posting a full jobs array every time
 
 ### WordPress integration
 
@@ -150,6 +153,8 @@ Optional batch generation secret (required to enable the batch API):
 BATCH_API_SECRET=your-secret-token-here
 ```
 
+The first app start after upgrades may apply SQLite schema migrations automatically for new workflow, automation, and publish-tracking columns.
+
 ### 4. Start the app
 
 ```bash
@@ -173,6 +178,50 @@ TechScribe Studio ships a built-in [Model Context Protocol (MCP)](https://modelc
 | `get_history_entry` | Retrieve a single history entry by ID |
 | `list_calendar_entries` | List content calendar entries |
 | `create_calendar_entry` | Create a new content calendar entry |
+
+## Automation API
+
+TechScribe Studio supports two automation patterns:
+
+- Direct batch payloads: send a `jobs` array to `POST /api/generate/batch`
+- Saved templates: store a reusable batch definition in the app, then trigger it later with `template_id`
+
+### Batch request with explicit jobs
+
+```json
+{
+  "jobs": [
+    {
+      "slug": "article-writer",
+      "fields": {
+        "topic": "Weekly platform update",
+        "audience": "engineering managers"
+      },
+      "save": true,
+      "folder": "automation",
+      "tags": ["weekly", "ops"]
+    }
+  ],
+  "trigger_source": "github-actions"
+}
+```
+
+### Batch request using a saved template
+
+```json
+{
+  "template_id": 3,
+  "trigger_source": "cron"
+}
+```
+
+### Automation surfaces
+
+- `/automation` shows saved templates and recent run history
+- `GET /api/automation/templates` lists templates
+- `POST /api/automation/templates` creates a template
+- `DELETE /api/automation/templates/:id` removes a template
+- `GET /api/automation/runs` lists recent automation runs
 
 ### Running the MCP server
 
