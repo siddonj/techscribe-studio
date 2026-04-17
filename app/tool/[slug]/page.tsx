@@ -638,12 +638,12 @@ export default function ToolPage() {
               </div>
               {!publishAllowed && publishStatusLoaded && (
                 <div className="flex items-center gap-3 mt-2">
-                  <p className="text-[11px] text-amber-300/90">
+                  <p className="text-xs text-amber-300/90">
                     Publish Draft is disabled until your saved WordPress settings pass a successful connection test in Settings.
                   </p>
                   <Link
                     href="/settings"
-                    className="text-[11px] font-mono text-accent hover:text-white transition-colors whitespace-nowrap"
+                    className="text-xs font-mono text-accent hover:text-white transition-colors whitespace-nowrap"
                   >
                     Go to Settings →
                   </Link>
@@ -657,11 +657,11 @@ export default function ToolPage() {
                     const hint = getPublishFailureHint(category);
                     return (
                       <div className="flex flex-col gap-0.5 bg-red-400/5 border border-red-400/15 rounded-md px-3 py-2">
-                        <p className="text-[11px] text-red-300/90">
+                        <p className="text-xs text-red-300/90">
                           <span className="font-semibold text-red-300">{categoryLabel}:</span>{" "}
                           {publishError}
                         </p>
-                        <p className="text-[11px] text-red-300/60">{hint}</p>
+                        <p className="text-xs text-red-300/60">{hint}</p>
                       </div>
                     );
                   })()}

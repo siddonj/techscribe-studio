@@ -34,6 +34,28 @@ const config: Config = {
         body: ["var(--font-body)", "sans-serif"],
         mono: ["var(--font-mono)", "monospace"],
       },
+      // Typography scale — each step pairs a font-size with a consistent line-height.
+      // Minimum rendered size is 12px (text-xs) to meet readability standards.
+      fontSize: {
+        // Meta / chips / decorative labels — 12px / 16px
+        xs:   ["0.75rem",  { lineHeight: "1rem" }],
+        // Field labels, secondary UI, compact body — 14px / 20px
+        sm:   ["0.875rem", { lineHeight: "1.25rem" }],
+        // Primary body copy — 16px / 26px (slightly looser for prose comfort)
+        base: ["1rem",     { lineHeight: "1.625rem" }],
+        // Large body / intro paragraphs — 18px / 28px
+        lg:   ["1.125rem", { lineHeight: "1.75rem" }],
+        // Card / section subheadings — 20px / 28px
+        xl:   ["1.25rem",  { lineHeight: "1.75rem" }],
+        // Card / modal headings — 24px / 32px
+        "2xl": ["1.5rem",  { lineHeight: "2rem" }],
+        // Section headings (dashboard) — 30px / 38px
+        "3xl": ["1.875rem", { lineHeight: "2.375rem" }],
+        // Page hero titles — 36px / 44px
+        "4xl": ["2.25rem", { lineHeight: "2.75rem" }],
+        // Display / marketing titles — 48px / 56px
+        "5xl": ["3rem",    { lineHeight: "3.5rem" }],
+      },
     },
   },
   plugins: [],

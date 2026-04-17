@@ -679,7 +679,7 @@ export default function CalendarPage() {
                   <section key={section.id} className="border-b border-border/60 last:border-b-0">
                     <div className="px-4 py-3 bg-subtle/50 flex items-center justify-between">
                       <p className="font-mono text-xs text-muted uppercase tracking-wider">{section.title}</p>
-                      <span className="text-[11px] text-muted">{section.rows.length} items</span>
+                      <span className="text-xs text-muted">{section.rows.length} items</span>
                     </div>
 
                     <div className="p-2 space-y-2">
@@ -705,7 +705,7 @@ export default function CalendarPage() {
                                     <span className="text-xs text-muted truncate">{tool?.name ?? row.tool_slug}</span>
                                   </div>
                                 </div>
-                                <span className={`text-[11px] font-mono border rounded px-2 py-1 shrink-0 ${getStatusBadgeClass(row.status)}`}>
+                                <span className={`text-xs font-mono border rounded px-2 py-1 shrink-0 ${getStatusBadgeClass(row.status)}`}>
                                   {CALENDAR_STATUS_LABELS[row.status]}
                                 </span>
                               </div>
@@ -719,7 +719,7 @@ export default function CalendarPage() {
 
                             {/* Inline quick-reschedule */}
                             <div className="mt-2 flex items-center gap-1.5 border-t border-border/40 pt-2">
-                              <span className="text-[10px] text-muted">📅</span>
+                              <span className="text-xs text-muted">📅</span>
                               <input
                                 type="date"
                                 aria-label="Reschedule date"
@@ -728,10 +728,10 @@ export default function CalendarPage() {
                                 onChange={(e) => {
                                   void handleQuickRescheduleById(row.id, e.target.value);
                                 }}
-                                className="text-[11px] text-muted bg-transparent border-0 p-0 focus:outline-none focus:ring-1 focus:ring-accent rounded cursor-pointer hover:text-accent transition-colors disabled:opacity-40 [color-scheme:dark]"
+                                className="text-xs text-muted bg-transparent border-0 p-0 focus:outline-none focus:ring-1 focus:ring-accent rounded cursor-pointer hover:text-accent transition-colors disabled:opacity-40 [color-scheme:dark]"
                               />
                               {!row.scheduled_for && (
-                                <span className="text-[10px] text-muted/50 italic">unscheduled</span>
+                                <span className="text-xs text-muted/50 italic">unscheduled</span>
                               )}
                             </div>
                           </div>
@@ -797,10 +797,10 @@ export default function CalendarPage() {
                                 ${canMove ? "cursor-pointer hover:bg-accent/20" : "cursor-default"}
                               `}
                             >
-                              <p className="text-[10px] font-mono text-muted uppercase">{weekdayLabel}</p>
+                              <p className="text-xs font-mono text-muted uppercase">{weekdayLabel}</p>
                               <p className={`text-xl font-bold mt-0.5 ${isToday ? "text-accent" : "text-white"}`}>{dayNumber}</p>
                               {canMove && (
-                                <p className="text-[9px] text-accent/60 mt-0.5">Move here</p>
+                                <p className="text-xs text-accent/60 mt-0.5">Move here</p>
                               )}
                             </button>
 
@@ -815,10 +815,10 @@ export default function CalendarPage() {
                                     onClick={() => setSelectedId(row.id)}
                                     className={`w-full text-left border rounded-lg p-2 transition-colors ${selected ? "border-accent/40 bg-accent/5" : "border-border hover:border-accent/20 hover:bg-subtle/40"}`}
                                   >
-                                    <p className="text-[11px] text-white font-medium leading-snug line-clamp-2">{row.title}</p>
+                                    <p className="text-xs text-white font-medium leading-snug line-clamp-2">{row.title}</p>
                                     <div className="flex items-center justify-between mt-1.5 gap-1">
                                       <span className="text-xs">{tool?.icon ?? "📝"}</span>
-                                      <span className={`text-[9px] font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
+                                      <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
                                         {CALENDAR_STATUS_LABELS[row.status]}
                                       </span>
                                     </div>
@@ -832,7 +832,7 @@ export default function CalendarPage() {
                                   type="button"
                                   disabled={quickRescheduling}
                                   onClick={() => void handleQuickReschedule(dateValue)}
-                                  className="w-full text-center text-[10px] text-muted border border-dashed border-border rounded-lg py-4 hover:border-accent/50 hover:text-accent transition-colors disabled:opacity-40"
+                                  className="w-full text-center text-xs text-muted border border-dashed border-border rounded-lg py-4 hover:border-accent/50 hover:text-accent transition-colors disabled:opacity-40"
                                 >
                                   + Move here
                                 </button>
@@ -848,7 +848,7 @@ export default function CalendarPage() {
                       <div className="mt-4 border border-border rounded-xl overflow-hidden">
                         <div className="px-4 py-2 bg-subtle/50 border-b border-border flex items-center justify-between">
                           <p className="font-mono text-xs text-muted uppercase tracking-wider">Unscheduled</p>
-                          <span className="text-[11px] text-muted">{weekUnscheduled.length} items</span>
+                          <span className="text-xs text-muted">{weekUnscheduled.length} items</span>
                         </div>
                         <div className="p-2 flex flex-wrap gap-2">
                           {weekUnscheduled.map((row) => {
@@ -863,7 +863,7 @@ export default function CalendarPage() {
                                 <p className="text-xs text-white font-medium truncate">{row.title}</p>
                                 <div className="flex items-center justify-between mt-1.5 gap-1">
                                   <span className="text-xs">{tool?.icon ?? "📝"}</span>
-                                  <span className={`text-[9px] font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
+                                  <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
                                     {CALENDAR_STATUS_LABELS[row.status]}
                                   </span>
                                 </div>
@@ -961,7 +961,7 @@ export default function CalendarPage() {
                         value={editorDraft.scheduled_for}
                         onChange={(event) => setEditorDraft((current) => current ? { ...current, scheduled_for: event.target.value } : current)}
                       />
-                      <p className="text-[10px] text-muted/60 mt-1">Editorial planning date. Also used as the WordPress publish date when publish intent is set to "Schedule". Publishing is always triggered manually.</p>
+                      <p className="text-xs text-muted/60 mt-1">Editorial planning date. Also used as the WordPress publish date when publish intent is set to "Schedule". Publishing is always triggered manually.</p>
                     </div>
                   </div>
 
@@ -1053,13 +1053,13 @@ export default function CalendarPage() {
                           <option value="publish">Publish — make live on WordPress immediately</option>
                           <option value="schedule">Schedule — queue on WordPress using the planned date (WordPress controls timing)</option>
                         </select>
-                        <p className="text-[10px] text-muted/60 mt-1">Controls what happens on the next manual publish action. Scheduling hands the publish date to WordPress — the app does not auto-publish.</p>
+                        <p className="text-xs text-muted/60 mt-1">Controls what happens on the next manual publish action. Scheduling hands the publish date to WordPress — the app does not auto-publish.</p>
                       </div>
                       <div>
                         <p className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">WordPress Status</p>
                         {selectedEntry.wp_post_id ? (
                           <div className="space-y-1">
-                            <span className="inline-block text-[11px] font-mono border border-green-400/20 text-green-300 rounded px-2 py-1">
+                            <span className="inline-block text-xs font-mono border border-green-400/20 text-green-300 rounded px-2 py-1">
                               Post #{selectedEntry.wp_post_id} synced
                             </span>
                           </div>
@@ -1077,7 +1077,7 @@ export default function CalendarPage() {
                           value={editorDraft.wp_category}
                           onChange={(event) => setEditorDraft((current) => current ? { ...current, wp_category: event.target.value } : current)}
                         />
-                        <p className="text-[10px] text-muted/60 mt-1">Comma-separated WordPress category IDs sent on publish.</p>
+                        <p className="text-xs text-muted/60 mt-1">Comma-separated WordPress category IDs sent on publish.</p>
                       </div>
                       <div>
                         <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">WP Tag IDs</label>
@@ -1087,7 +1087,7 @@ export default function CalendarPage() {
                           value={editorDraft.wp_tags}
                           onChange={(event) => setEditorDraft((current) => current ? { ...current, wp_tags: event.target.value } : current)}
                         />
-                        <p className="text-[10px] text-muted/60 mt-1">Comma-separated WordPress tag IDs sent on publish.</p>
+                        <p className="text-xs text-muted/60 mt-1">Comma-separated WordPress tag IDs sent on publish.</p>
                       </div>
                     </div>
                   </div>
