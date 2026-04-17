@@ -6,7 +6,7 @@ import {
   normalizeCalendarApprovalStatus,
   normalizeCalendarPublishIntent,
 } from "@/lib/db";
-import { isCalendarApprovalStatus, isCalendarPublishIntent, isCalendarStatus } from "@/lib/calendar";
+import { type CalendarChecklistItem, isCalendarApprovalStatus, isCalendarPublishIntent, isCalendarStatus } from "@/lib/calendar";
 import { getToolBySlug } from "@/lib/tools";
 
 export const runtime = "nodejs";
@@ -40,7 +40,7 @@ function normalizeChecklistItems(value: unknown) {
 
       return null;
     })
-    .filter(Boolean);
+    .filter((item): item is CalendarChecklistItem => Boolean(item));
 }
 
 export async function GET(req: NextRequest) {
