@@ -15,14 +15,14 @@ export default function Dashboard() {
   const categories = getAllCategories();
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-6 md:p-10 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-12">
+      <div className="mb-16">
         <div className="font-mono text-accent text-xs tracking-widest uppercase mb-3">
           Welcome back
         </div>
         <h1
-          className="text-4xl text-white mb-4"
+          className="text-4xl text-white mb-5"
           style={{ fontFamily: "var(--font-display)" }}
         >
           TechScribe Studio
@@ -34,7 +34,7 @@ export default function Dashboard() {
         </p>
 
         {/* Stats bar */}
-        <div className="flex gap-6 mt-6">
+        <div className="flex gap-8 mt-8">
           {[
             { label: "Total Tools", value: TOOLS.length },
             { label: "Categories", value: categories.length },
@@ -47,13 +47,13 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="mt-8 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="bg-card border border-border rounded-2xl p-6 shadow-card-elevated">
-            <p className="font-mono text-accent text-xs tracking-widest uppercase mb-3">
+        <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="bg-card border border-border rounded-2xl p-7 md:p-8 shadow-card-elevated">
+            <p className="font-mono text-accent text-xs tracking-widest uppercase mb-4">
               Phase 2 Focus
             </p>
             <h2
-              className="text-2xl text-white mb-3"
+              className="text-2xl text-white mb-4"
               style={{ fontFamily: "var(--font-display)" }}
             >
               Content Calendar & Scheduling
@@ -65,11 +65,11 @@ export default function Dashboard() {
 
           <Link
             href="/calendar"
-            className="group bg-card border border-border hover:border-accent/40 rounded-2xl p-6 transition-all duration-200 hover:bg-accent/5 shadow-card-elevated"
+            className="group bg-card border border-border hover:border-accent/40 rounded-2xl p-7 md:p-8 transition-all duration-200 hover:bg-accent/5 shadow-card-elevated"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="font-mono text-xs text-muted uppercase tracking-wider mb-3">
+                <p className="font-mono text-xs text-muted uppercase tracking-wider mb-4">
                   Open Planner
                 </p>
                 <h3
@@ -78,7 +78,7 @@ export default function Dashboard() {
                 >
                   Build Your Editorial Queue
                 </h3>
-                <p className="text-sm text-slate-200 mt-3">
+                <p className="text-sm text-slate-200 mt-4">
                   Organize backlog ideas, this-week priorities, and scheduled drafts in one place.
                 </p>
               </div>
@@ -89,43 +89,45 @@ export default function Dashboard() {
       </div>
 
       {/* Tool categories */}
-      {categories.map((cat) => {
-        const tools = TOOLS.filter((t) => t.category === cat);
-        return (
-          <section key={cat} className="mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-xl">{CATEGORY_ICONS[cat] || "🔧"}</span>
-              <h2
-                className="text-lg text-white"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                {cat}
-              </h2>
-              <span className="font-mono text-xs text-muted bg-subtle px-2 py-0.5 rounded-full">
-                {tools.length} tools
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {tools.map((tool) => (
-                <Link
-                  key={tool.slug}
-                  href={`/tool/${tool.slug}`}
-                  className="group bg-card border border-border hover:border-accent/40 rounded-xl p-5 transition-all duration-200 hover:bg-accent/5 shadow-card-elevated"
+      <div className="space-y-12">
+        {categories.map((cat) => {
+          const tools = TOOLS.filter((t) => t.category === cat);
+          return (
+            <section key={cat}>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-xl">{CATEGORY_ICONS[cat] || "🔧"}</span>
+                <h2
+                  className="text-lg text-white"
+                  style={{ fontFamily: "var(--font-display)" }}
                 >
-                  <div className="text-2xl mb-2">{tool.icon}</div>
-                  <div className="text-sm font-medium text-white group-hover:text-accent transition-colors mb-1">
-                    {tool.name}
-                  </div>
-                  <div className="text-sm text-slate-200 line-clamp-2">
-                    {tool.description}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        );
-      })}
+                  {cat}
+                </h2>
+                <span className="font-mono text-xs text-muted bg-subtle px-2 py-0.5 rounded-full">
+                  {tools.length} tools
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+                {tools.map((tool) => (
+                  <Link
+                    key={tool.slug}
+                    href={`/tool/${tool.slug}`}
+                    className="group bg-card border border-border hover:border-accent/40 rounded-xl p-6 transition-all duration-200 hover:bg-accent/5 shadow-card-elevated"
+                  >
+                    <div className="text-2xl mb-3">{tool.icon}</div>
+                    <div className="text-sm font-medium text-white group-hover:text-accent transition-colors mb-2">
+                      {tool.name}
+                    </div>
+                    <div className="text-sm text-slate-200 line-clamp-2">
+                      {tool.description}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
