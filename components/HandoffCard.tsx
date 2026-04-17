@@ -50,7 +50,7 @@ export default function HandoffCard({
           {keywords.map((kw) => (
             <span
               key={kw}
-              className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-accent/10 text-accent/80 border border-accent/20"
+              className="font-mono text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent/80 border border-accent/20"
             >
               {kw}
             </span>

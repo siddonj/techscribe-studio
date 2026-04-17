@@ -1037,14 +1037,14 @@ export default function HistoryPage() {
                 </div>
                 {availableFolders.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Quick Folders</p>
+                    <p className="text-xs font-mono text-muted uppercase tracking-wider">Quick Folders</p>
                     <div className="flex flex-wrap gap-2">
                       {availableFolders.map((folder) => (
                         <button
                           key={folder}
                           onClick={() => handleBulkAssignMetadata({ folderName: folder, includeTags: false })}
                           disabled={bulkAction !== null}
-                          className="text-[11px] font-mono border border-border rounded px-2 py-1 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                          className="text-xs font-mono border border-border rounded px-2 py-1 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
                         >
                           Move to {folder}
                         </button>
@@ -1054,12 +1054,12 @@ export default function HistoryPage() {
                 )}
                 {!publishAllowed && publishStatusLoaded && (
                   <div className="flex items-center gap-3">
-                    <p className="text-[11px] text-amber-300/90">
+                    <p className="text-xs text-amber-300/90">
                       Bulk publish is disabled until your saved WordPress settings pass a successful connection test.
                     </p>
                     <Link
                       href="/settings"
-                      className="text-[11px] font-mono text-accent hover:text-white transition-colors whitespace-nowrap"
+                      className="text-xs font-mono text-accent hover:text-white transition-colors whitespace-nowrap"
                     >
                       Go to Settings →
                     </Link>
@@ -1125,10 +1125,10 @@ export default function HistoryPage() {
             {normalizedTagFilters.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Tag Filters</p>
+                  <p className="text-xs font-mono text-muted uppercase tracking-wider">Tag Filters</p>
                   <button
                     onClick={() => setTagFilters([])}
-                    className="text-[11px] text-muted hover:text-white transition-colors"
+                    className="text-xs text-muted hover:text-white transition-colors"
                   >
                     Clear tags
                   </button>
@@ -1138,7 +1138,7 @@ export default function HistoryPage() {
                     <button
                       key={tag}
                       onClick={() => toggleTagFilter(tag)}
-                      className="text-[11px] font-mono border border-accent/40 bg-accent/10 text-accent rounded px-2 py-1 transition-colors hover:text-white"
+                      className="text-xs font-mono border border-accent/40 bg-accent/10 text-accent rounded px-2 py-1 transition-colors hover:text-white"
                     >
                       #{tag} ✕
                     </button>
@@ -1166,17 +1166,17 @@ export default function HistoryPage() {
                 className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-subtle/80 transition-colors"
               >
                 <p className="text-xs font-mono text-muted uppercase tracking-wider">Advanced Filters</p>
-                <span className="text-muted text-[10px]">{filterAdvancedOpen ? "▲" : "▼"}</span>
+                <span className="text-muted text-xs">{filterAdvancedOpen ? "▲" : "▼"}</span>
               </button>
               {filterAdvancedOpen && (
                 <div className="px-3 pb-3 space-y-3 border-t border-border/50">
                   {availableFolders.length > 0 && (
                     <div className="space-y-2 pt-3">
-                      <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Folders</p>
+                      <p className="text-xs font-mono text-muted uppercase tracking-wider">Folders</p>
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => setFolderFilter("")}
-                          className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${!folderFilter ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                          className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${!folderFilter ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
                         >
                           All folders
                         </button>
@@ -1184,7 +1184,7 @@ export default function HistoryPage() {
                           <button
                             key={folder}
                             onClick={() => setFolderFilter(folder)}
-                            className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${folderFilter === folder ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                            className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${folderFilter === folder ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
                           >
                             📁 {folder}
                           </button>
@@ -1194,7 +1194,7 @@ export default function HistoryPage() {
                   )}
                   {popularTags.length > 0 && (
                     <div className="space-y-2 pt-1">
-                      <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Popular Tags</p>
+                      <p className="text-xs font-mono text-muted uppercase tracking-wider">Popular Tags</p>
                       <div className="flex flex-wrap gap-2">
                         {popularTags.map((tagSummary) => {
                           const active = normalizedTagFilters.some((tag) => tag.toLowerCase() === tagSummary.tag.toLowerCase());
@@ -1202,7 +1202,7 @@ export default function HistoryPage() {
                             <button
                               key={tagSummary.tag}
                               onClick={() => toggleTagFilter(tagSummary.tag)}
-                              className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                              className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
                             >
                               #{tagSummary.tag} ({tagSummary.count})
                             </button>
@@ -1213,7 +1213,7 @@ export default function HistoryPage() {
                   )}
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
-                      <p className="text-[11px] font-mono text-muted mb-1">From</p>
+                      <p className="text-xs font-mono text-muted mb-1">From</p>
                       <input
                         type="date"
                         className={inputClassName}
@@ -1222,7 +1222,7 @@ export default function HistoryPage() {
                       />
                     </div>
                     <div>
-                      <p className="text-[11px] font-mono text-muted mb-1">To</p>
+                      <p className="text-xs font-mono text-muted mb-1">To</p>
                       <input
                         type="date"
                         className={inputClassName}
@@ -1252,7 +1252,7 @@ export default function HistoryPage() {
                 className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-subtle/80 transition-colors"
               >
                 <p className="text-xs font-mono text-muted uppercase tracking-wider">📁 Folder Management</p>
-                <span className="text-muted text-[10px]">{filterFolderMgmtOpen ? "▲" : "▼"} <span className="font-mono">{folderSummaries.length}</span></span>
+                <span className="text-muted text-xs">{filterFolderMgmtOpen ? "▲" : "▼"} <span className="font-mono">{folderSummaries.length}</span></span>
               </button>
               {filterFolderMgmtOpen && (
                 <div className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3">
@@ -1300,7 +1300,7 @@ export default function HistoryPage() {
                   )}
                   {folderSummaries.length > 0 ? (
                     <div className="space-y-2">
-                      <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Library Folders</p>
+                      <p className="text-xs font-mono text-muted uppercase tracking-wider">Library Folders</p>
                       <div className="flex flex-wrap gap-2">
                         {folderSummaries.map((folderSummary) => (
                           <button
@@ -1309,7 +1309,7 @@ export default function HistoryPage() {
                               setFolderManagerFolder(folderSummary.folder);
                               setFolderFilter(folderSummary.folder);
                             }}
-                            className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${folderManagerFolder === folderSummary.folder || folderFilter === folderSummary.folder ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                            className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${folderManagerFolder === folderSummary.folder || folderFilter === folderSummary.folder ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
                           >
                             {folderSummary.folder} ({folderSummary.count})
                           </button>
@@ -1330,7 +1330,7 @@ export default function HistoryPage() {
                 className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-subtle/80 transition-colors"
               >
                 <p className="text-xs font-mono text-muted uppercase tracking-wider">🏷️ Tag Management</p>
-                <span className="text-muted text-[10px]">{filterTagMgmtOpen ? "▲" : "▼"} <span className="font-mono">{tagSummaries.length}</span></span>
+                <span className="text-muted text-xs">{filterTagMgmtOpen ? "▲" : "▼"} <span className="font-mono">{tagSummaries.length}</span></span>
               </button>
               {filterTagMgmtOpen && (
                 <div className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3">
@@ -1376,7 +1376,7 @@ export default function HistoryPage() {
                   )}
                   {popularTags.length > 0 ? (
                     <div className="space-y-2">
-                      <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Library Tags</p>
+                      <p className="text-xs font-mono text-muted uppercase tracking-wider">Library Tags</p>
                       <div className="flex flex-wrap gap-2">
                         {popularTags.map((tagSummary) => (
                           <button
@@ -1385,7 +1385,7 @@ export default function HistoryPage() {
                               setTagManagerTag(tagSummary.tag);
                               toggleTagFilter(tagSummary.tag);
                             }}
-                            className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${tagManagerTag === tagSummary.tag || normalizedTagFilters.some((tag) => tag.toLowerCase() === tagSummary.tag.toLowerCase()) ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                            className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${tagManagerTag === tagSummary.tag || normalizedTagFilters.some((tag) => tag.toLowerCase() === tagSummary.tag.toLowerCase()) ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
                           >
                             #{tagSummary.tag} ({tagSummary.count})
                           </button>
@@ -1406,7 +1406,7 @@ export default function HistoryPage() {
                 className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-subtle/80 transition-colors"
               >
                 <p className="text-xs font-mono text-muted uppercase tracking-wider">💾 Saved Presets</p>
-                <span className="text-muted text-[10px]">{filterPresetsOpen ? "▲" : "▼"} <span className="font-mono">{presets.length}</span></span>
+                <span className="text-muted text-xs">{filterPresetsOpen ? "▲" : "▼"} <span className="font-mono">{presets.length}</span></span>
               </button>
               {filterPresetsOpen && (
                 <div className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3">
@@ -1436,7 +1436,7 @@ export default function HistoryPage() {
                             className="flex-1 text-left text-sm border border-border rounded-lg px-3 py-2 text-white/90 hover:border-accent/40 transition-colors"
                           >
                             {preset.name}
-                            <span className="block text-[11px] text-muted mt-1 truncate">
+                            <span className="block text-xs text-muted mt-1 truncate">
                               {[preset.filterSlug !== "all" ? preset.filterSlug : null, preset.folderFilter || null, parseTagValues(preset.tagFilters ?? preset.tagFilter ?? []).join(", ") || null, preset.statusFilter !== "all" ? preset.statusFilter : null]
                                 .filter(Boolean)
                                 .join(" • ") || "All entries"}
@@ -1517,7 +1517,7 @@ export default function HistoryPage() {
                           </div>
                         </div>
                         {draftBadgeLabel && (
-                          <span className={`font-mono text-[10px] border rounded px-1.5 py-0.5 flex items-center gap-1 ${getDraftBadgeClassName(row)}`}>
+                          <span className={`font-mono text-xs border rounded px-1.5 py-0.5 flex items-center gap-1 ${getDraftBadgeClassName(row)}`}>
                             {publishStateIcon}
                             {draftBadgeLabel}
                           </span>
@@ -1685,12 +1685,12 @@ export default function HistoryPage() {
               {!publishAllowed && publishStatusLoaded && (
                 <div className="px-6 py-2 border-b border-border bg-amber-400/5">
                   <div className="flex items-center gap-3">
-                    <p className="text-[11px] text-amber-300/90">
+                    <p className="text-xs text-amber-300/90">
                       Publish Draft is disabled until your saved WordPress settings pass a successful connection test in Settings.
                     </p>
                     <Link
                       href="/settings"
-                      className="text-[11px] font-mono text-accent hover:text-white transition-colors whitespace-nowrap"
+                      className="text-xs font-mono text-accent hover:text-white transition-colors whitespace-nowrap"
                     >
                       Go to Settings →
                     </Link>
@@ -1706,12 +1706,12 @@ export default function HistoryPage() {
                     const hint = getPublishFailureHint(category);
                     return (
                       <div className="flex flex-col gap-0.5">
-                        <p className="text-[11px] text-red-300/90">
+                        <p className="text-xs text-red-300/90">
                           <span className="font-semibold text-red-300">{categoryLabel}:</span>{" "}
                           {selected.wp_error_message ?? "Last publish attempt failed."}{" "}
                           Click <span className="text-white font-semibold">Retry Publish</span> above to try again without regenerating.
                         </p>
-                        <p className="text-[11px] text-red-300/60">{hint}</p>
+                        <p className="text-xs text-red-300/60">{hint}</p>
                       </div>
                     );
                   })()}
@@ -1722,7 +1722,7 @@ export default function HistoryPage() {
               <div className="px-6 py-3 border-b border-border bg-subtle shrink-0">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                   <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Title</label>
+                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">Title</label>
                     <input
                       type="text"
                       className={inputClassName}
@@ -1731,7 +1731,7 @@ export default function HistoryPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Folder</label>
+                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">Folder</label>
                     <input
                       type="text"
                       list="history-folder-options"
@@ -1742,7 +1742,7 @@ export default function HistoryPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Tags</label>
+                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">Tags</label>
                     <input
                       type="text"
                       className={inputClassName}
@@ -1754,7 +1754,7 @@ export default function HistoryPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                   <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Slug</label>
+                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">WP Slug</label>
                     <input
                       type="text"
                       className={inputClassName}
@@ -1764,7 +1764,7 @@ export default function HistoryPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Excerpt</label>
+                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">WP Excerpt</label>
                     <input
                       type="text"
                       className={inputClassName}
@@ -1774,7 +1774,7 @@ export default function HistoryPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Category IDs</label>
+                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">WP Category IDs</label>
                     <input
                       type="text"
                       className={inputClassName}
@@ -1784,7 +1784,7 @@ export default function HistoryPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Tag IDs</label>
+                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">WP Tag IDs</label>
                     <input
                       type="text"
                       className={inputClassName}
@@ -1796,8 +1796,8 @@ export default function HistoryPage() {
                 </div>
                 <div className="mb-3 rounded-lg border border-border bg-surface/50 p-3 space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Tag Suggestions</p>
-                    <span className="text-[11px] text-muted">Add existing tags to keep naming consistent</span>
+                    <p className="text-xs font-mono text-muted uppercase tracking-wider">Tag Suggestions</p>
+                    <span className="text-xs text-muted">Add existing tags to keep naming consistent</span>
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -1826,7 +1826,7 @@ export default function HistoryPage() {
                       <button
                         key={tagSummary.tag}
                         onClick={() => handleAddEditingTag(tagSummary.tag)}
-                        className="text-[11px] font-mono border border-border rounded px-2 py-1 text-muted hover:text-white hover:border-accent/40 transition-colors"
+                        className="text-xs font-mono border border-border rounded px-2 py-1 text-muted hover:text-white hover:border-accent/40 transition-colors"
                       >
                         #{tagSummary.tag}
                       </button>
@@ -1836,7 +1836,7 @@ export default function HistoryPage() {
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div className="flex flex-wrap gap-2">
                     {selected.folder_name && (
-                      <span className="text-[11px] font-mono text-accent border border-accent/20 rounded px-2 py-1">
+                      <span className="text-xs font-mono text-accent border border-accent/20 rounded px-2 py-1">
                         Folder: {selected.folder_name}
                       </span>
                     )}
@@ -1844,7 +1844,7 @@ export default function HistoryPage() {
                       <button
                         key={tag}
                         onClick={() => handleRemoveEditingTag(tag)}
-                        className="text-[11px] font-mono text-muted border border-border rounded px-2 py-1 hover:text-white hover:border-accent/40 transition-colors"
+                        className="text-xs font-mono text-muted border border-border rounded px-2 py-1 hover:text-white hover:border-accent/40 transition-colors"
                         title="Remove tag"
                       >
                         #{tag} ✕

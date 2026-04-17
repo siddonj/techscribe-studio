@@ -191,8 +191,7 @@ export default function SettingsPage() {
             Integrations
           </div>
           <h2
-            className="text-4xl text-white mb-4"
-            style={{ fontFamily: "var(--font-display)" }}
+            className="font-display text-4xl text-white mb-4"
           >
             WordPress Setup
           </h2>

@@ -22,8 +22,7 @@ export default function Dashboard() {
           Welcome back
         </div>
         <h1
-          className="text-4xl text-white mb-5"
-          style={{ fontFamily: "var(--font-display)" }}
+          className="font-display text-4xl text-white mb-5"
         >
           TechScribe Studio
         </h1>
@@ -53,8 +52,7 @@ export default function Dashboard() {
               Phase 2 Focus
             </p>
             <h2
-              className="text-2xl text-white mb-4"
-              style={{ fontFamily: "var(--font-display)" }}
+              className="font-display text-2xl text-white mb-4"
             >
               Content Calendar & Scheduling
             </h2>
@@ -73,8 +71,7 @@ export default function Dashboard() {
                   Open Planner
                 </p>
                 <h3
-                  className="text-xl text-white group-hover:text-accent transition-colors"
-                  style={{ fontFamily: "var(--font-display)" }}
+                  className="font-display text-xl text-white group-hover:text-accent transition-colors"
                 >
                   Build Your Editorial Queue
                 </h3>
@@ -97,8 +94,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-3 mb-6">
                 <span className="text-xl">{CATEGORY_ICONS[cat] || "🔧"}</span>
                 <h2
-                  className="text-lg text-white"
-                  style={{ fontFamily: "var(--font-display)" }}
+                  className="font-display text-lg text-white"
                 >
                   {cat}
                 </h2>

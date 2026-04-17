@@ -55,10 +55,7 @@ function Sidebar({
             <div className="text-accent font-mono text-xs tracking-widest uppercase mb-1">
               TechScribe
             </div>
-            <div
-              className="text-white text-xl leading-tight"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
+            <div className="font-display text-white text-xl leading-tight">
               Studio
             </div>
           </Link>
@@ -116,7 +113,7 @@ function Sidebar({
 
           {/* Tool Library section label */}
           <div className="px-4 pt-1 pb-2 mb-1 border-t border-border/50">
-            <p className="text-[10px] font-mono tracking-widest uppercase text-muted/60 mt-2">
+            <p className="text-xs font-mono tracking-widest uppercase text-muted/60 mt-2">
               Tool Library
             </p>
           </div>
