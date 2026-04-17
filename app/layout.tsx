@@ -112,7 +112,7 @@ function Sidebar() {
                           className={`flex items-center gap-2 pl-8 pr-4 py-1.5 text-sm transition-colors ${
                             active
                               ? "text-accent bg-accent/5 border-r-2 border-accent"
-                              : "text-slate-400 hover:text-white"
+                              : "text-slate-200 hover:text-white"
                           }`}
                         >
                           <span className="text-base leading-none">

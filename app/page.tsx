@@ -27,7 +27,7 @@ export default function Dashboard() {
         >
           TechScribe Studio
         </h1>
-        <p className="text-slate-400 text-lg max-w-xl">
+        <p className="text-slate-200 text-lg max-w-xl">
           Your personal AI writing studio for{" "}
           <span className="text-accent">techscribe.org</span>. All tools,
           no limits, self-hosted.
@@ -58,7 +58,7 @@ export default function Dashboard() {
             >
               Content Calendar & Scheduling
             </h2>
-            <p className="text-slate-400 text-sm max-w-2xl">
+            <p className="text-slate-200 text-sm max-w-2xl">
               Plan article ideas, assign tools, schedule publishing dates, and move directly from a planned item into a prefilled writing workflow.
             </p>
           </div>
@@ -78,7 +78,7 @@ export default function Dashboard() {
                 >
                   Build Your Editorial Queue
                 </h3>
-                <p className="text-sm text-slate-400 mt-3">
+                <p className="text-sm text-slate-200 mt-3">
                   Organize backlog ideas, this-week priorities, and scheduled drafts in one place.
                 </p>
               </div>
@@ -117,7 +117,7 @@ export default function Dashboard() {
                   <div className="text-sm font-medium text-white group-hover:text-accent transition-colors mb-1">
                     {tool.name}
                   </div>
-                  <div className="text-xs text-muted line-clamp-2">
+                  <div className="text-sm text-slate-200 line-clamp-2">
                     {tool.description}
                   </div>
                 </Link>

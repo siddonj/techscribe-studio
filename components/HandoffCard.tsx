@@ -33,14 +33,14 @@ export default function HandoffCard({
     <div className="mt-6 bg-subtle border border-border rounded-xl p-5 flex flex-col gap-4 max-w-3xl">
       {/* Card header: title + summary */}
       <div className="flex flex-col gap-1">
-        <span className="font-mono text-[10px] text-muted uppercase tracking-widest">
+        <span className="font-mono text-xs text-muted uppercase tracking-widest">
           Structured Result
         </span>
         {title && (
           <p className="text-white text-sm font-medium leading-snug">{title}</p>
         )}
         {summary && (
-          <p className="text-slate-400 text-sm leading-relaxed">{summary}</p>
+          <p className="text-slate-200 text-sm leading-relaxed">{summary}</p>
         )}
       </div>
 
@@ -61,14 +61,14 @@ export default function HandoffCard({
       {/* Action row */}
       {actions.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-border">
-          <span className="font-mono text-[10px] text-muted uppercase tracking-widest">
+          <span className="font-mono text-xs text-muted uppercase tracking-widest">
             Launch with:
           </span>
           {actions.map((action) => (
             <Link
               key={action.targetSlug}
               href={buildHandoffUrl(action, fields, parsedOutput)}
-              className="font-mono text-[11px] px-2.5 py-1 rounded-md border border-accent/30 text-accent hover:text-white hover:border-accent/60 transition-colors"
+              className="font-mono text-xs px-2.5 py-1 rounded-md border border-accent/30 text-accent hover:text-white hover:border-accent/60 transition-colors"
             >
               {action.label} →
             </Link>
