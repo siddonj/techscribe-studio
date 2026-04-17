@@ -117,7 +117,7 @@ export default function Dashboard() {
           </p>
           <h2 className="text-2xl md:text-3xl text-white max-w-2xl" style={{ fontFamily: "var(--font-display)" }}>
             The planner is no longer a side feature. It is the top-level route for shaping upcoming content, assigning the right tool, and controlling what gets pushed downstream.
-          </p>
+            </h2>
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             {PHASE_TWO_PILLARS.map((pillar) => (
               <div key={pillar.title} className="shell-panel-soft rounded-3xl p-4">
