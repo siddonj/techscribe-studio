@@ -54,11 +54,11 @@ export const PUBLISH_STATE_LABELS: Record<PublishState, string> = {
 
 /** CSS classes for the small pill/badge shown in list rows. */
 export const PUBLISH_STATE_BADGE_CLASSES: Record<PublishState, string> = {
-  draft_created: "text-green-300 border-green-400/20",
-  draft_updated: "text-green-300 border-green-400/20",
-  published: "text-fuchsia-300 border-fuchsia-400/20",
-  scheduled: "text-blue-300 border-blue-400/20",
-  failed: "text-red-300 border-red-400/20",
+  draft_created: "text-emerald-300 border-emerald-400/30 bg-emerald-400/10",
+  draft_updated: "text-emerald-300 border-emerald-400/30 bg-emerald-400/10",
+  published: "text-fuchsia-300 border-fuchsia-400/30 bg-fuchsia-400/10",
+  scheduled: "text-sky-300 border-sky-400/30 bg-sky-400/10",
+  failed: "text-red-300 border-red-400/30 bg-red-400/10",
 };
 
 /** CSS classes for inline text annotations (slightly dimmed). */
@@ -128,14 +128,14 @@ export function resolvePublishState(row: HistoryRow): PublishState | null {
 /** Returns the badge CSS class for a history row, or the "no-state" default. */
 export function getPublishStateBadgeClass(row: HistoryRow): string {
   const state = resolvePublishState(row);
-  if (!state) return "text-green-300 border-green-400/20";
+  if (!state) return "text-slate-300 border-slate-400/20 bg-slate-400/5";
   return PUBLISH_STATE_BADGE_CLASSES[state];
 }
 
 /** Returns the inline text CSS class for a history row. */
 export function getPublishStateInlineClass(row: HistoryRow): string {
   const state = resolvePublishState(row);
-  if (!state) return "text-green-300/75";
+  if (!state) return "text-slate-400/75";
   return PUBLISH_STATE_INLINE_CLASSES[state];
 }
 

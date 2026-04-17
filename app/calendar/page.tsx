@@ -96,15 +96,15 @@ function formatDateLabel(value: string) {
 function getStatusBadgeClass(status: CalendarEntryStatus) {
   switch (status) {
     case "backlog":
-      return "border-white/15 text-slate-300";
+      return "border-slate-400/20 bg-slate-400/5 text-slate-300";
     case "planned":
-      return "border-sky-400/20 text-sky-300";
+      return "border-sky-400/30 bg-sky-400/10 text-sky-300";
     case "in-progress":
-      return "border-amber-400/20 text-amber-300";
+      return "border-amber-400/30 bg-amber-400/10 text-amber-300";
     case "ready":
-      return "border-emerald-400/20 text-emerald-300";
+      return "border-emerald-400/30 bg-emerald-400/10 text-emerald-300";
     case "published":
-      return "border-fuchsia-400/20 text-fuchsia-300";
+      return "border-fuchsia-400/30 bg-fuchsia-400/10 text-fuchsia-300";
   }
 }
 
@@ -464,11 +464,11 @@ export default function CalendarPage() {
         <section className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {[
             { label: "Total Items", value: summary?.total ?? rows.length, colorClass: "text-accent" },
-            { label: "Due This Week", value: summary?.dueThisWeek ?? 0, colorClass: "text-accent" },
-            { label: "Overdue", value: summary?.overdue ?? 0, colorClass: "text-accent" },
-            { label: "Unscheduled", value: summary?.unscheduled ?? 0, colorClass: "text-accent" },
-            { label: "Ready to Publish", value: summary?.byStatus.ready ?? 0, colorClass: "text-emerald-300" },
-            { label: "Published", value: summary?.byStatus.published ?? 0, colorClass: "text-fuchsia-300" },
+            { label: "Due This Week", value: summary?.dueThisWeek ?? 0, colorClass: "text-amber-400" },
+            { label: "Overdue", value: summary?.overdue ?? 0, colorClass: "text-red-400" },
+            { label: "Unscheduled", value: summary?.unscheduled ?? 0, colorClass: "text-sky-400" },
+            { label: "Ready to Publish", value: summary?.byStatus.ready ?? 0, colorClass: "text-emerald-400" },
+            { label: "Published", value: summary?.byStatus.published ?? 0, colorClass: "text-fuchsia-400" },
           ].map((stat) => (
             <div key={stat.label} className="bg-card-alt border border-border rounded-xl px-5 py-4 shadow-card-inset">
               <p className="font-mono text-xs text-muted uppercase tracking-wider">{stat.label}</p>

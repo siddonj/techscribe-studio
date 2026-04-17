@@ -928,27 +928,27 @@ export default function HistoryPage() {
             </span>
           )}
           {publishStateCounts.published > 0 && (
-            <span className="text-xs font-mono text-fuchsia-300/75">
+            <span className={`text-xs font-mono border rounded px-2 py-0.5 ${PUBLISH_STATE_BADGE_CLASSES.published}`}>
               {PUBLISH_STATE_LABELS.published}: {publishStateCounts.published}
             </span>
           )}
           {publishStateCounts.scheduled > 0 && (
-            <span className="text-xs font-mono text-blue-300/75">
+            <span className={`text-xs font-mono border rounded px-2 py-0.5 ${PUBLISH_STATE_BADGE_CLASSES.scheduled}`}>
               {PUBLISH_STATE_LABELS.scheduled}: {publishStateCounts.scheduled}
             </span>
           )}
           {publishStateCounts.draft_updated > 0 && (
-            <span className="text-xs font-mono text-green-300/75">
+            <span className={`text-xs font-mono border rounded px-2 py-0.5 ${PUBLISH_STATE_BADGE_CLASSES.draft_updated}`}>
               {PUBLISH_STATE_LABELS.draft_updated}: {publishStateCounts.draft_updated}
             </span>
           )}
           {publishStateCounts.draft_created > 0 && (
-            <span className="text-xs font-mono text-green-300/75">
+            <span className={`text-xs font-mono border rounded px-2 py-0.5 ${PUBLISH_STATE_BADGE_CLASSES.draft_created}`}>
               {PUBLISH_STATE_LABELS.draft_created}: {publishStateCounts.draft_created}
             </span>
           )}
           {publishStateCounts.unpublished > 0 && (
-            <span className="text-xs font-mono text-muted/70">
+            <span className="text-xs font-mono border rounded px-2 py-0.5 border-slate-400/20 bg-slate-400/5 text-slate-400">
               Never Published: {publishStateCounts.unpublished}
             </span>
           )}
@@ -1585,8 +1585,8 @@ export default function HistoryPage() {
                       rel="noreferrer"
                       className={`font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
                         resolvePublishState(selected) === "published"
-                          ? "border-fuchsia-400/20 text-fuchsia-300 hover:text-fuchsia-200 hover:border-fuchsia-400/40"
-                          : "border-green-400/20 text-green-300 hover:text-green-200 hover:border-green-400/40"
+                          ? "border-fuchsia-400/30 bg-fuchsia-400/10 text-fuchsia-300 hover:text-fuchsia-200 hover:border-fuchsia-400/50"
+                          : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300 hover:text-emerald-200 hover:border-emerald-400/50"
                       }`}
                     >
                       {resolvePublishState(selected) === "published" ? "View Live" : "View Draft"}
@@ -1594,14 +1594,14 @@ export default function HistoryPage() {
                   )}
                   <Link
                     href={`/tool/${selected.tool_slug}`}
-                    className="font-mono text-xs px-3 py-1.5 rounded-md border border-border text-muted hover:text-white hover:border-accent/40 transition-colors"
+                    className="btn-secondary"
                   >
                     Use Tool
                   </Link>
                   <button
                     onClick={handlePublishDraft}
                     disabled={publishing === selected.id || !publishAllowed || !publishStatusLoaded}
-                    className="font-mono text-xs px-3 py-1.5 rounded-md border border-border text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                    className="btn-primary"
                   >
                     {publishing === selected.id
                       ? (selected.wp_post_id ? "Updating..." : "Publishing...")
@@ -1613,14 +1613,14 @@ export default function HistoryPage() {
                   </button>
                   <button
                     onClick={handleCopy}
-                    className="font-mono text-xs px-3 py-1.5 rounded-md border border-border text-muted hover:text-white hover:border-accent/40 transition-colors"
+                    className="btn-secondary"
                   >
                     {copied ? "✓ Copied!" : "Copy"}
                   </button>
                   <button
                     onClick={() => handleDelete(selected.id)}
                     disabled={deleting === selected.id}
-                    className="font-mono text-xs px-3 py-1.5 rounded-md border border-red-400/20 text-red-400/60 hover:text-red-400 hover:border-red-400/40 transition-colors disabled:opacity-50"
+                    className="btn-danger"
                   >
                     Delete
                   </button>
