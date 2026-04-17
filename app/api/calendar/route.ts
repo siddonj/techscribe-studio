@@ -3,9 +3,10 @@ import {
   computeCalendarSummary,
   createCalendarEntry,
   listCalendarEntries,
+  normalizeCalendarApprovalStatus,
   normalizeCalendarPublishIntent,
 } from "@/lib/db";
-import { isCalendarPublishIntent, isCalendarStatus } from "@/lib/calendar";
+import { isCalendarApprovalStatus, isCalendarPublishIntent, isCalendarStatus } from "@/lib/calendar";
 import { getToolBySlug } from "@/lib/tools";
 
 export const runtime = "nodejs";
@@ -13,6 +14,33 @@ export const runtime = "nodejs";
 function normalizeOptionalString(value: unknown) {
   const nextValue = String(value ?? "").trim();
   return nextValue ? nextValue : null;
+}
+
+function normalizeChecklistItems(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => {
+      if (typeof item === "string") {
+        const text = item.trim();
+        return text ? { text, completed: false } : null;
+      }
+
+      if (typeof item === "object" && item !== null) {
+        const record = item as Record<string, unknown>;
+        const text = String(record.text ?? "").trim();
+        if (!text) {
+          return null;
+        }
+
+        return { text, completed: Boolean(record.completed) };
+      }
+
+      return null;
+    })
+    .filter(Boolean);
 }
 
 export async function GET(req: NextRequest) {
@@ -51,6 +79,7 @@ export async function POST(req: NextRequest) {
     const toolSlug = String(body.tool_slug ?? "").trim();
     const statusValue = String(body.status ?? "planned").trim();
     const publishIntent = String(body.publish_intent ?? "draft").trim();
+    const approvalStatus = String(body.approval_status ?? "not_requested").trim();
 
     if (!title || !toolSlug) {
       return NextResponse.json({ error: "Title and tool are required" }, { status: 400 });
@@ -68,15 +97,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid publish intent" }, { status: 400 });
     }
 
+    if (!isCalendarApprovalStatus(approvalStatus)) {
+      return NextResponse.json({ error: "Invalid approval status" }, { status: 400 });
+    }
+
     const entry = createCalendarEntry({
       title,
       tool_slug: toolSlug,
       status: statusValue,
       scheduled_for: normalizeOptionalString(body.scheduled_for),
+      review_due_at: normalizeOptionalString(body.review_due_at),
       brief: normalizeOptionalString(body.brief),
       keywords: normalizeOptionalString(body.keywords),
       audience: normalizeOptionalString(body.audience),
       notes: normalizeOptionalString(body.notes),
+      checklist_items: normalizeChecklistItems(body.checklist_items),
+      owner: normalizeOptionalString(body.owner),
+      reviewer: normalizeOptionalString(body.reviewer),
+      approval_status: normalizeCalendarApprovalStatus(approvalStatus),
+      blocked_reason: approvalStatus === "blocked" ? normalizeOptionalString(body.blocked_reason) : null,
       wp_category: normalizeOptionalString(body.wp_category),
       wp_tags: normalizeOptionalString(body.wp_tags),
       publish_intent: normalizeCalendarPublishIntent(publishIntent),

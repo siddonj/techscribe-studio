@@ -2,8 +2,11 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 import {
+  CALENDAR_APPROVAL_STATUSES,
   CALENDAR_PUBLISH_INTENTS,
   CALENDAR_STATUSES,
+  type CalendarChecklistItem,
+  type CalendarApprovalStatus,
   type CalendarEntry,
   type CalendarPublishIntent,
   type CalendarEntryStatus,
@@ -20,6 +23,183 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 let _db: Database.Database | null = null;
+
+type CalendarEntryRow = Omit<CalendarEntry, "checklist_items"> & {
+  checklist_items: CalendarChecklistItem[] | string[] | string | null;
+  checklist_json?: string | null;
+};
+
+type HistoryRowRaw = Omit<HistoryRow, "wp_sync_log"> & {
+  wp_sync_log?: PublishSyncLogEntry[] | string | null;
+};
+
+export interface PublishSyncLogEntry {
+  timestamp: string;
+  status: "success" | "failed";
+  action: "created" | "updated" | "published" | "scheduled" | "publish_failed";
+  message: string;
+  wpStatus: string | null;
+  wpPostId: number | null;
+}
+
+export interface AutomationTemplateRow {
+  id: number;
+  name: string;
+  description: string | null;
+  jobs_json: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AutomationRunRow {
+  id: number;
+  template_id: number | null;
+  trigger_source: string;
+  job_count: number;
+  success_count: number;
+  error_count: number;
+  status: "success" | "partial" | "error";
+  request_summary: string | null;
+  results_json: string | null;
+  started_at: string;
+  finished_at: string | null;
+}
+
+function parseChecklistItems(value: unknown): CalendarChecklistItem[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") {
+          const text = item.trim();
+          return text ? { text, completed: false } : null;
+        }
+
+        if (typeof item === "object" && item !== null) {
+          const record = item as Record<string, unknown>;
+          const text = String(record.text ?? "").trim();
+          if (!text) {
+            return null;
+          }
+
+          return { text, completed: Boolean(record.completed) };
+        }
+
+        return null;
+      })
+      .filter((item): item is CalendarChecklistItem => Boolean(item));
+  }
+
+  if (typeof value !== "string" || !value.trim()) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.map((item) => String(item).trim()).filter(Boolean)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeCalendarEntryRow(row: CalendarEntryRow | undefined): CalendarEntry | undefined {
+  if (!row) {
+    return undefined;
+  }
+
+  return {
+    ...row,
+    checklist_items: parseChecklistItems(row.checklist_json ?? row.checklist_items),
+  };
+}
+
+function parsePublishSyncLog(value: unknown): PublishSyncLogEntry[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item !== "object" || item === null) {
+          return null;
+        }
+
+        const record = item as Record<string, unknown>;
+        const timestamp = String(record.timestamp ?? "").trim();
+        const action = String(record.action ?? "").trim();
+        const status = String(record.status ?? "").trim();
+        const message = String(record.message ?? "").trim();
+
+        if (!timestamp || !message) {
+          return null;
+        }
+
+        if (
+          (action !== "created" && action !== "updated" && action !== "published" && action !== "scheduled" && action !== "publish_failed") ||
+          (status !== "success" && status !== "failed")
+        ) {
+          return null;
+        }
+
+        return {
+          timestamp,
+          action,
+          status,
+          message,
+          wpStatus: record.wpStatus ? String(record.wpStatus) : null,
+          wpPostId: typeof record.wpPostId === "number" ? record.wpPostId : null,
+        } as PublishSyncLogEntry;
+      })
+      .filter((item): item is PublishSyncLogEntry => Boolean(item));
+  }
+
+  if (typeof value !== "string" || !value.trim()) {
+    return [];
+  }
+
+  try {
+    return parsePublishSyncLog(JSON.parse(value) as unknown[]);
+  } catch {
+    return [];
+  }
+}
+
+function normalizeHistoryRow(row: HistoryRowRaw | undefined): HistoryRow | undefined {
+  if (!row) {
+    return undefined;
+  }
+
+  return {
+    ...row,
+    wp_sync_log: parsePublishSyncLog(row.wp_sync_log),
+  };
+}
+
+function ensureAutomationSchema(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS automation_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      jobs_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS automation_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER,
+      trigger_source TEXT NOT NULL,
+      job_count INTEGER NOT NULL,
+      success_count INTEGER NOT NULL DEFAULT 0,
+      error_count INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL,
+      request_summary TEXT,
+      results_json TEXT,
+      started_at TEXT NOT NULL,
+      finished_at TEXT,
+      FOREIGN KEY(template_id) REFERENCES automation_templates(id)
+    );
+  `);
+}
 
 function ensureHistorySchema(db: Database.Database) {
   const columns = db.prepare("PRAGMA table_info(history)").all() as Array<{ name: string }>;
@@ -76,6 +256,10 @@ function ensureHistorySchema(db: Database.Database) {
   if (!columnNames.has("wp_tags")) {
     db.exec("ALTER TABLE history ADD COLUMN wp_tags TEXT");
   }
+
+  if (!columnNames.has("wp_sync_log")) {
+    db.exec("ALTER TABLE history ADD COLUMN wp_sync_log TEXT");
+  }
 }
 
 function ensureSettingsSchema(db: Database.Database) {
@@ -111,10 +295,16 @@ function ensureCalendarSchema(db: Database.Database) {
       tool_slug TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'planned',
       scheduled_for TEXT,
+      review_due_at TEXT,
       brief TEXT,
       keywords TEXT,
       audience TEXT,
       notes TEXT,
+      checklist_json TEXT,
+      owner TEXT,
+      reviewer TEXT,
+      approval_status TEXT NOT NULL DEFAULT 'not_requested',
+      blocked_reason TEXT,
       wp_category TEXT,
       wp_tags TEXT,
       publish_intent TEXT NOT NULL DEFAULT 'draft',
@@ -132,6 +322,10 @@ function ensureCalendarSchema(db: Database.Database) {
     db.exec("ALTER TABLE content_calendar ADD COLUMN brief TEXT");
   }
 
+  if (!columnNames.has("review_due_at")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN review_due_at TEXT");
+  }
+
   if (!columnNames.has("keywords")) {
     db.exec("ALTER TABLE content_calendar ADD COLUMN keywords TEXT");
   }
@@ -142,6 +336,26 @@ function ensureCalendarSchema(db: Database.Database) {
 
   if (!columnNames.has("notes")) {
     db.exec("ALTER TABLE content_calendar ADD COLUMN notes TEXT");
+  }
+
+  if (!columnNames.has("checklist_json")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN checklist_json TEXT");
+  }
+
+  if (!columnNames.has("owner")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN owner TEXT");
+  }
+
+  if (!columnNames.has("reviewer")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN reviewer TEXT");
+  }
+
+  if (!columnNames.has("approval_status")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'not_requested'");
+  }
+
+  if (!columnNames.has("blocked_reason")) {
+    db.exec("ALTER TABLE content_calendar ADD COLUMN blocked_reason TEXT");
   }
 
   if (!columnNames.has("history_id")) {
@@ -193,12 +407,14 @@ function getDb(): Database.Database {
         wp_slug TEXT,
         wp_excerpt TEXT,
         wp_categories TEXT,
-        wp_tags TEXT
+        wp_tags TEXT,
+        wp_sync_log TEXT
       );
     `);
     ensureHistorySchema(_db);
     ensureSettingsSchema(_db);
     ensureCalendarSchema(_db);
+      ensureAutomationSchema(_db);
   }
   return _db;
 }
@@ -246,6 +462,7 @@ export interface HistoryRow {
   wp_categories: string | null;
   /** Comma-separated WordPress tag IDs (e.g. "3, 7"). */
   wp_tags: string | null;
+  wp_sync_log: PublishSyncLogEntry[];
 }
 
 export interface HistoryQueryOptions {
@@ -422,7 +639,14 @@ function buildHistoryQueryParts(options: HistoryQueryOptions) {
   return { whereSql, params, orderBy };
 }
 
-export function saveHistory(entry: Omit<HistoryRow, "id">): HistoryRow {
+function appendPublishSyncLog(
+  currentValue: HistoryRowRaw["wp_sync_log"],
+  nextEntry: PublishSyncLogEntry
+) {
+  return JSON.stringify([...parsePublishSyncLog(currentValue), nextEntry]);
+}
+
+export function saveHistory(entry: Omit<HistoryRow, "id" | "wp_sync_log"> & { wp_sync_log?: PublishSyncLogEntry[] }): HistoryRow {
   const db = getDb();
   const stmt = db.prepare(`
     INSERT INTO history (
@@ -447,7 +671,8 @@ export function saveHistory(entry: Omit<HistoryRow, "id">): HistoryRow {
       wp_slug,
       wp_excerpt,
       wp_categories,
-      wp_tags
+      wp_tags,
+      wp_sync_log
     )
     VALUES (
       @tool_slug,
@@ -471,11 +696,15 @@ export function saveHistory(entry: Omit<HistoryRow, "id">): HistoryRow {
       @wp_slug,
       @wp_excerpt,
       @wp_categories,
-      @wp_tags
+      @wp_tags,
+      @wp_sync_log
     )
   `);
-  const result = stmt.run(entry);
-  return { id: result.lastInsertRowid as number, ...entry };
+  const result = stmt.run({
+    ...entry,
+    wp_sync_log: JSON.stringify(entry.wp_sync_log ?? []),
+  });
+  return getHistoryById(result.lastInsertRowid as number) as HistoryRow;
 }
 
 export function updateHistoryWordPressDraft(
@@ -490,6 +719,27 @@ export function updateHistoryWordPressDraft(
   }
 ): HistoryRow | undefined {
   const db = getDb();
+  const existing = getHistoryById(id);
+  const nextLogEntry: PublishSyncLogEntry = {
+    timestamp: draft.wp_last_published_at,
+    status: "success",
+    action:
+      draft.wp_publish_state === "published"
+        ? "published"
+        : draft.wp_publish_state === "scheduled"
+          ? "scheduled"
+          : draft.wp_last_sync_action,
+    message:
+      draft.wp_publish_state === "published"
+        ? "Published successfully to WordPress"
+        : draft.wp_publish_state === "scheduled"
+          ? "Scheduled successfully on WordPress"
+          : draft.wp_last_sync_action === "updated"
+            ? "Updated linked WordPress draft"
+            : "Created linked WordPress draft",
+    wpStatus: draft.wp_status,
+    wpPostId: draft.wp_post_id,
+  };
   const result = db.prepare(`
     UPDATE history
     SET wp_post_id = @wp_post_id,
@@ -498,9 +748,14 @@ export function updateHistoryWordPressDraft(
       wp_last_published_at = @wp_last_published_at,
       wp_last_sync_action = @wp_last_sync_action,
       wp_publish_state = @wp_publish_state,
-      wp_error_message = NULL
+      wp_error_message = NULL,
+      wp_sync_log = @wp_sync_log
     WHERE id = @id
-  `).run({ id, ...draft });
+  `).run({
+    id,
+    ...draft,
+    wp_sync_log: appendPublishSyncLog(existing?.wp_sync_log, nextLogEntry),
+  });
 
   if (result.changes === 0) {
     return undefined;
@@ -514,12 +769,26 @@ export function markHistoryPublishFailed(
   errorMessage: string
 ): HistoryRow | undefined {
   const db = getDb();
+  const existing = getHistoryById(id);
+  const timestamp = new Date().toISOString();
   const result = db.prepare(`
     UPDATE history
     SET wp_publish_state = 'failed',
-        wp_error_message = ?
+        wp_error_message = ?,
+        wp_sync_log = ?
     WHERE id = ?
-  `).run(errorMessage, id);
+  `).run(
+    errorMessage,
+    appendPublishSyncLog(existing?.wp_sync_log, {
+      timestamp,
+      status: "failed",
+      action: "publish_failed",
+      message: errorMessage,
+      wpStatus: existing?.wp_status ?? null,
+      wpPostId: existing?.wp_post_id ?? null,
+    }),
+    id
+  );
 
   if (result.changes === 0) {
     return undefined;
@@ -644,9 +913,10 @@ export function bulkAssignHistoryMetadata(
 export function listHistory(limit = 100, options: HistoryQueryOptions = {}, offset = 0): HistoryRow[] {
   const db = getDb();
   const { whereSql, params, orderBy } = buildHistoryQueryParts(options);
-  return db
+  const rows = db
     .prepare(`SELECT * FROM history ${whereSql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`)
-    .all(...params, limit, offset) as HistoryRow[];
+    .all(...params, limit, offset) as HistoryRowRaw[];
+  return rows.map((row) => normalizeHistoryRow(row) as HistoryRow);
 }
 
 export function listHistoryTags(): HistoryTagSummary[] {
@@ -829,7 +1099,68 @@ export function deleteHistory(id: number): boolean {
 
 export function getHistoryById(id: number): HistoryRow | undefined {
   const db = getDb();
-  return db.prepare("SELECT * FROM history WHERE id = ?").get(id) as HistoryRow | undefined;
+  const row = db.prepare("SELECT * FROM history WHERE id = ?").get(id) as HistoryRowRaw | undefined;
+  return normalizeHistoryRow(row);
+}
+
+export function listAutomationTemplates(): AutomationTemplateRow[] {
+  const db = getDb();
+  return db.prepare("SELECT * FROM automation_templates ORDER BY updated_at DESC, id DESC").all() as AutomationTemplateRow[];
+}
+
+export function getAutomationTemplateById(id: number): AutomationTemplateRow | undefined {
+  const db = getDb();
+  return db.prepare("SELECT * FROM automation_templates WHERE id = ?").get(id) as AutomationTemplateRow | undefined;
+}
+
+export function createAutomationTemplate(template: Omit<AutomationTemplateRow, "id" | "created_at" | "updated_at">): AutomationTemplateRow {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const result = db.prepare(`
+    INSERT INTO automation_templates (name, description, jobs_json, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(template.name, template.description ?? null, template.jobs_json, now, now);
+  return getAutomationTemplateById(result.lastInsertRowid as number) as AutomationTemplateRow;
+}
+
+export function deleteAutomationTemplate(id: number): boolean {
+  const db = getDb();
+  return db.prepare("DELETE FROM automation_templates WHERE id = ?").run(id).changes > 0;
+}
+
+export function createAutomationRun(run: Omit<AutomationRunRow, "id">): AutomationRunRow {
+  const db = getDb();
+  const result = db.prepare(`
+    INSERT INTO automation_runs (
+      template_id,
+      trigger_source,
+      job_count,
+      success_count,
+      error_count,
+      status,
+      request_summary,
+      results_json,
+      started_at,
+      finished_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    run.template_id ?? null,
+    run.trigger_source,
+    run.job_count,
+    run.success_count,
+    run.error_count,
+    run.status,
+    run.request_summary ?? null,
+    run.results_json ?? null,
+    run.started_at,
+    run.finished_at ?? null,
+  );
+  return db.prepare("SELECT * FROM automation_runs WHERE id = ?").get(result.lastInsertRowid as number) as AutomationRunRow;
+}
+
+export function listAutomationRuns(limit = 50): AutomationRunRow[] {
+  const db = getDb();
+  return db.prepare("SELECT * FROM automation_runs ORDER BY started_at DESC, id DESC LIMIT ?").all(limit) as AutomationRunRow[];
 }
 
 export function getWordPressSettings(): WordPressSettingsRow | undefined {
@@ -905,7 +1236,7 @@ export function listCalendarEntries(options: CalendarQueryOptions = {}): Calenda
   const db = getDb();
   const { whereSql, params } = buildCalendarQueryParts(options);
 
-  return db.prepare(`
+  const rows = db.prepare(`
     SELECT *
     FROM content_calendar
     ${whereSql}
@@ -913,12 +1244,15 @@ export function listCalendarEntries(options: CalendarQueryOptions = {}): Calenda
       CASE WHEN scheduled_for IS NULL THEN 1 ELSE 0 END ASC,
       scheduled_for ASC,
       updated_at DESC
-  `).all(...params) as CalendarEntry[];
+  `).all(...params) as CalendarEntryRow[];
+
+  return rows.map((row) => normalizeCalendarEntryRow(row) as CalendarEntry);
 }
 
 export function getCalendarEntryById(id: number): CalendarEntry | undefined {
   const db = getDb();
-  return db.prepare("SELECT * FROM content_calendar WHERE id = ?").get(id) as CalendarEntry | undefined;
+  const row = db.prepare("SELECT * FROM content_calendar WHERE id = ?").get(id) as CalendarEntryRow | undefined;
+  return normalizeCalendarEntryRow(row);
 }
 
 export function createCalendarEntry(entry: Omit<CalendarEntry, "id" | "created_at" | "updated_at">): CalendarEntry {
@@ -930,10 +1264,16 @@ export function createCalendarEntry(entry: Omit<CalendarEntry, "id" | "created_a
       tool_slug,
       status,
       scheduled_for,
+      review_due_at,
       brief,
       keywords,
       audience,
       notes,
+      checklist_json,
+      owner,
+      reviewer,
+      approval_status,
+      blocked_reason,
       wp_category,
       wp_tags,
       publish_intent,
@@ -946,10 +1286,16 @@ export function createCalendarEntry(entry: Omit<CalendarEntry, "id" | "created_a
       @tool_slug,
       @status,
       @scheduled_for,
+      @review_due_at,
       @brief,
       @keywords,
       @audience,
       @notes,
+      @checklist_json,
+      @owner,
+      @reviewer,
+      @approval_status,
+      @blocked_reason,
       @wp_category,
       @wp_tags,
       @publish_intent,
@@ -960,6 +1306,7 @@ export function createCalendarEntry(entry: Omit<CalendarEntry, "id" | "created_a
     )
   `).run({
     ...entry,
+    checklist_json: JSON.stringify(entry.checklist_items),
     created_at: now,
     updated_at: now,
   });
@@ -978,10 +1325,16 @@ export function updateCalendarEntry(
         tool_slug = @tool_slug,
         status = @status,
         scheduled_for = @scheduled_for,
+      review_due_at = @review_due_at,
         brief = @brief,
         keywords = @keywords,
         audience = @audience,
         notes = @notes,
+      checklist_json = @checklist_json,
+        owner = @owner,
+        reviewer = @reviewer,
+        approval_status = @approval_status,
+        blocked_reason = @blocked_reason,
         wp_category = @wp_category,
         wp_tags = @wp_tags,
         publish_intent = @publish_intent,
@@ -992,6 +1345,7 @@ export function updateCalendarEntry(
   `).run({
     id,
     ...changes,
+    checklist_json: JSON.stringify(changes.checklist_items),
     updated_at: new Date().toISOString(),
   });
 
@@ -1025,6 +1379,8 @@ export function computeCalendarSummary(rows: CalendarEntry[]): CalendarSummary {
     overdue: 0,
     dueThisWeek: 0,
     unscheduled: 0,
+    blocked: 0,
+    reviewDueSoon: 0,
     byStatus: {
       backlog: 0,
       planned: 0,
@@ -1037,6 +1393,13 @@ export function computeCalendarSummary(rows: CalendarEntry[]): CalendarSummary {
       publish: 0,
       schedule: 0,
     },
+    byApprovalStatus: {
+      not_requested: 0,
+      pending_review: 0,
+      changes_requested: 0,
+      approved: 0,
+      blocked: 0,
+    },
   };
 
   for (const row of rows) {
@@ -1048,16 +1411,26 @@ export function computeCalendarSummary(rows: CalendarEntry[]): CalendarSummary {
       summary.byPublishIntent[row.publish_intent] += 1;
     }
 
-    if (!row.scheduled_for) {
-      summary.unscheduled += 1;
-      continue;
+    if (row.approval_status && CALENDAR_APPROVAL_STATUSES.includes(row.approval_status)) {
+      summary.byApprovalStatus[row.approval_status as CalendarApprovalStatus] += 1;
+      if (row.approval_status === "blocked") {
+        summary.blocked += 1;
+      }
     }
 
-    if (row.status !== "published" && row.scheduled_for < today) {
+    if (!row.scheduled_for) {
+      summary.unscheduled += 1;
+    }
+
+    if (row.review_due_at && row.review_due_at >= today && row.review_due_at <= weekAheadValue) {
+      summary.reviewDueSoon += 1;
+    }
+
+    if (row.scheduled_for && row.status !== "published" && row.scheduled_for < today) {
       summary.overdue += 1;
     }
 
-    if (row.scheduled_for >= today && row.scheduled_for <= weekAheadValue) {
+    if (row.scheduled_for && row.scheduled_for >= today && row.scheduled_for <= weekAheadValue) {
       summary.dueThisWeek += 1;
     }
   }
@@ -1128,4 +1501,12 @@ export function normalizeCalendarPublishIntent(value: string | null | undefined)
   }
 
   return "draft";
+}
+
+export function normalizeCalendarApprovalStatus(value: string | null | undefined): CalendarApprovalStatus {
+  if (value && CALENDAR_APPROVAL_STATUSES.includes(value as CalendarApprovalStatus)) {
+    return value as CalendarApprovalStatus;
+  }
+
+  return "not_requested";
 }

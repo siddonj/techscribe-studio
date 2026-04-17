@@ -30,6 +30,7 @@ function parseTermIds(value: string | null | undefined): number[] {
 }
 
 export async function POST(req: NextRequest) {
+  let requestHistoryId: number | undefined;
   try {
     const body = await req.json();
     const { content, title, historyId, calendarId } = body as {
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
       historyId?: number;
       calendarId?: number;
     };
+    requestHistoryId = historyId;
 
     if (!content?.trim()) {
       return NextResponse.json({ error: "Missing content" }, { status: 400 });
@@ -200,6 +202,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to publish draft";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const failedHistory = typeof requestHistoryId === "number"
+      ? markHistoryPublishFailed(requestHistoryId, message) ?? null
+      : null;
+    return NextResponse.json({ error: message, history: failedHistory }, { status: 500 });
   }
 }

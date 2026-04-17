@@ -28,6 +28,7 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 
 - A dedicated content calendar at `/calendar` for backlog and scheduled work
 - Quick planning flow with title, assigned tool, target date, brief, keywords, audience, and notes
+- Calendar entries now track owner, reviewer, approval status, blocked reason, review due date, and a lightweight production checklist
 - Calendar entries can carry WordPress planning metadata such as target category, tags, and publish intent
 - Saving generated output from a planned item links the resulting history entry back into the calendar
 - Publishing a linked draft updates the calendar item with the associated WordPress draft ID
@@ -73,6 +74,13 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 - Rename, merge, and delete folders and tags to keep the content library usable over time
 - Bulk metadata updates, export, delete, and publish actions for batch workflows
 - Track WordPress draft linkage and last sync status at the entry level
+- Each history row keeps a publish sync timeline so failed retries, draft updates, scheduled pushes, and live publishes are visible in one place
+
+### Automation operations
+
+- A dedicated automation page at `/automation` for saved batch templates and recent run history
+- Batch runs are logged with success/error counts, trigger source, and template linkage when applicable
+- Saved automation templates can be referenced by `template_id` when calling `POST /api/generate/batch`
 
 ### WordPress integration
 

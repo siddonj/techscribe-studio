@@ -3,10 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  CALENDAR_APPROVAL_STATUSES,
+  CALENDAR_APPROVAL_STATUS_LABELS,
   CALENDAR_PUBLISH_INTENTS,
   CALENDAR_PUBLISH_INTENT_LABELS,
   CALENDAR_STATUSES,
   CALENDAR_STATUS_LABELS,
+  type CalendarApprovalStatus,
+  type CalendarChecklistItem,
   type CalendarEntry,
   type CalendarEntryStatus,
   type CalendarPublishIntent,
@@ -24,10 +28,16 @@ interface CalendarDraft {
   tool_slug: string;
   status: CalendarEntryStatus;
   scheduled_for: string;
+  review_due_at: string;
   brief: string;
   keywords: string;
   audience: string;
   notes: string;
+  checklist_text: string;
+  owner: string;
+  reviewer: string;
+  approval_status: CalendarApprovalStatus;
+  blocked_reason: string;
   wp_category: string;
   wp_tags: string;
 }
@@ -41,10 +51,16 @@ function createEmptyDraft(): CalendarDraft {
     tool_slug: "article-writer",
     status: "planned",
     scheduled_for: "",
+    review_due_at: "",
     brief: "",
     keywords: "",
     audience: "",
     notes: "",
+    checklist_text: "",
+    owner: "",
+    reviewer: "",
+    approval_status: "not_requested",
+    blocked_reason: "",
     wp_category: "",
     wp_tags: "",
   };
@@ -108,6 +124,51 @@ function getStatusBadgeClass(status: CalendarEntryStatus) {
   }
 }
 
+function getApprovalBadgeClass(status: CalendarApprovalStatus) {
+  switch (status) {
+    case "pending_review":
+      return "border-sky-400/30 bg-sky-400/10 text-sky-300";
+    case "changes_requested":
+      return "border-amber-400/30 bg-amber-400/10 text-amber-300";
+    case "approved":
+      return "border-emerald-400/30 bg-emerald-400/10 text-emerald-300";
+    case "blocked":
+      return "border-rose-400/30 bg-rose-400/10 text-rose-300";
+    case "not_requested":
+      return "border-slate-400/20 bg-slate-400/5 text-slate-300";
+  }
+}
+
+function checklistToText(items: CalendarChecklistItem[]) {
+  return items.map((item) => `${item.completed ? "[x]" : "[ ]"} ${item.text}`).join("\n");
+}
+
+function textToChecklist(value: string): CalendarChecklistItem[] {
+  return value
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        return null;
+      }
+
+      const completed = /^\[x\]\s*/i.test(trimmed);
+      const text = trimmed.replace(/^\[(x| )\]\s*/i, "").trim();
+      if (!text) {
+        return null;
+      }
+
+      return { text, completed };
+    })
+    .filter((item): item is CalendarChecklistItem => Boolean(item));
+}
+
+function getChecklistProgress(items: CalendarChecklistItem[]) {
+  const total = items.length;
+  const completed = items.filter((item) => item.completed).length;
+  return { total, completed };
+}
+
 function buildToolHref(entry: CalendarDraft | CalendarEntry) {
   const params = new URLSearchParams();
   const title = String(entry.title ?? "").trim();
@@ -138,10 +199,16 @@ function toDraft(entry: CalendarEntry): CalendarDraft {
     tool_slug: entry.tool_slug,
     status: entry.status,
     scheduled_for: entry.scheduled_for ?? "",
+    review_due_at: entry.review_due_at ?? "",
     brief: entry.brief ?? "",
     keywords: entry.keywords ?? "",
     audience: entry.audience ?? "",
     notes: entry.notes ?? "",
+    checklist_text: checklistToText(entry.checklist_items),
+    owner: entry.owner ?? "",
+    reviewer: entry.reviewer ?? "",
+    approval_status: entry.approval_status,
+    blocked_reason: entry.blocked_reason ?? "",
     wp_category: entry.wp_category ?? "",
     wp_tags: entry.wp_tags ?? "",
   };
@@ -151,10 +218,18 @@ function toPayload(draft: CalendarDraft) {
   return {
     ...draft,
     scheduled_for: draft.scheduled_for.trim() || null,
+    review_due_at: draft.review_due_at.trim() || null,
     brief: draft.brief.trim() || null,
     keywords: draft.keywords.trim() || null,
     audience: draft.audience.trim() || null,
     notes: draft.notes.trim() || null,
+    checklist_items: textToChecklist(draft.checklist_text),
+    owner: draft.owner.trim() || null,
+    reviewer: draft.reviewer.trim() || null,
+    approval_status: draft.approval_status,
+    blocked_reason: draft.approval_status === "blocked"
+      ? draft.blocked_reason.trim() || null
+      : null,
     wp_category: draft.wp_category.trim() || null,
     wp_tags: draft.wp_tags.trim() || null,
   };
@@ -474,8 +549,8 @@ export default function CalendarPage() {
                 { label: "Total", value: summary?.total ?? rows.length },
                 { label: "This Week", value: summary?.dueThisWeek ?? 0 },
                 { label: "Overdue", value: summary?.overdue ?? 0 },
-                { label: "Unscheduled", value: summary?.unscheduled ?? 0 },
-                { label: "Published", value: summary?.byStatus.published ?? 0 },
+                { label: "Blocked", value: summary?.blocked ?? 0 },
+                { label: "Review Due", value: summary?.reviewDueSoon ?? 0 },
               ].map((stat) => (
                 <div key={stat.label} className="shell-stat-card rounded-3xl px-4 py-4">
                   <p className="font-mono text-[11px] text-slate-500 uppercase tracking-[0.18em]">{stat.label}</p>
@@ -492,7 +567,7 @@ export default function CalendarPage() {
             { label: "Planned", value: summary?.byStatus.planned ?? 0 },
             { label: "In Progress", value: summary?.byStatus["in-progress"] ?? 0 },
             { label: "Ready", value: summary?.byStatus.ready ?? 0 },
-            { label: "Planner Flow", value: "Calendar → Tool → Draft" },
+            { label: "Pending Review", value: summary?.byApprovalStatus.pending_review ?? 0 },
           ].map((item) => (
             <div key={item.label} className="shell-status-pill rounded-2xl px-4 py-3">
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
@@ -536,6 +611,12 @@ export default function CalendarPage() {
               onChange={(event) => setCreateDraft((current) => ({ ...current, scheduled_for: event.target.value }))}
             />
             <input
+              type="date"
+              className={inputClassName}
+              value={createDraft.review_due_at}
+              onChange={(event) => setCreateDraft((current) => ({ ...current, review_due_at: event.target.value }))}
+            />
+            <input
               className={inputClassName}
               placeholder="Keywords"
               value={createDraft.keywords}
@@ -565,12 +646,55 @@ export default function CalendarPage() {
             </button>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <input
+              className={inputClassName}
+              placeholder="Owner"
+              value={createDraft.owner}
+              onChange={(event) => setCreateDraft((current) => ({ ...current, owner: event.target.value }))}
+            />
+            <input
+              className={inputClassName}
+              placeholder="Reviewer"
+              value={createDraft.reviewer}
+              onChange={(event) => setCreateDraft((current) => ({ ...current, reviewer: event.target.value }))}
+            />
+            <select
+              className={inputClassName}
+              value={createDraft.approval_status}
+              onChange={(event) => setCreateDraft((current) => ({
+                ...current,
+                approval_status: event.target.value as CalendarApprovalStatus,
+                blocked_reason: event.target.value === "blocked" ? current.blocked_reason : "",
+              }))}
+            >
+              {CALENDAR_APPROVAL_STATUSES.map((status) => (
+                <option key={status} value={status}>{CALENDAR_APPROVAL_STATUS_LABELS[status]}</option>
+              ))}
+            </select>
+            <input
+              className={`${inputClassName} disabled:opacity-50`}
+              placeholder="Blocked reason"
+              value={createDraft.blocked_reason}
+              disabled={createDraft.approval_status !== "blocked"}
+              onChange={(event) => setCreateDraft((current) => ({ ...current, blocked_reason: event.target.value }))}
+            />
+          </div>
+
           <textarea
             className={`${inputClassName} resize-none`}
             rows={2}
             placeholder="Brief or planning note"
             value={createDraft.brief}
             onChange={(event) => setCreateDraft((current) => ({ ...current, brief: event.target.value }))}
+          />
+
+          <textarea
+            className={`${inputClassName} resize-none`}
+            rows={4}
+            placeholder="Checklist items, one per line"
+            value={createDraft.checklist_text}
+            onChange={(event) => setCreateDraft((current) => ({ ...current, checklist_text: event.target.value }))}
           />
         </section>
 
@@ -723,6 +847,14 @@ export default function CalendarPage() {
                                     <span className="text-xs">{tool?.icon ?? "📝"}</span>
                                     <span className="text-xs text-slate-500 truncate">{tool?.name ?? row.tool_slug}</span>
                                   </div>
+                                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                                    {row.owner && <span className="text-[11px] text-slate-400">Owner: {row.owner}</span>}
+                                    {row.approval_status !== "not_requested" && (
+                                      <span className={`text-[11px] font-mono border rounded-full px-2 py-0.5 ${getApprovalBadgeClass(row.approval_status)}`}>
+                                        {CALENDAR_APPROVAL_STATUS_LABELS[row.approval_status]}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 <span className={`text-[11px] font-mono border rounded-full px-2.5 py-1 shrink-0 ${getStatusBadgeClass(row.status)}`}>
                                   {CALENDAR_STATUS_LABELS[row.status]}
@@ -733,6 +865,16 @@ export default function CalendarPage() {
                               )}
                               {row.brief && (
                                 <p className="text-xs text-slate-500 mt-1 line-clamp-2">{row.brief}</p>
+                              )}
+                              {(row.review_due_at || row.checklist_items.length > 0) && (
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                                  {row.review_due_at && <span>Review: {formatDateLabel(row.review_due_at)}</span>}
+                                  {row.checklist_items.length > 0 && (
+                                    <span>
+                                      {getChecklistProgress(row.checklist_items).completed}/{getChecklistProgress(row.checklist_items).total} checklist done
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </button>
 
@@ -975,6 +1117,16 @@ export default function CalendarPage() {
                       />
                       <p className="text-xs text-muted/60 mt-1">Editorial planning date. Also used as the WordPress publish date when publish intent is set to "Schedule". Publishing is always triggered manually.</p>
                     </div>
+                    <div>
+                      <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Review Due</label>
+                      <input
+                        type="date"
+                        className={inputClassName}
+                        value={editorDraft.review_due_at}
+                        onChange={(event) => setEditorDraft((current) => current ? { ...current, review_due_at: event.target.value } : current)}
+                      />
+                      <p className="text-xs text-muted/60 mt-1">Separate sign-off deadline for editorial review. This does not change publish timing.</p>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -998,6 +1150,63 @@ export default function CalendarPage() {
                     </div>
                   </div>
 
+                  <div className="bg-card-alt border border-border rounded-xl p-5 space-y-4 shadow-card-inset">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-mono text-xs text-muted uppercase tracking-wider">Workflow</p>
+                      <span className={`text-[11px] font-mono border rounded-full px-2.5 py-1 ${getApprovalBadgeClass(editorDraft.approval_status)}`}>
+                        {CALENDAR_APPROVAL_STATUS_LABELS[editorDraft.approval_status]}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">Owner</label>
+                        <input
+                          className={inputClassName}
+                          placeholder="Who owns delivery"
+                          value={editorDraft.owner}
+                          onChange={(event) => setEditorDraft((current) => current ? { ...current, owner: event.target.value } : current)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">Reviewer</label>
+                        <input
+                          className={inputClassName}
+                          placeholder="Who signs off"
+                          value={editorDraft.reviewer}
+                          onChange={(event) => setEditorDraft((current) => current ? { ...current, reviewer: event.target.value } : current)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">Approval Status</label>
+                        <select
+                          className={inputClassName}
+                          value={editorDraft.approval_status}
+                          onChange={(event) => setEditorDraft((current) => current ? {
+                            ...current,
+                            approval_status: event.target.value as CalendarApprovalStatus,
+                            blocked_reason: event.target.value === "blocked" ? current.blocked_reason : "",
+                          } : current)}
+                        >
+                          {CALENDAR_APPROVAL_STATUSES.map((status) => (
+                            <option key={status} value={status}>{CALENDAR_APPROVAL_STATUS_LABELS[status]}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">Blocked Reason</label>
+                      <textarea
+                        className={`${inputClassName} resize-none disabled:opacity-50`}
+                        rows={3}
+                        disabled={editorDraft.approval_status !== "blocked"}
+                        placeholder="Missing source material, awaiting sign-off, legal review, or another blocker"
+                        value={editorDraft.blocked_reason}
+                        onChange={(event) => setEditorDraft((current) => current ? { ...current, blocked_reason: event.target.value } : current)}
+                      />
+                      <p className="text-xs text-muted/60 mt-1">Use this when a piece cannot move forward yet. Clearing the blocked status also clears the reason on save.</p>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Brief</label>
                     <textarea
@@ -1018,6 +1227,18 @@ export default function CalendarPage() {
                       value={editorDraft.notes}
                       onChange={(event) => setEditorDraft((current) => current ? { ...current, notes: event.target.value } : current)}
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Checklist</label>
+                    <textarea
+                      className={`${inputClassName} resize-none`}
+                      rows={6}
+                      placeholder="One line per production step, asset, or approval task"
+                      value={editorDraft.checklist_text}
+                      onChange={(event) => setEditorDraft((current) => current ? { ...current, checklist_text: event.target.value } : current)}
+                    />
+                    <p className="text-xs text-muted/60 mt-1">Use lines like [ ] Draft outline or [x] Final review to preserve completion state.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

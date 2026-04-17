@@ -442,6 +442,7 @@ export default function HistoryPage() {
         wp_url: data.url,
         wp_last_published_at: new Date().toISOString(),
         wp_last_sync_action: data.action ?? null,
+        wp_sync_log: selected.wp_sync_log,
       };
 
       setSelected(nextSelected);
@@ -476,6 +477,7 @@ export default function HistoryPage() {
       wp_url: data.url,
       wp_last_published_at: new Date().toISOString(),
       wp_last_sync_action: data.action ?? null,
+      wp_sync_log: row.wp_sync_log,
     };
 
     setRows((prev) => prev.map((item) => (item.id === updatedRow.id ? updatedRow : item)));
@@ -1745,6 +1747,35 @@ export default function HistoryPage() {
                       </div>
                     );
                   })()}
+                </div>
+              )}
+
+              {selected.wp_sync_log.length > 0 && (
+                <div className="px-6 py-3 border-b border-white/5 bg-white/[0.02]">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <p className="font-mono text-xs text-accent uppercase tracking-widest">Publish Sync History</p>
+                    <span className="text-xs text-slate-500">{selected.wp_sync_log.length} events</span>
+                  </div>
+                  <div className="space-y-2">
+                    {[...selected.wp_sync_log].slice(-5).reverse().map((entry, index) => (
+                      <div key={`${entry.timestamp}-${index}`} className="shell-panel-soft rounded-2xl px-4 py-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[11px] font-mono border rounded-full px-2 py-0.5 ${entry.status === "failed" ? "border-red-400/30 bg-red-400/10 text-red-300" : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"}`}>
+                              {entry.status === "failed" ? "Failed" : "Success"}
+                            </span>
+                            <span className="text-xs text-slate-300">{entry.message}</span>
+                          </div>
+                          <span className="text-[11px] font-mono text-slate-500">{formatDate(entry.timestamp)}</span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-slate-500">
+                          <span>Action: {entry.action.replace("_", " ")}</span>
+                          {entry.wpStatus && <span>WP status: {entry.wpStatus}</span>}
+                          {entry.wpPostId && <span>Post #{entry.wpPostId}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

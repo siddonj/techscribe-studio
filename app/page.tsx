@@ -38,6 +38,13 @@ const QUICK_ACTIONS = [
     description: "Confirm WordPress credentials before the next publishing session.",
     icon: "⚙️",
   },
+  {
+    href: "/automation",
+    label: "Automation",
+    title: "Review batch templates and runs",
+    description: "Track saved jobs, recent automation runs, and scheduler-ready payloads.",
+    icon: "🤖",
+  },
 ];
 
 const CATEGORY_ICONS: Record<string, string> = {

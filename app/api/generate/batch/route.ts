@@ -59,6 +59,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { getToolBySlug } from "@/lib/tools";
 import {
+  createAutomationRun,
+  getAutomationTemplateById,
   saveHistory,
   linkCalendarEntryToHistory,
   getCalendarEntryById,
@@ -85,6 +87,12 @@ interface BatchJob {
   folder?: string;
   /** Tags to assign to the saved history entry. */
   tags?: string[];
+}
+
+interface BatchRequestBody {
+  jobs?: unknown[];
+  template_id?: number;
+  trigger_source?: string;
 }
 
 interface BatchJobResult {
@@ -260,21 +268,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { jobs?: unknown[] };
+  let body: BatchRequestBody;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!Array.isArray(body.jobs) || body.jobs.length === 0) {
+  let rawJobs = body.jobs;
+  let templateId: number | null = null;
+  if (!rawJobs && typeof body.template_id === "number") {
+    const template = getAutomationTemplateById(body.template_id);
+    if (!template) {
+      return NextResponse.json({ error: "Automation template not found" }, { status: 404 });
+    }
+
+    try {
+      const parsedJobs = JSON.parse(template.jobs_json) as unknown;
+      if (!Array.isArray(parsedJobs)) {
+        return NextResponse.json({ error: "Saved automation template has invalid jobs payload" }, { status: 500 });
+      }
+      rawJobs = parsedJobs;
+      templateId = template.id;
+    } catch {
+      return NextResponse.json({ error: "Saved automation template could not be parsed" }, { status: 500 });
+    }
+  }
+
+  if (!Array.isArray(rawJobs) || rawJobs.length === 0) {
     return NextResponse.json(
       { error: "Request body must include a non-empty `jobs` array" },
       { status: 400 }
     );
   }
 
-  if (body.jobs.length > MAX_BATCH_SIZE) {
+  if (rawJobs.length > MAX_BATCH_SIZE) {
     return NextResponse.json(
       {
         error: `Batch size exceeds the maximum of ${MAX_BATCH_SIZE} jobs per request`,
@@ -285,14 +313,15 @@ export async function POST(req: NextRequest) {
 
   // Validate each job has required shape.
   const jobs: BatchJob[] = [];
-  for (let i = 0; i < body.jobs.length; i++) {
-    const parsed = parseJob(body.jobs[i], i);
+  for (let i = 0; i < rawJobs.length; i++) {
+    const parsed = parseJob(rawJobs[i], i);
     if ("error" in parsed) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
     jobs.push(parsed.job);
   }
 
+  const startedAt = new Date().toISOString();
   // Process jobs sequentially to avoid overwhelming the upstream API.
   const results: BatchJobResult[] = [];
   for (const job of jobs) {
@@ -300,5 +329,22 @@ export async function POST(req: NextRequest) {
     results.push(result);
   }
 
-  return NextResponse.json({ results });
+  const successCount = results.filter((result) => result.status === "success").length;
+  const errorCount = results.length - successCount;
+  const status = errorCount === 0 ? "success" : successCount === 0 ? "error" : "partial";
+
+  const run = createAutomationRun({
+    template_id: templateId,
+    trigger_source: String(body.trigger_source ?? (templateId ? "template" : "manual")).slice(0, 80),
+    job_count: jobs.length,
+    success_count: successCount,
+    error_count: errorCount,
+    status,
+    request_summary: JSON.stringify({ slugs: jobs.map((job) => job.slug) }),
+    results_json: JSON.stringify(results),
+    started_at: startedAt,
+    finished_at: new Date().toISOString(),
+  });
+
+  return NextResponse.json({ results, run });
 }
