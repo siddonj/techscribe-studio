@@ -71,7 +71,7 @@ function parseBlogIdeaSuggestions(text: string): BlogIdeaSuggestion[] {
         heading.replace(/^##+\s*/i, "").replace(/^Idea\s+\d+\s*:\s*/i, "")
       );
       const body = rest.join("\n");
-      const descriptionMatch = body.match(/(?:^|\n)(?:Description|Summary)\s*:\s*(.+?)(?=\n(?:Keywords?|Description|Summary)\s*:|$)/is);
+      const descriptionMatch = body.match(/(?:^|\n)(?:Description|Summary)\s*:\s*([\s\S]+?)(?=\n(?:Keywords?|Description|Summary)\s*:|$)/i);
       const keywordsMatch = body.match(/(?:^|\n)Keywords?\s*:\s*(.+)$/im);
       const description = normalizeSuggestionText(
         descriptionMatch?.[1] ?? rest.find((line) => !/^Keywords?\s*:/i.test(line)) ?? ""
@@ -244,7 +244,8 @@ export default function ToolPage() {
       : publishStatusLoaded
         ? "Publish locked"
         : "Checking publish";
-  const blogIdeaSuggestions = tool.slug === "blog-post-ideas"
+  const isBlogPostIdeas = tool?.slug === "blog-post-ideas";
+  const blogIdeaSuggestions = isBlogPostIdeas
     ? parseBlogIdeaSuggestions(output)
     : [];
 
