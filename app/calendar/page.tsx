@@ -96,7 +96,7 @@ function formatDateLabel(value: string) {
 function getStatusBadgeClass(status: CalendarEntryStatus) {
   switch (status) {
     case "backlog":
-      return "border-white/10 text-slate-300";
+      return "border-white/15 text-slate-300";
     case "planned":
       return "border-sky-400/20 text-sky-300";
     case "in-progress":
@@ -470,14 +470,14 @@ export default function CalendarPage() {
             { label: "Ready to Publish", value: summary?.byStatus.ready ?? 0, colorClass: "text-emerald-300" },
             { label: "Published", value: summary?.byStatus.published ?? 0, colorClass: "text-fuchsia-300" },
           ].map((stat) => (
-            <div key={stat.label} className="bg-card border border-border rounded-xl px-5 py-4">
+            <div key={stat.label} className="bg-card-alt border border-border rounded-xl px-5 py-4 shadow-card-inset">
               <p className="font-mono text-xs text-muted uppercase tracking-wider">{stat.label}</p>
               <p className={`text-3xl font-mono mt-2 ${stat.colorClass}`}>{stat.value}</p>
             </div>
           ))}
         </section>
 
-        <section className="bg-card border border-border rounded-2xl p-5 space-y-4">
+        <section className="bg-card border border-border rounded-2xl p-6 space-y-5 shadow-card-elevated">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="font-mono text-xs text-accent uppercase tracking-widest">Quick Plan</p>
@@ -559,9 +559,9 @@ export default function CalendarPage() {
 
         <div className="flex-1 min-h-0 flex gap-6 overflow-hidden">
           {/* Left panel: List view or Week view */}
-          <div className={`${viewMode === "list" ? "w-[28rem] shrink-0" : "flex-1"} border border-border rounded-2xl bg-card overflow-hidden flex flex-col`}>
+          <div className={`${viewMode === "list" ? "w-[28rem] shrink-0" : "flex-1"} border border-border rounded-2xl bg-card overflow-hidden flex flex-col shadow-card-elevated`}>
             {/* Panel controls */}
-            <div className="p-4 border-b border-border space-y-3">
+            <div className="p-5 border-b border-border space-y-3">
               <div className="flex items-center justify-between gap-3">
                 {/* View mode toggle */}
                 <div className="flex gap-1 bg-subtle rounded-lg p-0.5">
@@ -881,7 +881,7 @@ export default function CalendarPage() {
           </div>
 
           {/* Editor panel */}
-          <section className={`${viewMode === "list" ? "flex-1" : "w-80 shrink-0"} border border-border rounded-2xl bg-card overflow-hidden flex flex-col min-w-0`}>
+          <section className={`${viewMode === "list" ? "flex-1" : "w-80 shrink-0"} border border-border rounded-2xl bg-card overflow-hidden flex flex-col min-w-0 shadow-card-elevated`}>
             {!selectedEntry || !editorDraft ? (
               <div className="flex-1 flex items-center justify-center text-center p-8">
                 <div>
@@ -1010,21 +1010,21 @@ export default function CalendarPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-subtle border border-border rounded-xl p-4">
+                    <div className="bg-card-alt border border-border rounded-xl p-5 shadow-card-inset">
                       <p className="font-mono text-xs text-muted uppercase tracking-wider">Created</p>
                       <p className="text-sm text-white mt-2">{new Date(selectedEntry.created_at).toLocaleString()}</p>
                     </div>
-                    <div className="bg-subtle border border-border rounded-xl p-4">
+                    <div className="bg-card-alt border border-border rounded-xl p-5 shadow-card-inset">
                       <p className="font-mono text-xs text-muted uppercase tracking-wider">Last Updated</p>
                       <p className="text-sm text-white mt-2">{new Date(selectedEntry.updated_at).toLocaleString()}</p>
                     </div>
-                    <div className="bg-subtle border border-border rounded-xl p-4">
+                    <div className="bg-card-alt border border-border rounded-xl p-5 shadow-card-inset">
                       <p className="font-mono text-xs text-muted uppercase tracking-wider">Current Tool</p>
                       <p className="text-sm text-white mt-2">{getToolBySlug(editorDraft.tool_slug)?.name ?? editorDraft.tool_slug}</p>
                     </div>
                   </div>
 
-                  <div className="bg-subtle border border-border rounded-xl p-4 space-y-3">
+                  <div className="bg-card-alt border border-border rounded-xl p-5 space-y-3 shadow-card-inset">
                     <p className="font-mono text-xs text-muted uppercase tracking-wider">Publishing</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>

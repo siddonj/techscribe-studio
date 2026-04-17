@@ -439,7 +439,7 @@ export default function ToolPage() {
           <div>
             <p className="text-slate-200 text-sm mb-6">{tool.description}</p>
             {Number.isFinite(calendarId) && (
-              <div className="bg-subtle border border-border rounded-lg px-4 py-3 text-sm mb-4">
+              <div className="bg-card-alt border border-border rounded-lg px-4 py-3 text-sm mb-4">
                 <p className="text-muted text-xs font-mono uppercase tracking-wider mb-1">Calendar Linked</p>
                 <p className="text-white/90">Saving this draft will link the result back to the planned calendar item.</p>
               </div>
@@ -449,7 +449,7 @@ export default function ToolPage() {
           {/* Outline-editing phase: show summary + outline actions */}
           {isOutlineMode && articleStep === "outline-editing" ? (
             <>
-              <div className="bg-subtle border border-border rounded-lg px-4 py-3 text-sm">
+              <div className="bg-card-alt border border-border rounded-lg px-4 py-3 text-sm">
                 <p className="text-muted text-xs font-mono uppercase tracking-wider mb-1">Topic</p>
                 <p className="text-white">{fields.topic || "—"}</p>
               </div>

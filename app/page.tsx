@@ -40,7 +40,7 @@ export default function Dashboard() {
             { label: "Categories", value: categories.length },
             { label: "Model", value: "Claude" },
           ].map((s) => (
-            <div key={s.label} className="bg-card border border-border rounded-lg px-5 py-3">
+            <div key={s.label} className="bg-card-alt border border-border rounded-lg px-5 py-3 shadow-card-inset">
               <div className="text-2xl font-mono text-accent">{s.value}</div>
               <div className="text-xs text-muted mt-0.5">{s.label}</div>
             </div>
@@ -48,7 +48,7 @@ export default function Dashboard() {
         </div>
 
         <div className="mt-8 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="bg-card border border-border rounded-2xl p-6">
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-card-elevated">
             <p className="font-mono text-accent text-xs tracking-widest uppercase mb-3">
               Phase 2 Focus
             </p>
@@ -65,7 +65,7 @@ export default function Dashboard() {
 
           <Link
             href="/calendar"
-            className="group bg-card border border-border hover:border-accent/40 rounded-2xl p-6 transition-all duration-200 hover:bg-accent/5"
+            className="group bg-card border border-border hover:border-accent/40 rounded-2xl p-6 transition-all duration-200 hover:bg-accent/5 shadow-card-elevated"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -111,7 +111,7 @@ export default function Dashboard() {
                 <Link
                   key={tool.slug}
                   href={`/tool/${tool.slug}`}
-                  className="group bg-card border border-border hover:border-accent/40 rounded-xl p-4 transition-all duration-200 hover:bg-accent/5"
+                  className="group bg-card border border-border hover:border-accent/40 rounded-xl p-5 transition-all duration-200 hover:bg-accent/5 shadow-card-elevated"
                 >
                   <div className="text-2xl mb-2">{tool.icon}</div>
                   <div className="text-sm font-medium text-white group-hover:text-accent transition-colors mb-1">
