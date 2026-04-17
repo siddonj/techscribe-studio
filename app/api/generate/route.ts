@@ -6,9 +6,33 @@ const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
+interface ResearchItem {
+  type: "url" | "text" | "file";
+  label: string;
+  content: string;
+}
+
+function buildResearchSection(research: ResearchItem[]): string {
+  if (!research || research.length === 0) return "";
+  const items = research
+    .map((item, i) => {
+      if (item.type === "url") return `${i + 1}. [URL] ${item.content}`;
+      if (item.type === "file") return `${i + 1}. [File: ${item.label}]\n${item.content}`;
+      return `${i + 1}. [Text]\n${item.content}`;
+    })
+    .join("\n\n");
+  return `\n\nResearch Sources:\n${items}`;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { slug, fields, mode, outline } = await req.json();
+    const { slug, fields, mode, outline, research } = await req.json() as {
+      slug: string;
+      fields: Record<string, string>;
+      mode?: string;
+      outline?: string;
+      research?: ResearchItem[];
+    };
 
     if (!slug || !fields) {
       return new Response(JSON.stringify({ error: "Missing slug or fields" }), {
@@ -25,6 +49,10 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Build the {contextSection} replacement value
+    const contextValue = fields.context?.trim() ?? "";
+    const contextSection = contextValue ? `\nContext/Brief: ${contextValue}` : "";
+
     let systemPrompt: string;
     let userPrompt: string;
 
@@ -35,6 +63,7 @@ export async function POST(req: NextRequest) {
       for (const [key, value] of Object.entries(fields)) {
         userPrompt = userPrompt.replaceAll(`{${key}}`, String(value || ""));
       }
+      userPrompt = userPrompt.replaceAll("{contextSection}", contextSection);
     } else if (mode === "article" && outline && tool.articleWithOutlinePromptTemplate) {
       // Step 2: generate the full article using the approved outline
       systemPrompt = tool.systemPrompt;
@@ -42,6 +71,7 @@ export async function POST(req: NextRequest) {
       for (const [key, value] of Object.entries(fields)) {
         userPrompt = userPrompt.replaceAll(`{${key}}`, String(value || ""));
       }
+      userPrompt = userPrompt.replaceAll("{contextSection}", contextSection);
       userPrompt = userPrompt.replaceAll("{outline}", String(outline));
     } else {
       // Default: single-step generation
@@ -50,6 +80,12 @@ export async function POST(req: NextRequest) {
       for (const [key, value] of Object.entries(fields)) {
         userPrompt = userPrompt.replaceAll(`{${key}}`, String(value || ""));
       }
+      userPrompt = userPrompt.replaceAll("{contextSection}", contextSection);
+    }
+
+    // Append any research sources to the prompt
+    if (research && research.length > 0) {
+      userPrompt += buildResearchSection(research);
     }
 
     // Stream the response
@@ -94,3 +130,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

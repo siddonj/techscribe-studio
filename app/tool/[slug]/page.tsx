@@ -7,6 +7,7 @@ import { getToolBySlug, Tool, ToolField } from "@/lib/tools";
 import { getHandoffActions } from "@/lib/handoff-registry";
 import { parseToolOutput, ParsedToolOutput } from "@/lib/output-parsers";
 import HandoffCard from "@/components/HandoffCard";
+import AddKnowledgeModal, { ResearchItem } from "@/components/AddKnowledgeModal";
 import type { PublishState, PublishFailureCategory } from "@/lib/publish-state";
 import {
   normalizePublishState,
@@ -120,6 +121,10 @@ export default function ToolPage() {
   const [editableOutline, setEditableOutline] = useState("");
   const isOutlineMode = !!tool?.outlineSystemPrompt;
 
+  // Research / knowledge sources state
+  const [researchItems, setResearchItems] = useState<ResearchItem[]>([]);
+  const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
+
   // Output tab state (ARTICLE = rendered, EDITOR = editable textarea)
   type OutputTab = "article" | "editor";
   const [outputTab, setOutputTab] = useState<OutputTab>("article");
@@ -152,6 +157,7 @@ export default function ToolPage() {
     setPublishErrorCategory(null);
     setArticleStep("input");
     setEditableOutline("");
+    setResearchItems([]);
   }, [searchParams, slug, tool]);
 
   // Auto-scroll output
@@ -221,7 +227,7 @@ export default function ToolPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: tool.slug, fields, mode }),
+        body: JSON.stringify({ slug: tool.slug, fields, mode, research: researchItems }),
       });
 
       if (!res.ok) {
@@ -274,7 +280,7 @@ export default function ToolPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: tool.slug, fields, mode: "article", outline: editableOutline }),
+        body: JSON.stringify({ slug: tool.slug, fields, mode: "article", outline: editableOutline, research: researchItems }),
       });
 
       if (!res.ok) {
@@ -405,6 +411,7 @@ export default function ToolPage() {
     setArticleStep("input");
     setEditableOutline("");
     setOutputTab("article");
+    setResearchItems([]);
   };
 
   const handleReset = () => {
@@ -502,6 +509,42 @@ export default function ToolPage() {
                   />
                 </div>
               ))}
+
+              {/* Research / Knowledge Sources — shown for tools with supportsResearch */}
+              {tool.supportsResearch && (
+                <div>
+                  {researchItems.length > 0 && (
+                    <ul className="flex flex-col gap-1.5 mb-2">
+                      {researchItems.map((item) => (
+                        <li
+                          key={item.id}
+                          className="flex items-start gap-2 bg-subtle border border-border rounded-lg px-3 py-2 text-xs"
+                        >
+                          <span className="mt-0.5 shrink-0 font-mono text-accent">
+                            {item.type === "url" ? "🔗" : item.type === "file" ? "📄" : "📝"}
+                          </span>
+                          <span className="flex-1 text-white/80 break-all line-clamp-2" title={item.label}>{item.label}</span>
+                          <button
+                            onClick={() =>
+                              setResearchItems((prev) => prev.filter((r) => r.id !== item.id))
+                            }
+                            className="shrink-0 text-muted hover:text-red-400 transition-colors leading-none"
+                            aria-label="Remove research item"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <button
+                    onClick={() => setShowKnowledgeModal(true)}
+                    className="flex items-center gap-1.5 text-sm text-muted border border-border rounded-full px-4 py-1.5 hover:text-white hover:border-white/30 transition-colors"
+                  >
+                    <span className="text-base leading-none">+</span> Add Knowledge
+                  </button>
+                </div>
+              )}
 
               {error && (
                 <div className="text-red-400 text-xs bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
@@ -774,6 +817,14 @@ export default function ToolPage() {
           </div>
         </div>
       </div>
+
+      {/* Add Knowledge modal */}
+      {showKnowledgeModal && (
+        <AddKnowledgeModal
+          onClose={() => setShowKnowledgeModal(false)}
+          onAdd={(item) => setResearchItems((prev) => [...prev, item])}
+        />
+      )}
     </div>
   );
 }
