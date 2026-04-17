@@ -930,32 +930,32 @@ export default function HistoryPage() {
           <p className="font-mono text-xs text-muted uppercase tracking-wider shrink-0">Publish States</p>
           {publishStateCounts.failed > 0 && (
             <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.failed}`}>
-              <span>{PUBLISH_STATE_ICONS.failed}</span>{PUBLISH_STATE_LABELS.failed}: {publishStateCounts.failed}
+              {PUBLISH_STATE_ICONS.failed}{PUBLISH_STATE_LABELS.failed}: {publishStateCounts.failed}
             </span>
           )}
           {publishStateCounts.published > 0 && (
             <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.published}`}>
-              <span>{PUBLISH_STATE_ICONS.published}</span>{PUBLISH_STATE_LABELS.published}: {publishStateCounts.published}
+              {PUBLISH_STATE_ICONS.published}{PUBLISH_STATE_LABELS.published}: {publishStateCounts.published}
             </span>
           )}
           {publishStateCounts.scheduled > 0 && (
             <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.scheduled}`}>
-              <span>{PUBLISH_STATE_ICONS.scheduled}</span>{PUBLISH_STATE_LABELS.scheduled}: {publishStateCounts.scheduled}
+              {PUBLISH_STATE_ICONS.scheduled}{PUBLISH_STATE_LABELS.scheduled}: {publishStateCounts.scheduled}
             </span>
           )}
           {publishStateCounts.draft_updated > 0 && (
             <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.draft_updated}`}>
-              <span>{PUBLISH_STATE_ICONS.draft_updated}</span>{PUBLISH_STATE_LABELS.draft_updated}: {publishStateCounts.draft_updated}
+              {PUBLISH_STATE_ICONS.draft_updated}{PUBLISH_STATE_LABELS.draft_updated}: {publishStateCounts.draft_updated}
             </span>
           )}
           {publishStateCounts.draft_created > 0 && (
             <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.draft_created}`}>
-              <span>{PUBLISH_STATE_ICONS.draft_created}</span>{PUBLISH_STATE_LABELS.draft_created}: {publishStateCounts.draft_created}
+              {PUBLISH_STATE_ICONS.draft_created}{PUBLISH_STATE_LABELS.draft_created}: {publishStateCounts.draft_created}
             </span>
           )}
           {publishStateCounts.unpublished > 0 && (
             <span className="text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 border-slate-400/20 bg-slate-400/5 text-slate-400">
-              <span>📄</span>Never Published: {publishStateCounts.unpublished}
+              📄 Never Published: {publishStateCounts.unpublished}
             </span>
           )}
         </div>
@@ -1518,7 +1518,7 @@ export default function HistoryPage() {
                         </div>
                         {draftBadgeLabel && (
                           <span className={`font-mono text-[10px] border rounded px-1.5 py-0.5 flex items-center gap-1 ${getDraftBadgeClassName(row)}`}>
-                            {publishStateIcon && <span>{publishStateIcon}</span>}
+                            {publishStateIcon}
                             {draftBadgeLabel}
                           </span>
                         )}
@@ -1530,7 +1530,7 @@ export default function HistoryPage() {
                         </span>
                         {(row.wp_post_id || row.wp_publish_state === "failed") && (
                           <span className={`font-mono text-xs flex items-center gap-1 ${getDraftInlineClassName(row)}`}>
-                            {publishStateIcon && <span>{publishStateIcon}</span>}
+                            {publishStateIcon}
                             {row.wp_publish_state === "failed"
                               ? "Publish failed"
                               : row.wp_publish_state === "publish"
