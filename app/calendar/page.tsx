@@ -464,11 +464,11 @@ export default function CalendarPage() {
         <section className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {[
             { label: "Total Items", value: summary?.total ?? rows.length, colorClass: "text-accent" },
-            { label: "Due This Week", value: summary?.dueThisWeek ?? 0, colorClass: "text-amber-400" },
-            { label: "Overdue", value: summary?.overdue ?? 0, colorClass: "text-red-400" },
-            { label: "Unscheduled", value: summary?.unscheduled ?? 0, colorClass: "text-sky-400" },
-            { label: "Ready to Publish", value: summary?.byStatus.ready ?? 0, colorClass: "text-emerald-400" },
-            { label: "Published", value: summary?.byStatus.published ?? 0, colorClass: "text-fuchsia-400" },
+            { label: "Due This Week", value: summary?.dueThisWeek ?? 0, colorClass: "text-status-warning" },
+            { label: "Overdue", value: summary?.overdue ?? 0, colorClass: "text-status-error" },
+            { label: "Unscheduled", value: summary?.unscheduled ?? 0, colorClass: "text-status-info" },
+            { label: "Ready to Publish", value: summary?.byStatus.ready ?? 0, colorClass: "text-status-success" },
+            { label: "Published", value: summary?.byStatus.published ?? 0, colorClass: "text-status-published" },
           ].map((stat) => (
             <div key={stat.label} className="bg-card-alt border border-border rounded-xl px-5 py-4 shadow-card-inset">
               <p className="font-mono text-xs text-muted uppercase tracking-wider">{stat.label}</p>
