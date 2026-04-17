@@ -16,6 +16,7 @@ import {
   PUBLISH_FAILURE_CATEGORY_LABELS,
   PUBLISH_STATE_LABELS,
   PUBLISH_STATE_BADGE_CLASSES,
+  PUBLISH_STATE_ICONS,
 } from "@/lib/publish-state";
 
 // Simple markdown renderer (same as tool page)
@@ -193,6 +194,10 @@ export default function HistoryPage() {
   const [publishStatusLoaded, setPublishStatusLoaded] = useState(false);
   const [totalRows, setTotalRows] = useState(0);
   const [hasMoreRows, setHasMoreRows] = useState(false);
+  const [filterAdvancedOpen, setFilterAdvancedOpen] = useState(false);
+  const [filterFolderMgmtOpen, setFilterFolderMgmtOpen] = useState(false);
+  const [filterTagMgmtOpen, setFilterTagMgmtOpen] = useState(false);
+  const [filterPresetsOpen, setFilterPresetsOpen] = useState(false);
 
   const trimmedSearchQuery = searchQuery.trim();
   const trimmedFolderFilter = folderFilter.trim();
@@ -924,33 +929,33 @@ export default function HistoryPage() {
         <div className="border-b border-border px-8 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
           <p className="font-mono text-xs text-muted uppercase tracking-wider shrink-0">Publish States</p>
           {publishStateCounts.failed > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 ${PUBLISH_STATE_BADGE_CLASSES.failed}`}>
-              {PUBLISH_STATE_LABELS.failed}: {publishStateCounts.failed}
+            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.failed}`}>
+              {PUBLISH_STATE_ICONS.failed}{PUBLISH_STATE_LABELS.failed}: {publishStateCounts.failed}
             </span>
           )}
           {publishStateCounts.published > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 ${PUBLISH_STATE_BADGE_CLASSES.published}`}>
-              {PUBLISH_STATE_LABELS.published}: {publishStateCounts.published}
+            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.published}`}>
+              {PUBLISH_STATE_ICONS.published}{PUBLISH_STATE_LABELS.published}: {publishStateCounts.published}
             </span>
           )}
           {publishStateCounts.scheduled > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 ${PUBLISH_STATE_BADGE_CLASSES.scheduled}`}>
-              {PUBLISH_STATE_LABELS.scheduled}: {publishStateCounts.scheduled}
+            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.scheduled}`}>
+              {PUBLISH_STATE_ICONS.scheduled}{PUBLISH_STATE_LABELS.scheduled}: {publishStateCounts.scheduled}
             </span>
           )}
           {publishStateCounts.draft_updated > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 ${PUBLISH_STATE_BADGE_CLASSES.draft_updated}`}>
-              {PUBLISH_STATE_LABELS.draft_updated}: {publishStateCounts.draft_updated}
+            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.draft_updated}`}>
+              {PUBLISH_STATE_ICONS.draft_updated}{PUBLISH_STATE_LABELS.draft_updated}: {publishStateCounts.draft_updated}
             </span>
           )}
           {publishStateCounts.draft_created > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 ${PUBLISH_STATE_BADGE_CLASSES.draft_created}`}>
-              {PUBLISH_STATE_LABELS.draft_created}: {publishStateCounts.draft_created}
+            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.draft_created}`}>
+              {PUBLISH_STATE_ICONS.draft_created}{PUBLISH_STATE_LABELS.draft_created}: {publishStateCounts.draft_created}
             </span>
           )}
           {publishStateCounts.unpublished > 0 && (
-            <span className="text-xs font-mono border rounded px-2 py-0.5 border-slate-400/20 bg-slate-400/5 text-slate-400">
-              Never Published: {publishStateCounts.unpublished}
+            <span className="text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 border-slate-400/20 bg-slate-400/5 text-slate-400">
+              📄 Never Published: {publishStateCounts.unpublished}
             </span>
           )}
         </div>
@@ -958,9 +963,9 @@ export default function HistoryPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* List panel */}
-        <div className="w-96 border-r border-border flex flex-col overflow-hidden">
+        <div className="w-96 border-r border-border flex flex-col overflow-hidden bg-surface">
           {/* Filter bar */}
-          <div className="px-4 py-3 border-b border-border space-y-3">
+          <div className="px-4 py-3 border-b border-border space-y-3 overflow-y-auto shrink-0 max-h-[60vh]">
             {selectedCount > 0 && (
               <div className="bg-subtle border border-border rounded-lg p-3 space-y-3">
                 <div className="flex items-center justify-between gap-3">
@@ -1133,52 +1138,11 @@ export default function HistoryPage() {
                     <button
                       key={tag}
                       onClick={() => toggleTagFilter(tag)}
-                      className="text-[11px] font-mono border border-accent/40 text-accent rounded px-2 py-1 transition-colors hover:text-white"
+                      className="text-[11px] font-mono border border-accent/40 bg-accent/10 text-accent rounded px-2 py-1 transition-colors hover:text-white"
                     >
                       #{tag} ✕
                     </button>
                   ))}
-                </div>
-              </div>
-            )}
-            {availableFolders.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Folders</p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setFolderFilter("")}
-                    className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${!folderFilter ? "border-accent/40 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
-                  >
-                    All folders
-                  </button>
-                  {availableFolders.map((folder) => (
-                    <button
-                      key={folder}
-                      onClick={() => setFolderFilter(folder)}
-                      className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${folderFilter === folder ? "border-accent/40 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
-                    >
-                      {folder}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {popularTags.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Popular Tags</p>
-                <div className="flex flex-wrap gap-2">
-                  {popularTags.map((tagSummary) => {
-                    const active = normalizedTagFilters.some((tag) => tag.toLowerCase() === tagSummary.tag.toLowerCase());
-                    return (
-                      <button
-                        key={tagSummary.tag}
-                        onClick={() => toggleTagFilter(tagSummary.tag)}
-                        className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${active ? "border-accent/40 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
-                      >
-                        #{tagSummary.tag} ({tagSummary.count})
-                      </button>
-                    );
-                  })}
                 </div>
               </div>
             )}
@@ -1195,212 +1159,300 @@ export default function HistoryPage() {
               <option value="publish-failed">Publish failed</option>
             </select>
 
-            <div className="bg-subtle border border-border rounded-lg p-3 space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-mono text-muted uppercase tracking-wider">Folder Management</p>
-                <span className="text-[11px] font-mono text-muted">{folderSummaries.length} folders</span>
-              </div>
-              <input
-                type="text"
-                list="history-folder-options"
-                className={inputClassName}
-                value={folderManagerFolder}
-                onChange={(e) => setFolderManagerFolder(e.target.value)}
-                placeholder="Folder to rename, merge, or delete"
-              />
-              <input
-                type="text"
-                list="history-folder-options"
-                className={inputClassName}
-                value={folderManagerTarget}
-                onChange={(e) => setFolderManagerTarget(e.target.value)}
-                placeholder="New name or merge target"
-              />
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => handleFolderAction("rename")}
-                  disabled={folderActionLoading !== null}
-                  className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
-                >
-                  {folderActionLoading === "rename" ? "Renaming..." : "Rename"}
-                </button>
-                <button
-                  onClick={() => handleFolderAction("merge")}
-                  disabled={folderActionLoading !== null}
-                  className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
-                >
-                  {folderActionLoading === "merge" ? "Merging..." : "Merge"}
-                </button>
-                <button
-                  onClick={() => handleFolderAction("delete")}
-                  disabled={folderActionLoading !== null}
-                  className="text-sm border border-red-400/20 rounded-lg py-2 text-red-300/80 hover:text-red-200 hover:border-red-400/40 transition-colors disabled:opacity-50"
-                >
-                  {folderActionLoading === "delete" ? "Deleting..." : "Delete"}
-                </button>
-              </div>
-              {folderActionMessage && (
-                <p className="text-xs text-muted">{folderActionMessage}</p>
-              )}
-              {folderSummaries.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Library Folders</p>
-                  <div className="flex flex-wrap gap-2">
-                    {folderSummaries.map((folderSummary) => (
-                      <button
-                        key={folderSummary.folder}
-                        onClick={() => {
-                          setFolderManagerFolder(folderSummary.folder);
-                          setFolderFilter(folderSummary.folder);
-                        }}
-                        className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${folderManagerFolder === folderSummary.folder || folderFilter === folderSummary.folder ? "border-accent/40 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
-                      >
-                        {folderSummary.folder} ({folderSummary.count})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-muted">No folders saved yet.</p>
-              )}
-            </div>
-
-            <div className="bg-subtle border border-border rounded-lg p-3 space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-mono text-muted uppercase tracking-wider">Tag Management</p>
-                <span className="text-[11px] font-mono text-muted">{tagSummaries.length} tags</span>
-              </div>
-              <input
-                type="text"
-                className={inputClassName}
-                value={tagManagerTag}
-                onChange={(e) => setTagManagerTag(e.target.value)}
-                placeholder="Tag to rename, merge, or delete"
-              />
-              <input
-                type="text"
-                className={inputClassName}
-                value={tagManagerTarget}
-                onChange={(e) => setTagManagerTarget(e.target.value)}
-                placeholder="New name or merge target"
-              />
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => handleTagAction("rename")}
-                  disabled={tagActionLoading !== null}
-                  className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
-                >
-                  {tagActionLoading === "rename" ? "Renaming..." : "Rename"}
-                </button>
-                <button
-                  onClick={() => handleTagAction("merge")}
-                  disabled={tagActionLoading !== null}
-                  className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
-                >
-                  {tagActionLoading === "merge" ? "Merging..." : "Merge"}
-                </button>
-                <button
-                  onClick={() => handleTagAction("delete")}
-                  disabled={tagActionLoading !== null}
-                  className="text-sm border border-red-400/20 rounded-lg py-2 text-red-300/80 hover:text-red-200 hover:border-red-400/40 transition-colors disabled:opacity-50"
-                >
-                  {tagActionLoading === "delete" ? "Deleting..." : "Delete"}
-                </button>
-              </div>
-              {tagActionMessage && (
-                <p className="text-xs text-muted">{tagActionMessage}</p>
-              )}
-              {popularTags.length > 0 ? (
-                <div className="space-y-2">
-                  <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Library Tags</p>
-                  <div className="flex flex-wrap gap-2">
-                    {popularTags.map((tagSummary) => (
-                      <button
-                        key={tagSummary.tag}
-                        onClick={() => {
-                          setTagManagerTag(tagSummary.tag);
-                          toggleTagFilter(tagSummary.tag);
-                        }}
-                        className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${tagManagerTag === tagSummary.tag || normalizedTagFilters.some((tag) => tag.toLowerCase() === tagSummary.tag.toLowerCase()) ? "border-accent/40 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
-                      >
-                        #{tagSummary.tag} ({tagSummary.count})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-muted">No tags saved yet.</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="date"
-                className={inputClassName}
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-              <input
-                type="date"
-                className={inputClassName}
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
-            </div>
-            <select
-              className={inputClassName}
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "title-az" | "title-za")}
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="title-az">Title A-Z</option>
-              <option value="title-za">Title Z-A</option>
-            </select>
-
-            <div className="bg-subtle border border-border rounded-lg p-3 space-y-3">
-              <p className="text-xs font-mono text-muted uppercase tracking-wider">Saved Presets</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  className="flex-1 input-base"
-                  value={presetName}
-                  onChange={(e) => setPresetName(e.target.value)}
-                  placeholder="Preset name"
-                />
-                <button
-                  onClick={handleSavePreset}
-                  className="px-3 py-2 text-sm border border-border rounded-lg text-muted hover:text-white hover:border-accent/40 transition-colors"
-                >
-                  Save
-                </button>
-              </div>
-              {presets.length === 0 ? (
-                <p className="text-xs text-muted">No saved presets yet.</p>
-              ) : (
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {presets.map((preset) => (
-                    <div key={preset.id} className="flex items-center gap-2">
-                      <button
-                        onClick={() => applyPreset(preset)}
-                        className="flex-1 text-left text-sm border border-border rounded-lg px-3 py-2 text-white/90 hover:border-accent/40 transition-colors"
-                      >
-                        {preset.name}
-                        <span className="block text-[11px] text-muted mt-1 truncate">
-                          {[preset.filterSlug !== "all" ? preset.filterSlug : null, preset.folderFilter || null, parseTagValues(preset.tagFilters ?? preset.tagFilter ?? []).join(", ") || null, preset.statusFilter !== "all" ? preset.statusFilter : null]
-                            .filter(Boolean)
-                            .join(" • ") || "All entries"}
-                        </span>
-                      </button>
-                      <button
-                        onClick={() => deletePreset(preset.id)}
-                        className="text-xs text-muted hover:text-red-300 transition-colors px-2"
-                        title="Delete preset"
-                      >
-                        ✕
-                      </button>
+            {/* Advanced Filters — collapsible */}
+            <div className="bg-subtle/50 border border-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => setFilterAdvancedOpen(!filterAdvancedOpen)}
+                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-subtle/80 transition-colors"
+              >
+                <p className="text-xs font-mono text-muted uppercase tracking-wider">Advanced Filters</p>
+                <span className="text-muted text-[10px]">{filterAdvancedOpen ? "▲" : "▼"}</span>
+              </button>
+              {filterAdvancedOpen && (
+                <div className="px-3 pb-3 space-y-3 border-t border-border/50">
+                  {availableFolders.length > 0 && (
+                    <div className="space-y-2 pt-3">
+                      <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Folders</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => setFolderFilter("")}
+                          className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${!folderFilter ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                        >
+                          All folders
+                        </button>
+                        {availableFolders.map((folder) => (
+                          <button
+                            key={folder}
+                            onClick={() => setFolderFilter(folder)}
+                            className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${folderFilter === folder ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                          >
+                            📁 {folder}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  )}
+                  {popularTags.length > 0 && (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Popular Tags</p>
+                      <div className="flex flex-wrap gap-2">
+                        {popularTags.map((tagSummary) => {
+                          const active = normalizedTagFilters.some((tag) => tag.toLowerCase() === tagSummary.tag.toLowerCase());
+                          return (
+                            <button
+                              key={tagSummary.tag}
+                              onClick={() => toggleTagFilter(tagSummary.tag)}
+                              className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                            >
+                              #{tagSummary.tag} ({tagSummary.count})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <p className="text-[11px] font-mono text-muted mb-1">From</p>
+                      <input
+                        type="date"
+                        className={inputClassName}
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-mono text-muted mb-1">To</p>
+                      <input
+                        type="date"
+                        className={inputClassName}
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <select
+                    className={inputClassName}
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "title-az" | "title-za")}
+                  >
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                    <option value="title-az">Title A-Z</option>
+                    <option value="title-za">Title Z-A</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Folder Management — collapsible */}
+            <div className="bg-subtle border border-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => setFilterFolderMgmtOpen(!filterFolderMgmtOpen)}
+                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-subtle/80 transition-colors"
+              >
+                <p className="text-xs font-mono text-muted uppercase tracking-wider">📁 Folder Management</p>
+                <span className="text-muted text-[10px]">{filterFolderMgmtOpen ? "▲" : "▼"} <span className="font-mono">{folderSummaries.length}</span></span>
+              </button>
+              {filterFolderMgmtOpen && (
+                <div className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3">
+                  <input
+                    type="text"
+                    list="history-folder-options"
+                    className={inputClassName}
+                    value={folderManagerFolder}
+                    onChange={(e) => setFolderManagerFolder(e.target.value)}
+                    placeholder="Folder to rename, merge, or delete"
+                  />
+                  <input
+                    type="text"
+                    list="history-folder-options"
+                    className={inputClassName}
+                    value={folderManagerTarget}
+                    onChange={(e) => setFolderManagerTarget(e.target.value)}
+                    placeholder="New name or merge target"
+                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => handleFolderAction("rename")}
+                      disabled={folderActionLoading !== null}
+                      className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                    >
+                      {folderActionLoading === "rename" ? "Renaming..." : "Rename"}
+                    </button>
+                    <button
+                      onClick={() => handleFolderAction("merge")}
+                      disabled={folderActionLoading !== null}
+                      className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                    >
+                      {folderActionLoading === "merge" ? "Merging..." : "Merge"}
+                    </button>
+                    <button
+                      onClick={() => handleFolderAction("delete")}
+                      disabled={folderActionLoading !== null}
+                      className="text-sm border border-red-400/20 rounded-lg py-2 text-red-300/80 hover:text-red-200 hover:border-red-400/40 transition-colors disabled:opacity-50"
+                    >
+                      {folderActionLoading === "delete" ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                  {folderActionMessage && (
+                    <p className="text-xs text-muted">{folderActionMessage}</p>
+                  )}
+                  {folderSummaries.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Library Folders</p>
+                      <div className="flex flex-wrap gap-2">
+                        {folderSummaries.map((folderSummary) => (
+                          <button
+                            key={folderSummary.folder}
+                            onClick={() => {
+                              setFolderManagerFolder(folderSummary.folder);
+                              setFolderFilter(folderSummary.folder);
+                            }}
+                            className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${folderManagerFolder === folderSummary.folder || folderFilter === folderSummary.folder ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                          >
+                            {folderSummary.folder} ({folderSummary.count})
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted">No folders saved yet.</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Tag Management — collapsible */}
+            <div className="bg-subtle border border-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => setFilterTagMgmtOpen(!filterTagMgmtOpen)}
+                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-subtle/80 transition-colors"
+              >
+                <p className="text-xs font-mono text-muted uppercase tracking-wider">🏷️ Tag Management</p>
+                <span className="text-muted text-[10px]">{filterTagMgmtOpen ? "▲" : "▼"} <span className="font-mono">{tagSummaries.length}</span></span>
+              </button>
+              {filterTagMgmtOpen && (
+                <div className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3">
+                  <input
+                    type="text"
+                    className={inputClassName}
+                    value={tagManagerTag}
+                    onChange={(e) => setTagManagerTag(e.target.value)}
+                    placeholder="Tag to rename, merge, or delete"
+                  />
+                  <input
+                    type="text"
+                    className={inputClassName}
+                    value={tagManagerTarget}
+                    onChange={(e) => setTagManagerTarget(e.target.value)}
+                    placeholder="New name or merge target"
+                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => handleTagAction("rename")}
+                      disabled={tagActionLoading !== null}
+                      className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                    >
+                      {tagActionLoading === "rename" ? "Renaming..." : "Rename"}
+                    </button>
+                    <button
+                      onClick={() => handleTagAction("merge")}
+                      disabled={tagActionLoading !== null}
+                      className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                    >
+                      {tagActionLoading === "merge" ? "Merging..." : "Merge"}
+                    </button>
+                    <button
+                      onClick={() => handleTagAction("delete")}
+                      disabled={tagActionLoading !== null}
+                      className="text-sm border border-red-400/20 rounded-lg py-2 text-red-300/80 hover:text-red-200 hover:border-red-400/40 transition-colors disabled:opacity-50"
+                    >
+                      {tagActionLoading === "delete" ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                  {tagActionMessage && (
+                    <p className="text-xs text-muted">{tagActionMessage}</p>
+                  )}
+                  {popularTags.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-mono text-muted uppercase tracking-wider">Library Tags</p>
+                      <div className="flex flex-wrap gap-2">
+                        {popularTags.map((tagSummary) => (
+                          <button
+                            key={tagSummary.tag}
+                            onClick={() => {
+                              setTagManagerTag(tagSummary.tag);
+                              toggleTagFilter(tagSummary.tag);
+                            }}
+                            className={`text-[11px] font-mono border rounded px-2 py-1 transition-colors ${tagManagerTag === tagSummary.tag || normalizedTagFilters.some((tag) => tag.toLowerCase() === tagSummary.tag.toLowerCase()) ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                          >
+                            #{tagSummary.tag} ({tagSummary.count})
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted">No tags saved yet.</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Saved Presets — collapsible */}
+            <div className="bg-subtle border border-border rounded-lg overflow-hidden">
+              <button
+                onClick={() => setFilterPresetsOpen(!filterPresetsOpen)}
+                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-subtle/80 transition-colors"
+              >
+                <p className="text-xs font-mono text-muted uppercase tracking-wider">💾 Saved Presets</p>
+                <span className="text-muted text-[10px]">{filterPresetsOpen ? "▲" : "▼"} <span className="font-mono">{presets.length}</span></span>
+              </button>
+              {filterPresetsOpen && (
+                <div className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="flex-1 input-base"
+                      value={presetName}
+                      onChange={(e) => setPresetName(e.target.value)}
+                      placeholder="Preset name"
+                    />
+                    <button
+                      onClick={handleSavePreset}
+                      className="px-3 py-2 text-sm border border-border rounded-lg text-muted hover:text-white hover:border-accent/40 transition-colors"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  {presets.length === 0 ? (
+                    <p className="text-xs text-muted">No saved presets yet.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {presets.map((preset) => (
+                        <div key={preset.id} className="flex items-center gap-2">
+                          <button
+                            onClick={() => applyPreset(preset)}
+                            className="flex-1 text-left text-sm border border-border rounded-lg px-3 py-2 text-white/90 hover:border-accent/40 transition-colors"
+                          >
+                            {preset.name}
+                            <span className="block text-[11px] text-muted mt-1 truncate">
+                              {[preset.filterSlug !== "all" ? preset.filterSlug : null, preset.folderFilter || null, parseTagValues(preset.tagFilters ?? preset.tagFilter ?? []).join(", ") || null, preset.statusFilter !== "all" ? preset.statusFilter : null]
+                                .filter(Boolean)
+                                .join(" • ") || "All entries"}
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => deletePreset(preset.id)}
+                            className="text-xs text-muted hover:text-red-300 transition-colors px-2"
+                            title="Delete preset"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1434,14 +1486,15 @@ export default function HistoryPage() {
               </div>
             )}
 
-            {!loading && visibleRows.map((row) => {
+            {!loading && visibleRows.map((row, rowIndex) => {
               const isSelected = selected?.id === row.id;
               const draftBadgeLabel = getDraftBadgeLabel(row);
+              const publishStateIcon = resolvePublishState(row) ? PUBLISH_STATE_ICONS[resolvePublishState(row)!] : null;
               return (
                 <div
                   key={row.id}
                   className={`w-full text-left px-4 py-3 border-b border-border transition-colors ${
-                    isSelected ? "bg-accent/5 border-l-2 border-l-accent" : "hover:bg-subtle"
+                    isSelected ? "bg-accent/5 border-l-2 border-l-accent" : rowIndex % 2 !== 0 ? "bg-subtle/20 hover:bg-subtle/60" : "hover:bg-subtle/40"
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -1464,7 +1517,8 @@ export default function HistoryPage() {
                           </div>
                         </div>
                         {draftBadgeLabel && (
-                          <span className={`font-mono text-[10px] border rounded px-1.5 py-0.5 ${getDraftBadgeClassName(row)}`}>
+                          <span className={`font-mono text-[10px] border rounded px-1.5 py-0.5 flex items-center gap-1 ${getDraftBadgeClassName(row)}`}>
+                            {publishStateIcon}
                             {draftBadgeLabel}
                           </span>
                         )}
@@ -1475,7 +1529,8 @@ export default function HistoryPage() {
                           {formatDate(row.created_at)}
                         </span>
                         {(row.wp_post_id || row.wp_publish_state === "failed") && (
-                          <span className={`font-mono text-xs ${getDraftInlineClassName(row)}`}>
+                          <span className={`font-mono text-xs flex items-center gap-1 ${getDraftInlineClassName(row)}`}>
+                            {publishStateIcon}
                             {row.wp_publish_state === "failed"
                               ? "Publish failed"
                               : row.wp_publish_state === "publish"
