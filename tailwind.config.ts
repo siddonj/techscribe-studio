@@ -16,7 +16,7 @@ const config: Config = {
         accent: "#00e5ff",
         "accent-dim": "#00b8cc",
         purple: "#7c3aed",
-        muted: "#4a5068",
+        muted: "#64748b",
         subtle: "#252840",
       },
       fontFamily: {

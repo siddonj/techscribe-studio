@@ -437,7 +437,7 @@ export default function ToolPage() {
         {/* Input panel */}
         <div className="w-96 border-r border-border p-6 flex flex-col gap-4 overflow-y-auto">
           <div>
-            <p className="text-slate-400 text-sm mb-6">{tool.description}</p>
+            <p className="text-slate-200 text-sm mb-6">{tool.description}</p>
             {Number.isFinite(calendarId) && (
               <div className="bg-subtle border border-border rounded-lg px-4 py-3 text-sm mb-4">
                 <p className="text-muted text-xs font-mono uppercase tracking-wider mb-1">Calendar Linked</p>

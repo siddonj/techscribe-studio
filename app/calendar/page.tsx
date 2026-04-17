@@ -481,7 +481,7 @@ export default function CalendarPage() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="font-mono text-xs text-accent uppercase tracking-widest">Quick Plan</p>
-              <p className="text-sm text-slate-400 mt-1">Add a topic, assign a tool, and give it a date so the queue stays visible.</p>
+              <p className="text-sm text-slate-200 mt-1">Add a topic, assign a tool, and give it a date so the queue stays visible.</p>
               <p className="text-xs text-muted/60 mt-0.5">Dates are planning guides only — publishing to WordPress is always triggered manually.</p>
             </div>
             <Link href={buildToolHref(createDraft)} className="text-sm border border-border rounded-lg px-3 py-2 text-muted hover:text-white hover:border-accent/40 transition-colors">

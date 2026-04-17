@@ -196,7 +196,7 @@ export default function SettingsPage() {
           >
             WordPress Setup
           </h2>
-          <p className="text-slate-400 text-lg max-w-2xl">
+          <p className="text-slate-200 text-lg max-w-2xl">
             Save your WordPress site URL and application password here so draft publishing works without editing environment files.
           </p>
         </div>
@@ -205,7 +205,7 @@ export default function SettingsPage() {
           <section className="bg-card border border-border rounded-2xl p-6 space-y-5">
             <div>
               <p className="font-mono text-xs text-muted uppercase tracking-wider mb-1">Connection</p>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-slate-200">
                 Use your WordPress site root URL and an Application Password from your WordPress user profile.
               </p>
             </div>
@@ -322,7 +322,7 @@ export default function SettingsPage() {
 
             <div className="border-t border-border pt-5">
               <p className="font-mono text-xs text-muted uppercase tracking-wider mb-2">Notes</p>
-              <div className="space-y-2 text-sm text-slate-400">
+              <div className="space-y-2 text-sm text-slate-200">
                 <p>Draft publishing uses the in-app settings first.</p>
                 <p>Env vars still work as a fallback if no saved settings exist.</p>
                 <p>{isCurrentConfigVerified ? "The current form values have been verified." : "The current form values have not been verified yet."}</p>
