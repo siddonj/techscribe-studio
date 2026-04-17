@@ -95,9 +95,7 @@ function parseChecklistItems(value: unknown): CalendarChecklistItem[] {
 
   try {
     const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed)
-      ? parsed.map((item) => String(item).trim()).filter(Boolean)
-      : [];
+    return Array.isArray(parsed) ? parseChecklistItems(parsed) : [];
   } catch {
     return [];
   }
