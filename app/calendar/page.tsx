@@ -32,8 +32,7 @@ interface CalendarDraft {
   wp_tags: string;
 }
 
-const inputClassName =
-  "w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60 transition-colors";
+const inputClassName = "w-full input-base";
 
 function createEmptyDraft(): CalendarDraft {
   return {

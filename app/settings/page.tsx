@@ -172,7 +172,7 @@ export default function SettingsPage() {
     }
   };
 
-  const inputClassName = "w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60 transition-colors";
+  const inputClassName = "w-full input-base";
 
   return (
     <div className="min-h-screen flex flex-col">
