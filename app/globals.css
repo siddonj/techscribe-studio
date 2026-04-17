@@ -42,48 +42,86 @@ h1, h2, h3, h4, h5, h6 {
 .markdown-output h3 {
   font-family: var(--font-display);
   color: #f1f5f9;
-  margin-top: 1.5em;
+  margin-top: 1.75em;
   margin-bottom: 0.5em;
 }
-.markdown-output h1 { font-size: 1.75rem; }
-.markdown-output h2 { font-size: 1.375rem; border-bottom: 1px solid #2a2d40; padding-bottom: 0.25em; }
-.markdown-output h3 { font-size: 1.1rem; color: #00e5ff; }
+.markdown-output h1 {
+  font-size: 1.875rem;
+  padding-bottom: 0.5em;
+  border-bottom: 2px solid #2a2d40;
+}
+.markdown-output h2 {
+  font-size: 1.375rem;
+  border-bottom: 1px solid #2a2d40;
+  padding-bottom: 0.25em;
+}
+.markdown-output h3 {
+  font-size: 1.05rem;
+  color: #00e5ff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 .markdown-output p { margin-bottom: 1em; }
-.markdown-output ul, .markdown-output ol { padding-left: 1.5em; margin-bottom: 1em; }
-.markdown-output li { margin-bottom: 0.25em; }
+.markdown-output ul, .markdown-output ol { padding-left: 1.75em; margin-bottom: 1em; }
+.markdown-output ul { list-style-type: disc; }
+.markdown-output ol { list-style-type: decimal; }
+.markdown-output li { margin-bottom: 0.35em; padding-left: 0.25em; }
 .markdown-output strong { color: #f1f5f9; font-weight: 600; }
 .markdown-output em { color: #94a3b8; }
+.markdown-output a { color: #00e5ff; text-decoration: underline; text-underline-offset: 2px; }
+.markdown-output a:hover { color: #ffffff; }
 .markdown-output code {
   font-family: var(--font-mono);
   background: #191b2c;
   color: #00e5ff;
-  padding: 0.125em 0.4em;
-  border-radius: 3px;
-  font-size: 0.875em;
+  padding: 0.15em 0.45em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  border: 1px solid rgba(0, 229, 255, 0.12);
 }
 .markdown-output pre {
-  background: #0f1018;
+  position: relative;
+  background: #0b0c14;
   border: 1px solid #2a2d40;
-  border-radius: 8px;
-  padding: 1em;
-  overflow-x: auto;
-  margin-bottom: 1em;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 1.25em;
+}
+.markdown-output pre::before {
+  content: 'CODE';
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #4a5568;
+  letter-spacing: 0.1em;
+  background: #0f1018;
+  border-bottom: 1px solid #2a2d40;
+  padding: 0.4em 1em;
 }
 .markdown-output pre code {
+  display: block;
   background: transparent;
   color: #e2e8f0;
-  padding: 0;
+  padding: 1em 1.25em;
+  overflow-x: auto;
+  font-size: 0.875em;
+  line-height: 1.7;
+  border: none;
 }
 .markdown-output blockquote {
-  border-left: 3px solid #00e5ff;
-  padding-left: 1em;
+  border-left: 3px solid #00e5ff44;
+  background: rgba(0, 229, 255, 0.04);
+  border-radius: 0 6px 6px 0;
+  padding: 0.75em 1.25em;
   color: #94a3b8;
-  margin: 1em 0;
+  margin: 1.25em 0;
+  font-style: italic;
 }
+.markdown-output blockquote p { margin-bottom: 0; }
 .markdown-output hr {
   border: none;
   border-top: 1px solid #2a2d40;
-  margin: 1.5em 0;
+  margin: 2em 0;
 }
 
 /* Card shadow hierarchy */
