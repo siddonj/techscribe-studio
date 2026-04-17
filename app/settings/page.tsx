@@ -202,7 +202,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <section className="bg-card border border-border rounded-2xl p-6 space-y-5">
+          <section className="bg-card border border-border rounded-2xl p-6 space-y-5 shadow-card-elevated">
             <div>
               <p className="font-mono text-xs text-muted uppercase tracking-wider mb-1">Connection</p>
               <p className="text-sm text-slate-200">
@@ -294,7 +294,7 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <aside className="bg-card border border-border rounded-2xl p-6 space-y-5 h-fit">
+          <aside className="bg-card border border-border rounded-2xl p-6 space-y-5 h-fit shadow-card-elevated">
             <div>
               <p className="font-mono text-xs text-muted uppercase tracking-wider mb-1">Current Source</p>
               <p className="text-white text-sm capitalize">{loading ? "Loading..." : source}</p>
