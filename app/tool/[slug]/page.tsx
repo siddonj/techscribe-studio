@@ -434,7 +434,7 @@ export default function ToolPage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Input panel */}
-        <div className="w-96 border-r border-border p-6 flex flex-col gap-4 overflow-y-auto">
+        <div className="w-96 border-r border-border p-6 flex flex-col gap-4 overflow-y-auto bg-bg">
           <div>
             <p className="text-slate-200 text-sm mb-6">{tool.description}</p>
             {Number.isFinite(calendarId) && (
@@ -532,10 +532,10 @@ export default function ToolPage() {
         </div>
 
         {/* Output panel */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col bg-card">
           {/* Output toolbar — shown when output is ready and not in outline-editing */}
           {output && articleStep !== "outline-editing" && (
-            <div className="px-6 py-3 border-b border-border">
+            <div className="px-6 py-3 border-b border-border bg-card-alt">
               {/* Tab row + action buttons */}
               <div className="flex items-center justify-between gap-4">
                 {/* ARTICLE / EDITOR tabs (only when article is fully done) */}
@@ -672,14 +672,22 @@ export default function ToolPage() {
 
           {/* Outline toolbar */}
           {articleStep === "outline-editing" && (
-            <div className="flex items-center justify-between px-6 py-3 border-b border-border">
+            <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card-alt">
               <span className="font-mono text-xs text-muted">OUTLINE — Edit below, then generate</span>
               <button
                 onClick={() => navigator.clipboard.writeText(editableOutline)}
-                className="font-mono text-xs px-3 py-1.5 rounded-md border border-border text-muted hover:text-white hover:border-accent/40 transition-colors"
+                className="btn-secondary"
               >
                 Copy
               </button>
+            </div>
+          )}
+
+          {/* Output section label — always visible when no output yet */}
+          {!output && !loading && (
+            <div className="px-6 py-2.5 border-b border-border bg-card-alt flex items-center gap-2">
+              <span className="font-mono text-xs text-muted uppercase tracking-widest">Output</span>
+              <span className="flex-1 border-t border-border/50" />
             </div>
           )}
 

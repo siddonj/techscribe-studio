@@ -30,7 +30,7 @@ export default function HandoffCard({
   const { title, summary, keywords } = parsedOutput;
 
   return (
-    <div className="mt-6 bg-card-alt border border-border rounded-xl p-6 flex flex-col gap-4 max-w-3xl shadow-card-inset">
+    <div className="mt-8 bg-card-alt border border-border rounded-xl p-6 flex flex-col gap-4 max-w-3xl shadow-card-elevated">
       {/* Card header: title + summary */}
       <div className="flex flex-col gap-1">
         <span className="font-mono text-xs text-muted uppercase tracking-widest">
