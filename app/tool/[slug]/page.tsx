@@ -578,8 +578,8 @@ export default function ToolPage() {
                       rel="noreferrer"
                       className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
                         publishState === "published"
-                          ? "border-fuchsia-400/20 text-fuchsia-300 hover:text-fuchsia-200 hover:border-fuchsia-400/40"
-                          : "border-green-400/20 text-green-300 hover:text-green-200 hover:border-green-400/40"
+                          ? "border-fuchsia-400/30 bg-fuchsia-400/10 text-fuchsia-300 hover:text-fuchsia-200 hover:border-fuchsia-400/50"
+                          : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300 hover:text-emerald-200 hover:border-emerald-400/50"
                       }`}
                     >
                       {publishState === "published" ? "View Live" : "View Draft"}
@@ -587,7 +587,7 @@ export default function ToolPage() {
                   )}
                   <button
                     onClick={handleCopy}
-                    className="flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border border-border text-muted hover:text-white hover:border-accent/40 transition-colors"
+                    className="flex items-center gap-1.5 btn-secondary"
                   >
                     {copied ? "✓ Copied!" : "Copy"}
                   </button>
@@ -597,8 +597,8 @@ export default function ToolPage() {
                       disabled={publishing || !publishAllowed || !publishStatusLoaded}
                       className={`flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border transition-colors disabled:opacity-50 ${
                         publishError
-                          ? "border-red-400/30 text-red-300 hover:text-red-200 hover:border-red-400/50"
-                          : "border-border text-muted hover:text-white hover:border-accent/40"
+                          ? "border-red-400/30 bg-red-400/10 text-red-300 hover:text-red-200 hover:border-red-400/50"
+                          : "border-accent/60 text-accent hover:bg-accent/10"
                       }`}
                     >
                       {publishing
@@ -613,7 +613,7 @@ export default function ToolPage() {
                   {!loading && (
                     <button
                       onClick={handleSave}
-                      className="flex items-center gap-1.5 font-mono text-xs px-3 py-1.5 rounded-md border border-border text-muted hover:text-white hover:border-accent/40 transition-colors"
+                      className="flex items-center gap-1.5 btn-secondary"
                     >
                       {saved ? "✓ Saved!" : "Save"}
                     </button>

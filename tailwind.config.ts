@@ -19,6 +19,15 @@ const config: Config = {
         purple: "#7c3aed",
         muted: "#64748b",
         subtle: "#252840",
+        // Semantic status colors
+        status: {
+          success: "#4ade80",   // green-400  — content ready / linked
+          warning: "#fbbf24",   // amber-400  — in-progress / due soon
+          error: "#f87171",     // red-400    — failed / overdue
+          info: "#38bdf8",      // sky-400    — planned / info
+          draft: "#94a3b8",     // slate-400  — backlog / unpublished
+          published: "#e879f9", // fuchsia-400 — live content
+        },
       },
       fontFamily: {
         display: ["var(--font-display)", "serif"],

@@ -110,6 +110,17 @@ h1, h2, h3, h4, h5, h6 {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
+/* Semantic button utilities */
+.btn-primary {
+  @apply font-mono text-xs px-3 py-1.5 rounded-md border border-accent/60 text-accent bg-transparent hover:bg-accent/10 transition-colors disabled:opacity-50;
+}
+.btn-secondary {
+  @apply font-mono text-xs px-3 py-1.5 rounded-md border border-border text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50;
+}
+.btn-danger {
+  @apply font-mono text-xs px-3 py-1.5 rounded-md border border-red-400/30 text-red-400/70 hover:text-red-400 hover:border-red-400/50 transition-colors disabled:opacity-50;
+}
+
 /* Cursor blink */
 @keyframes blink {
   0%, 100% { opacity: 1; }
