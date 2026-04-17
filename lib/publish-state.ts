@@ -52,6 +52,15 @@ export const PUBLISH_STATE_LABELS: Record<PublishState, string> = {
 
 // ─── Tailwind CSS class helpers ───────────────────────────────────────────────
 
+/** Icon emoji for each publish state (prepended to badge labels and status text). */
+export const PUBLISH_STATE_ICONS: Record<PublishState, string> = {
+  draft_created: "🔗",
+  draft_updated: "✏️",
+  published: "🌐",
+  scheduled: "📅",
+  failed: "⚠️",
+};
+
 /** CSS classes for the small pill/badge shown in list rows. */
 export const PUBLISH_STATE_BADGE_CLASSES: Record<PublishState, string> = {
   draft_created: "text-emerald-300 border-emerald-400/30 bg-emerald-400/10",
