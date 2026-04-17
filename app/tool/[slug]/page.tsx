@@ -46,8 +46,7 @@ function FieldInput({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const base =
-    "w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60 transition-colors";
+  const base = "w-full input-base";
 
   if (field.type === "textarea") {
     return (

@@ -144,6 +144,7 @@ interface HistoryFoldersResponse {
 const HISTORY_PRESETS_STORAGE_KEY = "techscribe-history-filter-presets";
 
 export default function HistoryPage() {
+  const inputClassName = "w-full input-base";
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -1000,14 +1001,14 @@ export default function HistoryPage() {
                   <input
                     type="text"
                     list="history-folder-options"
-                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                    className={inputClassName}
                     value={bulkFolderName}
                     onChange={(e) => setBulkFolderName(e.target.value)}
                     placeholder="Assign folder to selected"
                   />
                   <input
                     type="text"
-                    className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                    className={inputClassName}
                     value={bulkTags}
                     onChange={(e) => setBulkTags(e.target.value)}
                     placeholder="Add tags to selected (comma-separated)"
@@ -1063,7 +1064,7 @@ export default function HistoryPage() {
             )}
 
             <select
-              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/60"
+              className={inputClassName}
               value={filterSlug}
               onChange={(e) => setFilterSlug(e.target.value)}
             >
@@ -1079,7 +1080,7 @@ export default function HistoryPage() {
             </select>
             <input
               type="text"
-              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+              className={inputClassName}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search titles, tools, or content..."
@@ -1088,7 +1089,7 @@ export default function HistoryPage() {
               <input
                 type="text"
                 list="history-folder-options"
-                className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                className={inputClassName}
                 value={folderFilter}
                 onChange={(e) => setFolderFilter(e.target.value)}
                 placeholder="Folder"
@@ -1097,7 +1098,7 @@ export default function HistoryPage() {
                 <input
                   type="text"
                   list="history-tag-options"
-                  className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                  className="flex-1 input-base"
                   value={tagFilterInput}
                   onChange={(e) => setTagFilterInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -1182,7 +1183,7 @@ export default function HistoryPage() {
               </div>
             )}
             <select
-              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/60"
+              className={inputClassName}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as "all" | "never-published" | "draft-linked" | "draft-updated" | "published-live" | "publish-failed")}
             >
@@ -1202,7 +1203,7 @@ export default function HistoryPage() {
               <input
                 type="text"
                 list="history-folder-options"
-                className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                className={inputClassName}
                 value={folderManagerFolder}
                 onChange={(e) => setFolderManagerFolder(e.target.value)}
                 placeholder="Folder to rename, merge, or delete"
@@ -1210,7 +1211,7 @@ export default function HistoryPage() {
               <input
                 type="text"
                 list="history-folder-options"
-                className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                className={inputClassName}
                 value={folderManagerTarget}
                 onChange={(e) => setFolderManagerTarget(e.target.value)}
                 placeholder="New name or merge target"
@@ -1271,14 +1272,14 @@ export default function HistoryPage() {
               </div>
               <input
                 type="text"
-                className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                className={inputClassName}
                 value={tagManagerTag}
                 onChange={(e) => setTagManagerTag(e.target.value)}
                 placeholder="Tag to rename, merge, or delete"
               />
               <input
                 type="text"
-                className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                className={inputClassName}
                 value={tagManagerTarget}
                 onChange={(e) => setTagManagerTarget(e.target.value)}
                 placeholder="New name or merge target"
@@ -1335,19 +1336,19 @@ export default function HistoryPage() {
             <div className="grid grid-cols-2 gap-3">
               <input
                 type="date"
-                className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/60"
+                className={inputClassName}
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
               />
               <input
                 type="date"
-                className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/60"
+                className={inputClassName}
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
               />
             </div>
             <select
-              className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/60"
+              className={inputClassName}
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "title-az" | "title-za")}
             >
@@ -1362,7 +1363,7 @@ export default function HistoryPage() {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                  className="flex-1 input-base"
                   value={presetName}
                   onChange={(e) => setPresetName(e.target.value)}
                   placeholder="Preset name"
@@ -1669,7 +1670,7 @@ export default function HistoryPage() {
                     <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Title</label>
                     <input
                       type="text"
-                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent/60"
+                      className={inputClassName}
                       value={editingTitle}
                       onChange={(e) => setEditingTitle(e.target.value)}
                     />
@@ -1679,7 +1680,7 @@ export default function HistoryPage() {
                     <input
                       type="text"
                       list="history-folder-options"
-                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                      className={inputClassName}
                       value={editingFolder}
                       onChange={(e) => setEditingFolder(e.target.value)}
                       placeholder="e.g. SEO Drafts"
@@ -1689,7 +1690,7 @@ export default function HistoryPage() {
                     <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">Tags</label>
                     <input
                       type="text"
-                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                      className={inputClassName}
                       value={editingTags}
                       onChange={(e) => setEditingTags(e.target.value)}
                       placeholder="seo, wordpress, newsletter"
@@ -1701,7 +1702,7 @@ export default function HistoryPage() {
                     <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Slug</label>
                     <input
                       type="text"
-                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                      className={inputClassName}
                       value={editingWpSlug}
                       onChange={(e) => setEditingWpSlug(e.target.value)}
                       placeholder="my-post-url-slug"
@@ -1711,7 +1712,7 @@ export default function HistoryPage() {
                     <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Excerpt</label>
                     <input
                       type="text"
-                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                      className={inputClassName}
                       value={editingWpExcerpt}
                       onChange={(e) => setEditingWpExcerpt(e.target.value)}
                       placeholder="Short post excerpt"
@@ -1721,7 +1722,7 @@ export default function HistoryPage() {
                     <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Category IDs</label>
                     <input
                       type="text"
-                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                      className={inputClassName}
                       value={editingWpCategories}
                       onChange={(e) => setEditingWpCategories(e.target.value)}
                       placeholder="1, 5, 12"
@@ -1731,7 +1732,7 @@ export default function HistoryPage() {
                     <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">WP Tag IDs</label>
                     <input
                       type="text"
-                      className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                      className={inputClassName}
                       value={editingWpTags}
                       onChange={(e) => setEditingWpTags(e.target.value)}
                       placeholder="3, 7"
@@ -1747,7 +1748,7 @@ export default function HistoryPage() {
                     <input
                       type="text"
                       list="history-tag-options"
-                      className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-white placeholder-muted focus:outline-none focus:border-accent/60"
+                      className="flex-1 input-base"
                       value={editingTagDraft}
                       onChange={(e) => setEditingTagDraft(e.target.value)}
                       onKeyDown={(e) => {

@@ -121,6 +121,17 @@ h1, h2, h3, h4, h5, h6 {
   @apply font-mono text-xs px-3 py-1.5 rounded-md border border-red-400/30 text-red-400/70 hover:text-red-400 hover:border-red-400/50 transition-colors disabled:opacity-50;
 }
 
+/* Form input utilities */
+.input-base {
+  @apply bg-card border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-accent/75 focus:ring-2 focus:ring-accent/15 transition-[border-color,box-shadow] duration-150;
+}
+.input-error {
+  @apply border-red-500/50 focus:border-red-400/70 focus:ring-red-400/15;
+}
+.input-success {
+  @apply border-green-500/40 focus:border-green-400/60 focus:ring-green-400/10;
+}
+
 /* Cursor blink */
 @keyframes blink {
   0%, 100% { opacity: 1; }
