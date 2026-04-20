@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
   const tags = searchParams.getAll("tag").map((tag) => tag.trim()).filter(Boolean);
   const search = searchParams.get("q")?.trim() || undefined;
   const status = searchParams.get("status") ?? "all";
+  const collaborationStatus = searchParams.get("collaborationStatus")?.trim() || undefined;
+  const assignee = searchParams.get("assignee")?.trim() || undefined;
   const sortBy = searchParams.get("sort") ?? "newest";
   const dateFrom = toIsoStart(searchParams.get("dateFrom"));
   const dateTo = toIsoExclusiveEnd(searchParams.get("dateTo"));
@@ -36,7 +38,9 @@ export async function GET(req: NextRequest) {
       folder,
       tags,
       search,
-      status: status as "all" | "never-published" | "draft-linked" | "draft-updated",
+      status: status as "all" | "never-published" | "draft-linked" | "draft-updated" | "publish-failed" | "published-live" | "seo-scored",
+      collaborationStatus,
+      assignee,
       dateFrom,
       dateTo,
       sortBy: sortBy as "newest" | "oldest" | "title-az" | "title-za",

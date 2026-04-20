@@ -77,6 +77,40 @@ export async function PATCH(
     const wpExcerpt = String(body.wp_excerpt ?? "").trim() || null;
     const wpCategories = String(body.wp_categories ?? "").trim() || null;
     const wpTags = String(body.wp_tags ?? "").trim() || null;
+    const seoFocusKeyword = String(body.seo_focus_keyword ?? "").trim() || null;
+    const seoScore = body.seo_score === undefined || body.seo_score === null
+      ? null
+      : Number.isFinite(Number(body.seo_score))
+        ? Number(body.seo_score)
+        : null;
+    const seoChecklistItems = Array.isArray(body.seo_checklist_items)
+      ? body.seo_checklist_items.map((item: unknown) => String(item).trim()).filter(Boolean)
+      : [];
+    const workflowStage = String(body.workflow_stage ?? "").trim() || null;
+    const presetId = String(body.preset_id ?? "").trim() || null;
+    const collaborationStatus = String(body.collaboration_status ?? "").trim() || null;
+    const assignee = String(body.assignee ?? "").trim() || null;
+    const collaborationComments = Array.isArray(body.collaboration_comments)
+      ? body.collaboration_comments
+          .map((comment: unknown) => {
+            if (!comment || typeof comment !== "object") {
+              return null;
+            }
+
+            const record = comment as Record<string, unknown>;
+            const id = String(record.id ?? "").trim();
+            const author = String(record.author ?? "").trim();
+            const message = String(record.message ?? "").trim();
+            const created_at = String(record.created_at ?? "").trim();
+
+            if (!id || !author || !message || !created_at) {
+              return null;
+            }
+
+            return { id, author, message, created_at };
+          })
+          .filter((comment: { id: string; author: string; message: string; created_at: string } | null): comment is { id: string; author: string; message: string; created_at: string } => Boolean(comment))
+      : [];
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -90,6 +124,14 @@ export async function PATCH(
       wp_excerpt: wpExcerpt,
       wp_categories: wpCategories,
       wp_tags: wpTags,
+      seo_focus_keyword: seoFocusKeyword,
+      seo_score: seoScore,
+      seo_checklist_items: seoChecklistItems,
+      workflow_stage: workflowStage,
+      preset_id: presetId,
+      collaboration_status: collaborationStatus,
+      assignee,
+      collaboration_comments: collaborationComments,
     });
 
     if (!updated) {

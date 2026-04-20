@@ -31,7 +31,16 @@ type CalendarEntryRow = Omit<CalendarEntry, "checklist_items"> & {
 
 type HistoryRowRaw = Omit<HistoryRow, "wp_sync_log"> & {
   wp_sync_log?: PublishSyncLogEntry[] | string | null;
+  seo_checklist_json?: string | null;
+  comments_json?: string | null;
 };
+
+export interface CollaborationCommentEntry {
+  id: string;
+  author: string;
+  message: string;
+  created_at: string;
+}
 
 export interface PublishSyncLogEntry {
   timestamp: string;
@@ -165,9 +174,63 @@ function normalizeHistoryRow(row: HistoryRowRaw | undefined): HistoryRow | undef
     return undefined;
   }
 
+  const seoChecklistItems = (() => {
+    if (!row.seo_checklist_json) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(row.seo_checklist_json) as unknown;
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed.map((item) => String(item).trim()).filter(Boolean);
+    } catch {
+      return [];
+    }
+  })();
+
+  const collaborationComments = (() => {
+    if (!row.comments_json) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(row.comments_json) as unknown;
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed
+        .map((item) => {
+          if (!item || typeof item !== "object") {
+            return null;
+          }
+
+          const record = item as Record<string, unknown>;
+          const id = String(record.id ?? "").trim();
+          const author = String(record.author ?? "").trim();
+          const message = String(record.message ?? "").trim();
+          const created_at = String(record.created_at ?? "").trim();
+
+          if (!id || !author || !message || !created_at) {
+            return null;
+          }
+
+          return { id, author, message, created_at } as CollaborationCommentEntry;
+        })
+        .filter((comment): comment is CollaborationCommentEntry => Boolean(comment));
+    } catch {
+      return [];
+    }
+  })();
+
   return {
     ...row,
     wp_sync_log: parsePublishSyncLog(row.wp_sync_log),
+    seo_checklist_items: seoChecklistItems,
+    collaboration_comments: collaborationComments,
   };
 }
 
@@ -257,6 +320,38 @@ function ensureHistorySchema(db: Database.Database) {
 
   if (!columnNames.has("wp_sync_log")) {
     db.exec("ALTER TABLE history ADD COLUMN wp_sync_log TEXT");
+  }
+
+  if (!columnNames.has("seo_focus_keyword")) {
+    db.exec("ALTER TABLE history ADD COLUMN seo_focus_keyword TEXT");
+  }
+
+  if (!columnNames.has("seo_score")) {
+    db.exec("ALTER TABLE history ADD COLUMN seo_score INTEGER");
+  }
+
+  if (!columnNames.has("seo_checklist_json")) {
+    db.exec("ALTER TABLE history ADD COLUMN seo_checklist_json TEXT");
+  }
+
+  if (!columnNames.has("workflow_stage")) {
+    db.exec("ALTER TABLE history ADD COLUMN workflow_stage TEXT");
+  }
+
+  if (!columnNames.has("preset_id")) {
+    db.exec("ALTER TABLE history ADD COLUMN preset_id TEXT");
+  }
+
+  if (!columnNames.has("collaboration_status")) {
+    db.exec("ALTER TABLE history ADD COLUMN collaboration_status TEXT");
+  }
+
+  if (!columnNames.has("assignee")) {
+    db.exec("ALTER TABLE history ADD COLUMN assignee TEXT");
+  }
+
+  if (!columnNames.has("comments_json")) {
+    db.exec("ALTER TABLE history ADD COLUMN comments_json TEXT");
   }
 }
 
@@ -406,7 +501,15 @@ function getDb(): Database.Database {
         wp_excerpt TEXT,
         wp_categories TEXT,
         wp_tags TEXT,
-        wp_sync_log TEXT
+        wp_sync_log TEXT,
+        seo_focus_keyword TEXT,
+        seo_score INTEGER,
+        seo_checklist_json TEXT,
+        workflow_stage TEXT,
+        preset_id TEXT,
+        collaboration_status TEXT,
+        assignee TEXT,
+        comments_json TEXT
       );
     `);
     ensureHistorySchema(_db);
@@ -461,12 +564,24 @@ export interface HistoryRow {
   /** Comma-separated WordPress tag IDs (e.g. "3, 7"). */
   wp_tags: string | null;
   wp_sync_log: PublishSyncLogEntry[];
+  seo_focus_keyword?: string | null;
+  seo_score?: number | null;
+  seo_checklist_json?: string | null;
+  seo_checklist_items?: string[];
+  workflow_stage?: string | null;
+  preset_id?: string | null;
+  collaboration_status?: string | null;
+  assignee?: string | null;
+  comments_json?: string | null;
+  collaboration_comments?: CollaborationCommentEntry[];
 }
 
 export interface HistoryQueryOptions {
   toolSlug?: string;
   search?: string;
-  status?: "all" | "never-published" | "draft-linked" | "draft-updated" | "publish-failed" | "published-live";
+  status?: "all" | "never-published" | "draft-linked" | "draft-updated" | "publish-failed" | "published-live" | "seo-scored";
+  collaborationStatus?: string;
+  assignee?: string;
   dateFrom?: string;
   dateTo?: string;
   sortBy?: "newest" | "oldest" | "title-az" | "title-za";
@@ -611,6 +726,18 @@ function buildHistoryQueryParts(options: HistoryQueryOptions) {
     whereClauses.push("wp_post_id IS NOT NULL AND (wp_publish_state = 'published' OR wp_publish_state = 'publish')");
   } else if (options.status === "publish-failed") {
     whereClauses.push("wp_publish_state = 'failed'");
+  } else if (options.status === "seo-scored") {
+    whereClauses.push("seo_score IS NOT NULL");
+  }
+
+  if (options.collaborationStatus) {
+    whereClauses.push("COALESCE(collaboration_status, '') = ?");
+    params.push(options.collaborationStatus);
+  }
+
+  if (options.assignee) {
+    whereClauses.push("COALESCE(assignee, '') LIKE ? COLLATE NOCASE");
+    params.push(`%${options.assignee}%`);
   }
 
   if (options.dateFrom) {
@@ -805,9 +932,24 @@ export function updateHistoryMetadata(
     wp_excerpt?: string | null;
     wp_categories?: string | null;
     wp_tags?: string | null;
+    seo_focus_keyword?: string | null;
+    seo_score?: number | null;
+    seo_checklist_items?: string[];
+    workflow_stage?: string | null;
+    preset_id?: string | null;
+    collaboration_status?: string | null;
+    assignee?: string | null;
+    collaboration_comments?: CollaborationCommentEntry[];
   }
 ): HistoryRow | undefined {
   const db = getDb();
+  const existing = getHistoryById(id);
+  if (!existing) {
+    return undefined;
+  }
+
+  const nextSeoChecklist = metadata.seo_checklist_items ?? existing.seo_checklist_items ?? [];
+  const nextComments = metadata.collaboration_comments ?? existing.collaboration_comments ?? [];
   const result = db.prepare(`
     UPDATE history
     SET title = @title,
@@ -816,7 +958,15 @@ export function updateHistoryMetadata(
         wp_slug = @wp_slug,
         wp_excerpt = @wp_excerpt,
         wp_categories = @wp_categories,
-        wp_tags = @wp_tags
+        wp_tags = @wp_tags,
+        seo_focus_keyword = @seo_focus_keyword,
+        seo_score = @seo_score,
+        seo_checklist_json = @seo_checklist_json,
+        workflow_stage = @workflow_stage,
+        preset_id = @preset_id,
+        collaboration_status = @collaboration_status,
+        assignee = @assignee,
+        comments_json = @comments_json
     WHERE id = @id
   `).run({
     id,
@@ -827,6 +977,14 @@ export function updateHistoryMetadata(
     wp_excerpt: metadata.wp_excerpt ?? null,
     wp_categories: metadata.wp_categories ?? null,
     wp_tags: metadata.wp_tags ?? null,
+    seo_focus_keyword: metadata.seo_focus_keyword ?? existing.seo_focus_keyword ?? null,
+    seo_score: metadata.seo_score ?? existing.seo_score ?? null,
+    seo_checklist_json: JSON.stringify(nextSeoChecklist),
+    workflow_stage: metadata.workflow_stage ?? existing.workflow_stage ?? null,
+    preset_id: metadata.preset_id ?? existing.preset_id ?? null,
+    collaboration_status: metadata.collaboration_status ?? existing.collaboration_status ?? null,
+    assignee: metadata.assignee ?? existing.assignee ?? null,
+    comments_json: JSON.stringify(nextComments),
   });
 
   if (result.changes === 0) {

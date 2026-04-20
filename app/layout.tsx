@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
+  BarChart3,
   CalendarRange,
   ChevronDown,
   ChevronRight,
@@ -29,6 +30,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 const PRIMARY_NAV = [
   { href: "/", label: "Dashboard", icon: Home },
+  { href: "/seo", label: "SEO Workspace", icon: BarChart3 },
   { href: "/history", label: "History", icon: History },
   { href: "/calendar", label: "Calendar", icon: CalendarRange },
   { href: "/settings", label: "Settings", icon: Settings },
