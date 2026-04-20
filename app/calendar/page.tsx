@@ -94,6 +94,36 @@ function getWeekDates(offset: number): string[] {
   });
 }
 
+interface MonthCell {
+  dateValue: string;
+  isCurrentMonth: boolean;
+}
+
+function getMonthCells(offset: number): MonthCell[] {
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  const targetMonth = target.getMonth();
+  const targetYear = target.getFullYear();
+  const startDate = new Date(target);
+  startDate.setDate(1 - target.getDay());
+  return Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + i);
+    return {
+      dateValue: new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10),
+      isCurrentMonth: d.getMonth() === targetMonth && d.getFullYear() === targetYear,
+    };
+  });
+}
+
+function formatMonthLabel(offset: number): string {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + offset, 1).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+}
+
 function formatWeekRange(dates: string[]): string {
   if (dates.length === 0) return "";
   const first = new Date(`${dates[0]}T00:00:00`);
@@ -254,8 +284,9 @@ export default function CalendarPage() {
   const [editorDraft, setEditorDraft] = useState<CalendarDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"list" | "week">("list");
+  const [viewMode, setViewMode] = useState<"list" | "week" | "month">("list");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [monthOffset, setMonthOffset] = useState(0);
   const [quickRescheduling, setQuickRescheduling] = useState(false);
 
   // When arriving via a "Plan in Calendar" handoff from a keyword research
@@ -401,6 +432,24 @@ export default function CalendarPage() {
 
   const weekUnscheduled = useMemo(
     () => (viewMode === "week" ? rows.filter((r) => !r.scheduled_for) : []),
+    [viewMode, rows],
+  );
+
+  const monthCells = useMemo(
+    () => (viewMode === "month" ? getMonthCells(monthOffset) : []),
+    [viewMode, monthOffset],
+  );
+
+  const monthItemsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEntry[]>();
+    for (const cell of monthCells) {
+      map.set(cell.dateValue, rows.filter((r) => r.scheduled_for === cell.dateValue));
+    }
+    return map;
+  }, [monthCells, rows]);
+
+  const monthUnscheduled = useMemo(
+    () => (viewMode === "month" ? rows.filter((r) => !r.scheduled_for) : []),
     [viewMode, rows],
   );
 
@@ -698,6 +747,12 @@ export default function CalendarPage() {
                   >
                     Week
                   </button>
+                  <button
+                    onClick={() => setViewMode("month")}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-colors ${viewMode === "month" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"}`}
+                  >
+                    Month
+                  </button>
                 </div>
                 {viewMode === "week" && (
                   <div className="flex items-center gap-2">
@@ -717,6 +772,31 @@ export default function CalendarPage() {
                     {weekOffset !== 0 && (
                       <button
                         onClick={() => setWeekOffset(0)}
+                        className="text-xs text-accent hover:text-accent-dim px-2 py-1 transition-colors"
+                      >
+                        Today
+                      </button>
+                    )}
+                  </div>
+                )}
+                {viewMode === "month" && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setMonthOffset((n) => n - 1)}
+                      className="text-slate-600 hover:text-slate-900 text-sm px-2 py-1 border border-border rounded-xl transition-colors"
+                    >
+                      ‹
+                    </button>
+                    <span className="text-xs text-slate-500 font-mono">{formatMonthLabel(monthOffset)}</span>
+                    <button
+                      onClick={() => setMonthOffset((n) => n + 1)}
+                      className="text-slate-600 hover:text-slate-900 text-sm px-2 py-1 border border-border rounded-xl transition-colors"
+                    >
+                      ›
+                    </button>
+                    {monthOffset !== 0 && (
+                      <button
+                        onClick={() => setMonthOffset(0)}
                         className="text-xs text-accent hover:text-accent-dim px-2 py-1 transition-colors"
                       >
                         Today
@@ -983,6 +1063,129 @@ export default function CalendarPage() {
                         </div>
                         <div className="p-2 flex flex-wrap gap-2">
                           {weekUnscheduled.map((row) => {
+                            const tool = getToolBySlug(row.tool_slug);
+                            const selected = row.id === selectedId;
+                            return (
+                              <button
+                                key={row.id}
+                                onClick={() => setSelectedId(row.id)}
+                                className={`text-left border rounded-xl p-2.5 transition-colors w-48 ${selected ? "border-accent/40 bg-accent/8" : "border-white/8 bg-black/10 hover:border-accent/20 hover:bg-white/[0.03]"}`}
+                              >
+                                <p className="text-xs text-slate-900 font-medium truncate">{row.title}</p>
+                                <div className="flex items-center justify-between mt-1.5 gap-1">
+                                  <span className="text-xs">{tool?.icon ?? "📝"}</span>
+                                  <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
+                                    {CALENDAR_STATUS_LABELS[row.status]}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {viewMode === "month" && (
+              <div className="flex-1 overflow-auto p-3">
+                {loading && (
+                  <div className="p-6 text-sm text-slate-500 font-mono animate-pulse">Loading calendar...</div>
+                )}
+
+                {!loading && rows.length === 0 && (statusFilter !== "all" || toolFilter !== "all" || publishIntentFilter !== "all") && (
+                  <div className="p-6 text-center">
+                    <div className="text-4xl opacity-30 mb-3">🔍</div>
+                    <p className="text-sm text-slate-400">No items match the active filters.</p>
+                    <button
+                      onClick={() => { setStatusFilter("all"); setToolFilter("all"); setPublishIntentFilter("all"); }}
+                      className="text-xs text-accent hover:text-accent-dim mt-2 transition-colors"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+
+                {!loading && rows.length === 0 && statusFilter === "all" && toolFilter === "all" && publishIntentFilter === "all" && (
+                  <div className="p-6 text-center">
+                    <div className="text-4xl opacity-30 mb-3">🗓️</div>
+                    <p className="text-sm text-slate-400">No planned content yet.</p>
+                    <p className="text-xs text-slate-500 mt-1">Add your first scheduled item above to start building the queue.</p>
+                  </div>
+                )}
+
+                {!loading && (
+                  <>
+                    <div className="grid grid-cols-7 gap-px mb-1">
+                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                        <div key={d} className="text-center py-1">
+                          <span className="text-xs font-mono text-slate-500 uppercase">{d}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-px">
+                      {monthCells.map(({ dateValue, isCurrentMonth }) => {
+                        const dayItems = monthItemsByDate.get(dateValue) ?? [];
+                        const isToday = dateValue === getTodayValue();
+                        const canMove = !!selectedEntry && dateValue !== selectedEntry.scheduled_for;
+                        const dayNumber = new Date(`${dateValue}T00:00:00`).getDate();
+
+                        return (
+                          <div
+                            key={dateValue}
+                            className={`min-h-[96px] flex flex-col border rounded-xl overflow-hidden transition-colors
+                              ${isToday ? "border-accent/50" : "border-white/5"}
+                              ${!isCurrentMonth ? "opacity-40" : ""}
+                            `}
+                          >
+                            <button
+                              type="button"
+                              disabled={!canMove || quickRescheduling}
+                              onClick={() => canMove && void handleQuickReschedule(dateValue)}
+                              className={`w-full px-2 pt-1.5 pb-1 text-left border-b transition-colors
+                                ${isToday ? "bg-accent/10 border-accent/30" : "bg-white/[0.02] border-white/5"}
+                                ${canMove ? "cursor-pointer hover:bg-accent/20" : "cursor-default"}
+                              `}
+                            >
+                              <span className={`text-xs font-bold ${isToday ? "text-accent" : isCurrentMonth ? "text-slate-900" : "text-slate-600"}`}>
+                                {dayNumber}
+                              </span>
+                              {canMove && <span className="text-xs text-accent/60 ml-1">+</span>}
+                            </button>
+
+                            <div className="flex-1 p-1 space-y-0.5 overflow-y-auto">
+                              {dayItems.map((row) => {
+                                const selected = row.id === selectedId;
+                                return (
+                                  <button
+                                    key={row.id}
+                                    onClick={() => setSelectedId(row.id)}
+                                    className={`w-full text-left rounded px-1.5 py-0.5 transition-colors ${selected ? "bg-accent/20 text-accent" : "bg-white/[0.04] hover:bg-white/[0.08] text-slate-900"}`}
+                                  >
+                                    <p className="text-xs leading-snug truncate">{row.title}</p>
+                                    <span className={`inline-block text-xs font-mono border rounded px-1 leading-tight mt-0.5 ${getStatusBadgeClass(row.status)}`}>
+                                      {CALENDAR_STATUS_LABELS[row.status]}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {monthUnscheduled.length > 0 && (
+                      <div className="mt-4 border border-white/8 rounded-2xl overflow-hidden">
+                        <div className="px-4 py-2 bg-white/[0.03] border-b border-white/5 flex items-center justify-between">
+                          <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">Unscheduled</p>
+                          <span className="text-xs text-slate-500">{monthUnscheduled.length} items</span>
+                        </div>
+                        <div className="p-2 flex flex-wrap gap-2">
+                          {monthUnscheduled.map((row) => {
                             const tool = getToolBySlug(row.tool_slug);
                             const selected = row.id === selectedId;
                             return (
