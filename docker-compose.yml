@@ -3,14 +3,14 @@ services:
     build: .
     image: techscribe-studio:local
     ports:
-      - "3000:3000"
+      - "8989:8989"
     environment:
       NODE_ENV: production
-      PORT: 3000
+      PORT: 8989
       HOSTNAME: "0.0.0.0"
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:8989}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       WORDPRESS_SITE_URL: ${WORDPRESS_SITE_URL}
@@ -27,7 +27,7 @@ services:
       - techscribe-data:/app/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get({path:'/api/health',port:3000,timeout:8000},(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "require('http').get({path:'/api/health',port:8989,timeout:8000},(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3

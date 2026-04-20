@@ -17,7 +17,7 @@ services:
       - traefik-public
     environment:
       NODE_ENV: production
-      PORT: 3000
+      PORT: 8989
       HOSTNAME: "0.0.0.0"
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
@@ -37,7 +37,7 @@ services:
     volumes:
       - techscribe-data:/app/data
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get({path:'/api/health',port:3000,timeout:8000},(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "require('http').get({path:'/api/health',port:8989,timeout:8000},(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -64,7 +64,7 @@ services:
       - "traefik.http.routers.techscribe.tls=true"
       - "traefik.http.routers.techscribe.tls.certresolver=letsencrypt"
       # ── Service ────────────────────────────────────────────────────────────
-      - "traefik.http.services.techscribe.loadbalancer.server.port=3000"
+      - "traefik.http.services.techscribe.loadbalancer.server.port=8989"
       # Disable Traefik response buffering so streaming generation works
       - "traefik.http.middlewares.techscribe-buffering.buffering.maxResponseBodyBytes=0"
       - "traefik.http.routers.techscribe.middlewares=techscribe-buffering"
