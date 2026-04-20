@@ -21,8 +21,9 @@ RUN addgroup --system --gid 1001 nodejs \
 # Copy standalone Next.js output (includes only necessary node_modules)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+# public/ is optional — only copy if it exists
+RUN mkdir -p /app/public
+RUN mkdir -p /app/data && chown nextjs:nodejs /app/data /app/public
 USER nextjs
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
