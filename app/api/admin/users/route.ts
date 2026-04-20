@@ -1,7 +1,8 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
-import { listUsers, updateUserStatus, updateUserRole, type UserStatus, type UserRole } from "@/lib/db";
+import { listUsers, updateUserStatus, updateUserRole, getUserByGoogleId, type UserStatus, type UserRole } from "@/lib/db";
+import { sendApprovalNotification } from "@/lib/email";
 
 type AnySession = { user?: Record<string, unknown> } | null;
 
@@ -31,7 +32,11 @@ export async function PATCH(req: Request) {
     if (!validStatuses.includes(body.status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
+    const userBefore = listUsers().find((u) => u.id === body.id);
     updateUserStatus(body.id, body.status, adminEmail);
+    if (body.status === "approved" && userBefore?.status !== "approved") {
+      sendApprovalNotification({ name: userBefore?.name ?? null, email: userBefore?.email ?? "" }).catch(() => {});
+    }
   }
 
   if (body.role) {

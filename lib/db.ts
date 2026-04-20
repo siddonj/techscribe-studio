@@ -489,7 +489,7 @@ function ensureCalendarSchema(db: Database.Database) {
   }
 }
 
-function getDb(): Database.Database {
+export function getDb(): Database.Database {
   if (!_db) {
     _db = new Database(DB_PATH);
     _db.pragma("journal_mode = WAL");

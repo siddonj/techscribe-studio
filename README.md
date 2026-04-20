@@ -112,6 +112,7 @@ Phase 1 establishes the foundation for a usable, self-hosted content system:
 - Node.js 20+
 - npm
 - An Anthropic API key
+- A Google Cloud project with OAuth 2.0 credentials (for login)
 - Optional: a WordPress site with an application password for draft publishing
 
 ### 1. Clone the repo
@@ -151,6 +152,26 @@ Optional batch generation secret (required to enable the batch API):
 
 ```env
 BATCH_API_SECRET=your-secret-token-here
+```
+
+Required for Google login:
+
+```env
+NEXTAUTH_SECRET=<output of: openssl rand -base64 32>
+NEXTAUTH_URL=http://localhost:3000
+GOOGLE_CLIENT_ID=<from Google Cloud Console>
+GOOGLE_CLIENT_SECRET=<from Google Cloud Console>
+```
+
+Optional email notifications (new user signup + approval emails):
+
+```env
+SMTP_HOST=smtp.yourprovider.com
+SMTP_PORT=587
+SMTP_USER=you@yourdomain.com
+SMTP_PASS=your-smtp-password
+SMTP_FROM=TechScribe Studio <you@yourdomain.com>
+ADMIN_EMAIL=you@yourdomain.com
 ```
 
 The first app start after upgrades may apply SQLite schema migrations automatically for new workflow, automation, and publish-tracking columns.
@@ -626,6 +647,61 @@ Phase 2 is complete. All four sprints shipped:
 - Calendar workspace expansion — list and week views, unscheduled backlog lane, inline quick rescheduling, and shared filters across both views
 - Publishing workflow expansion — five-state publish model (draft linked, draft updated, scheduled, published live, publish failed), editable WordPress metadata (slug, excerpt, categories, tags), bulk retry for failed publishes, and WordPress-owned scheduling model
 - Deployment and operations hardening — deployment guide, operations and recovery notes, backup and persistence documentation, and smoke-test checklist (see [docs/](docs/))
+
+## Authentication
+
+TechScribe Studio uses Google OAuth (via NextAuth.js) with an admin-controlled approval gate.
+
+### How it works
+
+- Users sign in with their Google account
+- New accounts are created with `pending` status and cannot access the app until approved
+- The **first user to sign in** is automatically granted admin access and approved
+- Admins approve or reject users at `/admin/users` (also accessible via the sidebar "Users" button)
+- Approved users are notified by email if SMTP is configured; the pending page auto-redirects within seconds of approval without requiring a sign-out
+
+### User roles
+
+| Role | Capabilities |
+| --- | --- |
+| `admin` | Full access + user management at `/admin/users` |
+| `user` | Full access to all content and publishing features |
+
+Admins can promote users to admin, demote admins to user, and revoke access at any time.
+
+### Google Cloud setup
+
+1. Create a project at [console.cloud.google.com](https://console.cloud.google.com)
+2. Go to **APIs & Services → OAuth consent screen** — set to External, add your email as a test user
+3. Go to **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
+4. Application type: **Web application**
+5. Authorized JavaScript origins: `http://localhost:3000` (or your deployed URL)
+6. Authorized redirect URIs: `http://localhost:3000/api/auth/callback/google`
+7. Copy the Client ID and Secret into `.env.local`
+
+### GitHub Codespaces
+
+If you're running in GitHub Codespaces, `NEXTAUTH_URL` and the Google redirect URI must use the Codespace forwarded URL, not `localhost`:
+
+```env
+NEXTAUTH_URL=https://YOUR_CODESPACE_NAME-3000.app.github.dev
+```
+
+Add the same URL as an authorized origin and redirect URI in Google Console:
+
+```text
+https://YOUR_CODESPACE_NAME-3000.app.github.dev
+https://YOUR_CODESPACE_NAME-3000.app.github.dev/api/auth/callback/google
+```
+
+### Email notifications
+
+If SMTP variables are set, the app sends:
+
+- An email to `ADMIN_EMAIL` when a new user requests access
+- An email to the user when their account is approved
+
+Email is optional — the app works without it.
 
 ## Backlog
 

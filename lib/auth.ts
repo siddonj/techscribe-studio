@@ -1,6 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { upsertUser, getUserByGoogleId } from "@/lib/db";
+import { sendNewUserNotification } from "@/lib/email";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -14,12 +15,17 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ account, user }) {
       if (account?.provider !== "google") return false;
+      const isNew = !getUserByGoogleId(account.providerAccountId);
       upsertUser({
         google_id: account.providerAccountId,
         email: user.email!,
         name: user.name ?? null,
         avatar: user.image ?? null,
       });
+      if (isNew) {
+        // Fire-and-forget — don't block sign-in if email fails
+        sendNewUserNotification({ name: user.name ?? null, email: user.email! }).catch(() => {});
+      }
       return true;
     },
 
