@@ -670,6 +670,25 @@ function HistoryPageContent() {
     }
   };
 
+  const handleBulkRetryFailed = async () => {
+    const failedRows = rows.filter(
+      (row) => selectedIds.includes(row.id) && resolvePublishState(row) === "failed"
+    );
+    if (failedRows.length === 0) return;
+
+    setBulkAction("organize");
+
+    try {
+      for (const row of failedRows) {
+        await publishRow(row);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setBulkAction(null);
+    }
+  };
+
   const handleBulkAssignMetadata = async (options?: { clearFolder?: boolean; folderName?: string; includeTags?: boolean }) => {
     if (selectedIds.length === 0) return;
 
@@ -1047,6 +1066,7 @@ function HistoryPageContent() {
   const visibleRows = rows;
   const allVisibleSelected = visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id));
   const selectedCount = selectedIds.length;
+  const selectedFailedCount = rows.filter((row) => selectedIds.includes(row.id) && resolvePublishState(row) === "failed").length;
   const availableFolders = folderSummaries.map((summary) => summary.folder);
   const popularTags = [...tagSummaries]
     .sort((left, right) => right.count - left.count || left.tag.localeCompare(right.tag))
@@ -1177,6 +1197,15 @@ function HistoryPageContent() {
                     Export Selected
                   </button>
                 </div>
+                {selectedFailedCount > 0 && (
+                  <button
+                    onClick={handleBulkRetryFailed}
+                    disabled={bulkAction !== null || !publishAllowed || !publishStatusLoaded}
+                    className="w-full text-sm border border-red-200 rounded-lg py-2 text-red-600 hover:text-red-700 hover:border-red-300 transition-colors disabled:opacity-50"
+                  >
+                    {bulkAction === "organize" ? "Retrying..." : `Retry Failed (${selectedFailedCount})`}
+                  </button>
+                )}
                 <div className="grid grid-cols-1 gap-2">
                   <input
                     type="text"
@@ -2072,6 +2101,16 @@ function HistoryPageContent() {
                       placeholder="3, 7"
                     />
                   </div>
+                </div>
+                <div className="mb-3">
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">WP Excerpt</label>
+                  <textarea
+                    className={inputClassName}
+                    rows={3}
+                    value={editingWpExcerpt}
+                    onChange={(e) => setEditingWpExcerpt(e.target.value)}
+                    placeholder="Short summary shown in WordPress post lists and previews"
+                  />
                 </div>
                 <div className="shell-panel-soft rounded-[1.5rem] p-4 mb-3 space-y-3">
                   <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">Workflow + Collaboration</p>
