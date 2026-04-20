@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getToolBySlug, Tool, ToolField } from "@/lib/tools";
@@ -188,7 +188,7 @@ function FieldInput({
   );
 }
 
-export default function ToolPage() {
+function ToolPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const slug = params?.slug as string;
@@ -1009,5 +1009,13 @@ export default function ToolPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function ToolPage() {
+  return (
+    <Suspense>
+      <ToolPageContent />
+    </Suspense>
   );
 }

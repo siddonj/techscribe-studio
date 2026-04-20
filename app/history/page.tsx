@@ -1,7 +1,11 @@
-"use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+
+"use client";
+export const dynamic = "force-dynamic";
+
+import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { HistoryFolderSummary, HistoryRow, HistoryTagSummary } from "@/lib/db";
 import { TOOLS } from "@/lib/tools";
 import {
@@ -112,6 +116,45 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 const allSlugs = Array.from(new Set(TOOLS.map((t) => t.slug)));
 const HISTORY_PAGE_SIZE = 50;
+const COLLABORATION_FILTER_STATUSES = ["Not started", "In review", "Needs changes", "Approved"];
+const STATUS_FILTER_OPTIONS = [
+  "all",
+  "never-published",
+  "draft-linked",
+  "draft-updated",
+  "published-live",
+  "publish-failed",
+  "seo-scored",
+] as const;
+
+type HistoryStatusFilter = typeof STATUS_FILTER_OPTIONS[number];
+
+function buildSeoWorkspaceHref(row: HistoryRow): string {
+  let keyword = row.seo_focus_keyword ?? "";
+
+  if (!keyword) {
+    try {
+      const fields = JSON.parse(row.fields) as Record<string, unknown>;
+      keyword = String(fields.keyword ?? fields.topic ?? "").trim();
+    } catch {
+      keyword = "";
+    }
+  }
+
+  const query = new URLSearchParams();
+  query.set("historyId", String(row.id));
+  if (row.preset_id) {
+    query.set("preset", row.preset_id);
+  }
+  if (row.workflow_stage) {
+    query.set("stage", row.workflow_stage);
+  }
+  if (keyword) {
+    query.set("keyword", keyword);
+  }
+
+  return `/seo?${query.toString()}`;
+}
 
 interface HistoryListResponse {
   rows: HistoryRow[];
@@ -129,7 +172,7 @@ interface HistoryFilterPreset {
   tagFilters: string[];
   tagFilter?: string;
   searchQuery: string;
-  statusFilter: "all" | "never-published" | "draft-linked" | "draft-updated" | "published-live" | "publish-failed";
+  statusFilter: HistoryStatusFilter;
   dateFrom: string;
   dateTo: string;
   sortBy: "newest" | "oldest" | "title-az" | "title-za";
@@ -144,18 +187,38 @@ interface HistoryFoldersResponse {
 }
 
 const HISTORY_PRESETS_STORAGE_KEY = "techscribe-history-filter-presets";
+const WORKFLOW_STAGES = ["Idea", "Drafting", "Optimization", "Review", "Ready to Publish"];
+const COLLABORATION_STATUSES = ["Not started", "In review", "Needs changes", "Approved"];
 
-export default function HistoryPage() {
+function HistoryPageContent() {
+  const searchParams = useSearchParams();
+  const initialToolFilter = searchParams.get("tool") ?? "all";
+  const initialSearchQuery = searchParams.get("q") ?? "";
+  const initialAssigneeFilter = searchParams.get("assignee") ?? "";
+  const initialCollaborationStatus = searchParams.get("collaborationStatus") ?? "all";
+  const initialStatusFilter = (() => {
+    const status = searchParams.get("status") ?? "all";
+    return STATUS_FILTER_OPTIONS.includes(status as HistoryStatusFilter)
+      ? (status as HistoryStatusFilter)
+      : "all";
+  })();
+
   const inputClassName = "w-full input-base";
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [filterSlug, setFilterSlug] = useState<string>("all");
+  const [filterSlug, setFilterSlug] = useState<string>(allSlugs.includes(initialToolFilter) ? initialToolFilter : "all");
   const [folderFilter, setFolderFilter] = useState("");
   const [tagFilters, setTagFilters] = useState<string[]>([]);
   const [tagFilterInput, setTagFilterInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "never-published" | "draft-linked" | "draft-updated" | "published-live" | "publish-failed">("all");
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+  const [statusFilter, setStatusFilter] = useState<HistoryStatusFilter>(initialStatusFilter);
+  const [collaborationStatusFilter, setCollaborationStatusFilter] = useState<"all" | string>(
+    initialCollaborationStatus === "all" || COLLABORATION_FILTER_STATUSES.includes(initialCollaborationStatus)
+      ? initialCollaborationStatus
+      : "all"
+  );
+  const [assigneeFilter, setAssigneeFilter] = useState(initialAssigneeFilter);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title-az" | "title-za">("newest");
@@ -181,6 +244,14 @@ export default function HistoryPage() {
   const [editingWpExcerpt, setEditingWpExcerpt] = useState("");
   const [editingWpCategories, setEditingWpCategories] = useState("");
   const [editingWpTags, setEditingWpTags] = useState("");
+  const [editingFocusKeyword, setEditingFocusKeyword] = useState("");
+  const [editingSeoScore, setEditingSeoScore] = useState("");
+  const [editingWorkflowStage, setEditingWorkflowStage] = useState(WORKFLOW_STAGES[0]);
+  const [editingCollaborationStatus, setEditingCollaborationStatus] = useState(COLLABORATION_STATUSES[0]);
+  const [editingAssignee, setEditingAssignee] = useState("");
+  const [editingComments, setEditingComments] = useState<HistoryRow["collaboration_comments"]>([]);
+  const [editingCommentAuthor, setEditingCommentAuthor] = useState("");
+  const [editingCommentMessage, setEditingCommentMessage] = useState("");
   const [savingMetadata, setSavingMetadata] = useState(false);
   const [editingOutput, setEditingOutput] = useState("");
   const [savingOutput, setSavingOutput] = useState(false);
@@ -203,6 +274,34 @@ export default function HistoryPage() {
   const trimmedSearchQuery = searchQuery.trim();
   const trimmedFolderFilter = folderFilter.trim();
   const normalizedTagFilters = tagFilters;
+
+  const suggestedAssignees = useMemo(() => {
+    const seen = new Set<string>();
+    const suggestions: string[] = [];
+    const sortedRows = [...rows].sort((left, right) => {
+      return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+    });
+
+    for (const row of sortedRows) {
+      const nextAssignee = String(row.assignee ?? "").trim();
+      if (!nextAssignee) {
+        continue;
+      }
+
+      const normalized = nextAssignee.toLowerCase();
+      if (seen.has(normalized)) {
+        continue;
+      }
+
+      seen.add(normalized);
+      suggestions.push(nextAssignee);
+      if (suggestions.length >= 8) {
+        break;
+      }
+    }
+
+    return suggestions;
+  }, [rows]);
 
   const fetchTags = useCallback(async () => {
     const res = await fetch("/api/history/tags");
@@ -260,6 +359,14 @@ export default function HistoryPage() {
       params.set("status", statusFilter);
     }
 
+    if (collaborationStatusFilter !== "all") {
+      params.set("collaborationStatus", collaborationStatusFilter);
+    }
+
+    if (assigneeFilter.trim()) {
+      params.set("assignee", assigneeFilter.trim());
+    }
+
     if (dateFrom) {
       params.set("dateFrom", dateFrom);
     }
@@ -281,13 +388,13 @@ export default function HistoryPage() {
     } else {
       setLoading(false);
     }
-  }, [dateFrom, dateTo, normalizedTagFilters, rows.length, sortBy, statusFilter, trimmedFolderFilter, trimmedSearchQuery]);
+  }, [assigneeFilter, collaborationStatusFilter, dateFrom, dateTo, normalizedTagFilters, rows.length, sortBy, statusFilter, trimmedFolderFilter, trimmedSearchQuery]);
 
   useEffect(() => {
     setSelected(null);
     setSelectedIds([]);
     void fetchHistory(filterSlug === "all" ? undefined : filterSlug);
-  }, [dateFrom, dateTo, filterSlug, fetchHistory, sortBy, statusFilter, trimmedFolderFilter, trimmedSearchQuery, normalizedTagFilters]);
+  }, [assigneeFilter, collaborationStatusFilter, dateFrom, dateTo, filterSlug, fetchHistory, sortBy, statusFilter, trimmedFolderFilter, trimmedSearchQuery, normalizedTagFilters]);
 
   useEffect(() => {
     if (!selected) {
@@ -299,6 +406,14 @@ export default function HistoryPage() {
       setEditingWpExcerpt("");
       setEditingWpCategories("");
       setEditingWpTags("");
+      setEditingFocusKeyword("");
+      setEditingSeoScore("");
+      setEditingWorkflowStage(WORKFLOW_STAGES[0]);
+      setEditingCollaborationStatus(COLLABORATION_STATUSES[0]);
+      setEditingAssignee("");
+      setEditingComments([]);
+      setEditingCommentAuthor("");
+      setEditingCommentMessage("");
       setEditingOutput("");
       setDetailTab("article");
       return;
@@ -312,11 +427,21 @@ export default function HistoryPage() {
     setEditingWpExcerpt(selected.wp_excerpt ?? "");
     setEditingWpCategories(selected.wp_categories ?? "");
     setEditingWpTags(selected.wp_tags ?? "");
+    setEditingFocusKeyword(selected.seo_focus_keyword ?? "");
+    setEditingSeoScore(selected.seo_score !== undefined && selected.seo_score !== null ? String(selected.seo_score) : "");
+    setEditingWorkflowStage(selected.workflow_stage ?? WORKFLOW_STAGES[0]);
+    setEditingCollaborationStatus(selected.collaboration_status ?? COLLABORATION_STATUSES[0]);
+    setEditingAssignee(selected.assignee ?? "");
+    setEditingComments(selected.collaboration_comments ?? []);
+    setEditingCommentAuthor("");
+    setEditingCommentMessage("");
     setEditingOutput(selected.output);
     setDetailTab("article");
   }, [selected]);
 
   useEffect(() => {
+    // Only run on client
+    if (typeof window === "undefined") return;
     try {
       const saved = window.localStorage.getItem(HISTORY_PRESETS_STORAGE_KEY);
       if (saved) {
@@ -332,6 +457,8 @@ export default function HistoryPage() {
   }, []);
 
   useEffect(() => {
+    // Only run on client
+    if (typeof window === "undefined") return;
     try {
       window.localStorage.setItem(HISTORY_PRESETS_STORAGE_KEY, JSON.stringify(presets));
     } catch {
@@ -646,6 +773,14 @@ export default function HistoryPage() {
           wp_excerpt: editingWpExcerpt,
           wp_categories: editingWpCategories,
           wp_tags: editingWpTags,
+          seo_focus_keyword: editingFocusKeyword,
+          seo_score: editingSeoScore.trim() ? Number(editingSeoScore) : null,
+          seo_checklist_items: selected.seo_checklist_items ?? [],
+          workflow_stage: editingWorkflowStage,
+          preset_id: selected.preset_id ?? null,
+          collaboration_status: editingCollaborationStatus,
+          assignee: editingAssignee,
+          collaboration_comments: editingComments ?? [],
         }),
       });
 
@@ -702,6 +837,29 @@ export default function HistoryPage() {
 
   const handleRemoveEditingTag = (tagToRemove: string) => {
     setEditingTags((current) => joinTagValues(parseTagValues(current).filter((tag) => tag !== tagToRemove)));
+  };
+
+  const handleAddEditingComment = () => {
+    const author = editingCommentAuthor.trim();
+    const message = editingCommentMessage.trim();
+    if (!author || !message) {
+      return;
+    }
+
+    setEditingComments((current) => [
+      ...(current ?? []),
+      {
+        id: crypto.randomUUID(),
+        author,
+        message,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+    setEditingCommentMessage("");
+  };
+
+  const handleRemoveEditingComment = (commentId: string) => {
+    setEditingComments((current) => (current ?? []).filter((comment) => comment.id !== commentId));
   };
 
   const toggleTagFilter = (tag: string) => {
@@ -1166,7 +1324,7 @@ export default function HistoryPage() {
             <select
               className={inputClassName}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as "all" | "never-published" | "draft-linked" | "draft-updated" | "published-live" | "publish-failed")}
+              onChange={(e) => setStatusFilter(e.target.value as HistoryStatusFilter)}
             >
               <option value="all">All publish states</option>
               <option value="never-published">Never published</option>
@@ -1174,7 +1332,57 @@ export default function HistoryPage() {
               <option value="draft-updated">Draft updated</option>
               <option value="published-live">Published live</option>
               <option value="publish-failed">Publish failed</option>
+              <option value="seo-scored">SEO scored</option>
             </select>
+            {(collaborationStatusFilter !== "all" || assigneeFilter.trim()) && (
+              <button
+                onClick={() => {
+                  setCollaborationStatusFilter("all");
+                  setAssigneeFilter("");
+                }}
+                className="w-full text-xs font-mono border border-border rounded-lg px-3 py-2 text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors"
+              >
+                Clear collaboration filters
+              </button>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <select
+                className={inputClassName}
+                value={collaborationStatusFilter}
+                onChange={(e) => setCollaborationStatusFilter(e.target.value)}
+              >
+                <option value="all">All collaboration states</option>
+                {COLLABORATION_FILTER_STATUSES.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                className={inputClassName}
+                value={assigneeFilter}
+                onChange={(e) => setAssigneeFilter(e.target.value)}
+                placeholder="Filter by assignee"
+              />
+            </div>
+            {suggestedAssignees.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-mono text-muted uppercase tracking-wider">Recent Assignees</p>
+                <div className="flex flex-wrap gap-2">
+                  {suggestedAssignees.map((assignee) => {
+                    const active = assigneeFilter.trim().toLowerCase() === assignee.toLowerCase();
+                    return (
+                      <button
+                        key={assignee}
+                        onClick={() => setAssigneeFilter(active ? "" : assignee)}
+                        className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-slate-600 hover:text-slate-900 hover:border-accent/40"}`}
+                      >
+                        @{assignee}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Advanced Filters — collapsible */}
             <div className="bg-subtle/50 border border-border rounded-lg overflow-hidden">
@@ -1545,6 +1753,14 @@ export default function HistoryPage() {
                         <span className="font-mono text-xs text-muted/40">
                           {formatDate(row.created_at)}
                         </span>
+                        {row.collaboration_status && (
+                          <span className="font-mono text-xs text-slate-500">
+                            {row.collaboration_status}
+                          </span>
+                        )}
+                        {row.assignee && (
+                          <span className="font-mono text-xs text-slate-500">@{row.assignee}</span>
+                        )}
                         {(row.wp_post_id || row.wp_publish_state === "failed") && (
                           <span className={`font-mono text-xs flex items-center gap-1 ${getDraftInlineClassName(row)}`}>
                             {publishStateIcon}
@@ -1557,6 +1773,13 @@ export default function HistoryPage() {
                         )}
                       </div>
                     </button>
+                    <Link
+                      href={buildSeoWorkspaceHref(row)}
+                      className="text-xs text-slate-500 hover:text-accent transition-colors shrink-0"
+                      title="Open in SEO Workspace"
+                    >
+                      SEO
+                    </Link>
                     <button
                       onClick={() => handleDelete(row.id)}
                       disabled={deleting === row.id}
@@ -1670,6 +1893,12 @@ export default function HistoryPage() {
                     className="btn-secondary"
                   >
                     Use Tool
+                  </Link>
+                  <Link
+                    href={buildSeoWorkspaceHref(selected)}
+                    className="btn-secondary"
+                  >
+                    SEO Workspace
                   </Link>
                   <button
                     onClick={handlePublishDraft}
@@ -1844,6 +2073,110 @@ export default function HistoryPage() {
                     />
                   </div>
                 </div>
+                <div className="shell-panel-soft rounded-[1.5rem] p-4 mb-3 space-y-3">
+                  <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">Workflow + Collaboration</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">Workflow Stage</label>
+                      <select
+                        className={inputClassName}
+                        value={editingWorkflowStage}
+                        onChange={(e) => setEditingWorkflowStage(e.target.value)}
+                      >
+                        {WORKFLOW_STAGES.map((stage) => (
+                          <option key={stage} value={stage}>{stage}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">SEO Focus Keyword</label>
+                      <input
+                        type="text"
+                        className={inputClassName}
+                        value={editingFocusKeyword}
+                        onChange={(e) => setEditingFocusKeyword(e.target.value)}
+                        placeholder="primary keyword"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">SEO Score</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className={inputClassName}
+                        value={editingSeoScore}
+                        onChange={(e) => setEditingSeoScore(e.target.value)}
+                        placeholder="0 - 100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">Review Status</label>
+                      <select
+                        className={inputClassName}
+                        value={editingCollaborationStatus}
+                        onChange={(e) => setEditingCollaborationStatus(e.target.value)}
+                      >
+                        {COLLABORATION_STATUSES.map((status) => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">Assignee</label>
+                      <input
+                        type="text"
+                        className={inputClassName}
+                        value={editingAssignee}
+                        onChange={(e) => setEditingAssignee(e.target.value)}
+                        placeholder="owner or reviewer"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-[0.3fr_0.7fr_auto] gap-2">
+                    <input
+                      type="text"
+                      className={inputClassName}
+                      value={editingCommentAuthor}
+                      onChange={(e) => setEditingCommentAuthor(e.target.value)}
+                      placeholder="Author"
+                    />
+                    <input
+                      type="text"
+                      className={inputClassName}
+                      value={editingCommentMessage}
+                      onChange={(e) => setEditingCommentMessage(e.target.value)}
+                      placeholder="Add collaboration note"
+                    />
+                    <button
+                      onClick={handleAddEditingComment}
+                      className="shell-hover-lift px-3 py-2.5 text-sm border border-border rounded-2xl text-slate-700 hover:text-slate-900 hover:border-accent/40 transition-colors"
+                    >
+                      Add Note
+                    </button>
+                  </div>
+                  <div className="space-y-2 max-h-36 overflow-y-auto">
+                    {(editingComments ?? []).length === 0 && (
+                      <p className="text-xs text-slate-500">No collaboration notes yet.</p>
+                    )}
+                    {(editingComments ?? []).map((comment) => (
+                      <div key={comment.id} className="rounded-2xl border border-border bg-white/[0.03] px-3 py-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs text-slate-900 font-medium">{comment.author}</p>
+                          <button
+                            onClick={() => handleRemoveEditingComment(comment.id)}
+                            className="text-xs text-slate-500 hover:text-red-600 transition-colors"
+                            title="Remove note"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <p className="text-sm text-slate-700 mt-1">{comment.message}</p>
+                        <p className="text-[11px] text-slate-500 mt-1">{formatDate(comment.created_at)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <div className="mb-3 shell-panel-soft rounded-[1.5rem] p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">Tag Suggestions</p>
@@ -1969,5 +2302,13 @@ export default function HistoryPage() {
         ))}
       </datalist>
     </div>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense>
+      <HistoryPageContent />
+    </Suspense>
   );
 }
