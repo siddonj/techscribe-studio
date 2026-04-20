@@ -17,6 +17,7 @@ import {
   type CalendarSummary,
 } from "@/lib/calendar";
 import { TOOLS, getToolBySlug } from "@/lib/tools";
+import { EmptyState, PageHeader, StatusStrip, SurfaceNotice } from "@/components/DashboardPrimitives";
 
 interface CalendarResponse {
   rows: CalendarEntry[];
@@ -43,7 +44,7 @@ interface CalendarDraft {
 }
 
 const inputClassName =
-  "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-white placeholder-muted focus:outline-none transition-colors";
+  "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-colors";
 
 function createEmptyDraft(): CalendarDraft {
   return {
@@ -527,54 +528,29 @@ export default function CalendarPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="p-5 md:p-8 max-w-7xl w-full mx-auto flex-1 overflow-hidden flex flex-col gap-6">
-        <section className="shell-panel rounded-[2rem] p-6 md:p-8 overflow-hidden relative">
-          <div className="absolute right-0 top-0 h-36 w-36 rounded-full bg-accent/10 blur-3xl" />
-          <div className="relative grid gap-6 xl:grid-cols-[1.15fr_0.85fr] items-start">
-            <div>
-              <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
-                <span>←</span>
-                <span>Back to dashboard</span>
-              </Link>
-              <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.24em] text-accent">Phase 2 Planner</p>
-              <h1 className="mt-3 text-3xl md:text-4xl text-white" style={{ fontFamily: "var(--font-display)" }}>
-                Content Calendar
-              </h1>
-              <p className="mt-3 text-slate-400 max-w-2xl leading-relaxed">
-                Prioritize the queue, attach writing context, and move any planned item directly into a prefilled generation workflow.
-              </p>
-            </div>
+        <PageHeader
+          eyebrow="Phase 2 Planner"
+          title="Content Calendar"
+          description="Prioritize the queue, attach writing context, and move any planned item directly into a prefilled generation workflow."
+          stats={[
+            { label: "Total", value: summary?.total ?? rows.length },
+            { label: "This Week", value: summary?.dueThisWeek ?? 0 },
+            { label: "Overdue", value: summary?.overdue ?? 0 },
+            { label: "Blocked", value: summary?.blocked ?? 0 },
+            { label: "Review Due", value: summary?.reviewDueSoon ?? 0 },
+          ]}
+        />
 
-            <div className="grid grid-cols-2 md:grid-cols-5 xl:grid-cols-2 gap-3">
-              {[
-                { label: "Total", value: summary?.total ?? rows.length },
-                { label: "This Week", value: summary?.dueThisWeek ?? 0 },
-                { label: "Overdue", value: summary?.overdue ?? 0 },
-                { label: "Blocked", value: summary?.blocked ?? 0 },
-                { label: "Review Due", value: summary?.reviewDueSoon ?? 0 },
-              ].map((stat) => (
-                <div key={stat.label} className="shell-stat-card rounded-3xl px-4 py-4">
-                  <p className="font-mono text-[11px] text-slate-500 uppercase tracking-[0.18em]">{stat.label}</p>
-                  <p className="text-2xl text-white mt-2" style={{ fontFamily: "var(--font-display)" }}>{stat.value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="shell-status-strip rounded-[1.5rem] p-4 md:p-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          {[
+        <StatusStrip
+          columnsClassName="xl:grid-cols-5"
+          items={[
             { label: "Backlog", value: summary?.byStatus.backlog ?? 0 },
             { label: "Planned", value: summary?.byStatus.planned ?? 0 },
             { label: "In Progress", value: summary?.byStatus["in-progress"] ?? 0 },
             { label: "Ready", value: summary?.byStatus.ready ?? 0 },
             { label: "Pending Review", value: summary?.byApprovalStatus.pending_review ?? 0 },
-          ].map((item) => (
-            <div key={item.label} className="shell-status-pill rounded-2xl px-4 py-3">
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
-              <p className="text-sm text-white mt-2">{item.value}</p>
-            </div>
-          ))}
-        </section>
+          ]}
+        />
 
         <section className="shell-panel rounded-[2rem] p-5 space-y-4">
           <div className="flex items-center justify-between gap-4">
@@ -583,7 +559,7 @@ export default function CalendarPage() {
               <p className="text-sm text-slate-200 mt-1">Add a topic, assign a tool, and give it a date so the queue stays visible.</p>
               <p className="text-xs text-muted/60 mt-0.5">Dates are planning guides only — publishing to WordPress is always triggered manually.</p>
             </div>
-            <Link href={buildToolHref(createDraft)} className="text-sm border border-white/10 rounded-2xl px-4 py-2.5 text-slate-300 hover:text-white hover:border-accent/40 transition-colors">
+            <Link href={buildToolHref(createDraft)} className="text-sm border border-border rounded-2xl px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:border-accent/40 transition-colors">
               Open Tool Draft
             </Link>
           </div>
@@ -640,7 +616,7 @@ export default function CalendarPage() {
             <button
               onClick={handleCreateEntry}
               disabled={creating || !createDraft.title.trim()}
-              className="bg-accent text-[#08100c] font-semibold px-4 py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50"
+              className="bg-accent text-white font-semibold px-4 py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50"
             >
               {creating ? "Adding..." : "Add to Calendar"}
             </button>
@@ -700,8 +676,8 @@ export default function CalendarPage() {
 
         {(error || message) && (
           <section className="space-y-2">
-            {error && <div className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</div>}
-            {message && <div className="text-green-300 text-sm bg-green-400/10 border border-green-400/20 rounded-lg px-3 py-2">{message}</div>}
+            {error && <SurfaceNotice tone="error">{error}</SurfaceNotice>}
+            {message && <SurfaceNotice tone="success">{message}</SurfaceNotice>}
           </section>
         )}
 
@@ -712,13 +688,13 @@ export default function CalendarPage() {
                 <div className="flex gap-1 rounded-2xl bg-black/15 p-1 border border-white/5">
                   <button
                     onClick={() => setViewMode("list")}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-colors ${viewMode === "list" ? "bg-white/8 text-white" : "text-slate-500 hover:text-white"}`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-colors ${viewMode === "list" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"}`}
                   >
                     List
                   </button>
                   <button
                     onClick={() => setViewMode("week")}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-colors ${viewMode === "week" ? "bg-white/8 text-white" : "text-slate-500 hover:text-white"}`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-colors ${viewMode === "week" ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"}`}
                   >
                     Week
                   </button>
@@ -727,21 +703,21 @@ export default function CalendarPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setWeekOffset((n) => n - 1)}
-                      className="text-slate-400 hover:text-white text-sm px-2 py-1 border border-white/10 rounded-xl transition-colors"
+                      className="text-slate-600 hover:text-slate-900 text-sm px-2 py-1 border border-border rounded-xl transition-colors"
                     >
                       ‹
                     </button>
                     <span className="text-xs text-slate-500 font-mono">{formatWeekRange(weekDates)}</span>
                     <button
                       onClick={() => setWeekOffset((n) => n + 1)}
-                      className="text-slate-400 hover:text-white text-sm px-2 py-1 border border-white/10 rounded-xl transition-colors"
+                      className="text-slate-600 hover:text-slate-900 text-sm px-2 py-1 border border-border rounded-xl transition-colors"
                     >
                       ›
                     </button>
                     {weekOffset !== 0 && (
                       <button
                         onClick={() => setWeekOffset(0)}
-                        className="text-xs text-accent hover:text-white px-2 py-1 transition-colors"
+                        className="text-xs text-accent hover:text-accent-dim px-2 py-1 transition-colors"
                       >
                         Today
                       </button>
@@ -787,7 +763,7 @@ export default function CalendarPage() {
               )}
               {viewMode === "week" && selectedEntry && (
                 <p className="text-xs text-accent/80">
-                  <span className="font-mono">↑ Click any day to instantly move</span> <span className="text-white">{selectedEntry.title}</span> <span className="text-slate-500">to that date.</span>
+                  <span className="font-mono">↑ Click any day to instantly move</span> <span className="text-slate-900">{selectedEntry.title}</span> <span className="text-slate-500">to that date.</span>
                 </p>
               )}
             </div>
@@ -804,7 +780,7 @@ export default function CalendarPage() {
                     <p className="text-sm text-slate-400">No items match the active filters.</p>
                     <button
                       onClick={() => { setStatusFilter("all"); setToolFilter("all"); setPublishIntentFilter("all"); }}
-                      className="text-xs text-accent hover:text-white mt-2 transition-colors"
+                      className="text-xs text-accent hover:text-accent-dim mt-2 transition-colors"
                     >
                       Clear filters
                     </button>
@@ -842,7 +818,7 @@ export default function CalendarPage() {
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                  <p className="text-sm text-white font-medium truncate">{row.title}</p>
+                                  <p className="text-sm text-slate-900 font-medium truncate">{row.title}</p>
                                   <div className="flex items-center gap-2 mt-1">
                                     <span className="text-xs">{tool?.icon ?? "📝"}</span>
                                     <span className="text-xs text-slate-500 truncate">{tool?.name ?? row.tool_slug}</span>
@@ -915,7 +891,7 @@ export default function CalendarPage() {
                     <p className="text-sm text-slate-400">No items match the active filters.</p>
                     <button
                       onClick={() => { setStatusFilter("all"); setToolFilter("all"); setPublishIntentFilter("all"); }}
-                      className="text-xs text-accent hover:text-white mt-2 transition-colors"
+                      className="text-xs text-accent hover:text-accent-dim mt-2 transition-colors"
                     >
                       Clear filters
                     </button>
@@ -956,7 +932,7 @@ export default function CalendarPage() {
                               `}
                             >
                               <p className="text-xs font-mono text-slate-500 uppercase">{weekdayLabel}</p>
-                              <p className={`text-xl font-bold mt-0.5 ${isToday ? "text-accent" : "text-white"}`}>{dayNumber}</p>
+                              <p className={`text-xl font-bold mt-0.5 ${isToday ? "text-accent" : "text-slate-900"}`}>{dayNumber}</p>
                               {canMove && (
                                 <p className="text-xs text-accent/60 mt-0.5">Move here</p>
                               )}
@@ -972,7 +948,7 @@ export default function CalendarPage() {
                                     onClick={() => setSelectedId(row.id)}
                                     className={`w-full text-left border rounded-xl p-2 transition-colors ${selected ? "border-accent/40 bg-accent/8" : "border-white/8 bg-black/10 hover:border-accent/20 hover:bg-white/[0.03]"}`}
                                   >
-                                    <p className="text-xs text-white font-medium leading-snug line-clamp-2">{row.title}</p>
+                                    <p className="text-xs text-slate-900 font-medium leading-snug line-clamp-2">{row.title}</p>
                                     <div className="flex items-center justify-between mt-1.5 gap-1">
                                       <span className="text-xs">{tool?.icon ?? "📝"}</span>
                                       <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
@@ -1015,7 +991,7 @@ export default function CalendarPage() {
                                 onClick={() => setSelectedId(row.id)}
                                 className={`text-left border rounded-xl p-2.5 transition-colors w-48 ${selected ? "border-accent/40 bg-accent/8" : "border-white/8 bg-black/10 hover:border-accent/20 hover:bg-white/[0.03]"}`}
                               >
-                                <p className="text-xs text-white font-medium truncate">{row.title}</p>
+                                <p className="text-xs text-slate-900 font-medium truncate">{row.title}</p>
                                 <div className="flex items-center justify-between mt-1.5 gap-1">
                                   <span className="text-xs">{tool?.icon ?? "📝"}</span>
                                   <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
@@ -1037,36 +1013,37 @@ export default function CalendarPage() {
           <section className={`${viewMode === "list" ? "flex-1" : "w-80 shrink-0"} shell-panel rounded-[2rem] overflow-hidden flex flex-col min-w-0`}>
             {!selectedEntry || !editorDraft ? (
               <div className="flex-1 flex items-center justify-center text-center p-8">
-                <div>
-                  <div className="text-5xl opacity-20 mb-4">🗓️</div>
-                  <p className="text-sm text-slate-400 max-w-sm">Select a calendar entry to update scheduling details, refine the brief, or jump into the assigned writing tool.</p>
-                </div>
+                <EmptyState
+                  icon="🗓️"
+                  eyebrow="Planned Item"
+                  description="Select a calendar entry to update scheduling details, refine the brief, or jump into the assigned writing tool."
+                />
               </div>
             ) : (
               <>
                 <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between gap-4">
                   <div>
                     <p className="font-mono text-xs text-accent uppercase tracking-widest">Planned Item</p>
-                    <h2 className="text-white text-lg mt-1">{selectedEntry.title}</h2>
+                    <h2 className="text-slate-900 text-lg mt-1">{selectedEntry.title}</h2>
                   </div>
                   <div className="flex items-center gap-2">
                     <Link
                       href={buildToolHref(editorDraft)}
-                      className="shell-hover-lift text-sm border border-white/10 rounded-2xl px-3 py-2 text-slate-300 hover:text-white hover:border-accent/40 transition-colors"
+                      className="shell-hover-lift text-sm border border-border rounded-2xl px-3 py-2 text-slate-700 hover:text-slate-900 hover:border-accent/40 transition-colors"
                     >
                       Open Tool
                     </Link>
                     <button
                       onClick={handleDeleteSelected}
                       disabled={deleting}
-                      className="text-sm border border-red-400/20 rounded-lg px-3 py-2 text-red-300/80 hover:text-red-200 hover:border-red-400/40 transition-colors disabled:opacity-50"
+                      className="text-sm border border-red-200 rounded-lg px-3 py-2 text-red-600 hover:text-red-700 hover:border-red-300 transition-colors disabled:opacity-50"
                     >
                       {deleting ? "Deleting..." : "Delete"}
                     </button>
                     <button
                       onClick={handleSaveSelected}
                       disabled={saving}
-                      className="shell-hover-lift bg-accent text-[#08100c] font-semibold px-4 py-2 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50"
+                      className="shell-hover-lift bg-accent text-white font-semibold px-4 py-2 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50"
                     >
                       {saving ? "Saving..." : "Save Changes"}
                     </button>
@@ -1244,15 +1221,15 @@ export default function CalendarPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="shell-panel-soft rounded-2xl p-4">
                       <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">Created</p>
-                      <p className="text-sm text-white mt-2">{new Date(selectedEntry.created_at).toLocaleString()}</p>
+                      <p className="text-sm text-slate-900 mt-2">{new Date(selectedEntry.created_at).toLocaleString()}</p>
                     </div>
                     <div className="shell-panel-soft rounded-2xl p-4">
                       <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">Last Updated</p>
-                      <p className="text-sm text-white mt-2">{new Date(selectedEntry.updated_at).toLocaleString()}</p>
+                      <p className="text-sm text-slate-900 mt-2">{new Date(selectedEntry.updated_at).toLocaleString()}</p>
                     </div>
                     <div className="shell-panel-soft rounded-2xl p-4">
                       <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">Current Tool</p>
-                      <p className="text-sm text-white mt-2">{getToolBySlug(editorDraft.tool_slug)?.name ?? editorDraft.tool_slug}</p>
+                      <p className="text-sm text-slate-900 mt-2">{getToolBySlug(editorDraft.tool_slug)?.name ?? editorDraft.tool_slug}</p>
                     </div>
                   </div>
 
@@ -1292,7 +1269,7 @@ export default function CalendarPage() {
                         <p className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">WordPress Status</p>
                         {selectedEntry.wp_post_id ? (
                           <div className="space-y-1">
-                            <span className="inline-block text-xs font-mono border border-green-400/20 text-green-300 rounded px-2 py-1">
+                            <span className="inline-block text-xs font-mono border border-green-200 text-green-600 rounded px-2 py-1 bg-green-50">
                               Post #{selectedEntry.wp_post_id} synced
                             </span>
                           </div>

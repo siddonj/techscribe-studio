@@ -18,6 +18,7 @@ import {
   PUBLISH_STATE_BADGE_CLASSES,
   PUBLISH_STATE_ICONS,
 } from "@/lib/publish-state";
+import { EmptyState, PageHeader, StatusStrip } from "@/components/DashboardPrimitives";
 
 // Simple markdown renderer (same as tool page)
 function renderMarkdown(text: string): string {
@@ -914,44 +915,30 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="p-5 md:p-8 pb-0">
-        <section className="shell-panel rounded-[2rem] px-6 py-5 md:px-7 md:py-6">
-          <div className="flex flex-wrap items-start gap-4 justify-between">
-            <div>
-              <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
-                <span>←</span>
-                <span>Back to dashboard</span>
-              </Link>
-              <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.24em] text-accent">Archive</p>
-              <h1 className="mt-2 text-3xl text-white" style={{ fontFamily: "var(--font-display)" }}>
-                Generation History
-              </h1>
-              <p className="mt-2 text-sm text-slate-400 max-w-2xl">
-                Search previous output, batch-organize entries, and manage WordPress-linked drafts from the same archive surface.
-              </p>
-            </div>
-            <div className="shell-stat-card rounded-3xl px-4 py-3 min-w-[11rem]">
-              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-slate-500">Loaded</p>
-              <p className="mt-2 text-xl text-white">{rows.length}/{totalRows || rows.length}</p>
-            </div>
-          </div>
-        </section>
+        <PageHeader
+          eyebrow="Archive"
+          title="Generation History"
+          description="Search previous output, batch-organize entries, and manage WordPress-linked drafts from the same archive surface."
+          stats={[
+            { label: "Loaded", value: `${rows.length}/${totalRows || rows.length}`, meta: "archive rows in view" },
+            { label: "Folders", value: folderSummaries.length, meta: "saved groupings" },
+            { label: "Tags", value: tagSummaries.length, meta: "library tags" },
+            { label: "Publishing", value: publishAllowed ? "Enabled" : publishStatusLoaded ? "Needs config" : "Checking", meta: "WordPress sync" },
+          ]}
+        />
       </div>
 
       <div className="px-5 md:px-8 pt-4">
-        <section className="shell-status-strip rounded-[1.5rem] p-4 md:p-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          {[
+        <StatusStrip
+          columnsClassName="xl:grid-cols-5"
+          items={[
             { label: "Loaded Rows", value: rows.length },
             { label: "Selected", value: selectedCount },
             { label: "Folders", value: folderSummaries.length },
             { label: "Tags", value: tagSummaries.length },
             { label: "Publishing", value: publishAllowed ? "Draft sync enabled" : publishStatusLoaded ? "Connection required" : "Checking" },
-          ].map((item) => (
-            <div key={item.label} className="shell-status-pill rounded-2xl px-4 py-3">
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
-              <p className="text-sm text-white mt-2">{item.value}</p>
-            </div>
-          ))}
-        </section>
+          ]}
+        />
       </div>
 
       {/* Publish State Summary */}
@@ -1004,7 +991,7 @@ export default function HistoryPage() {
                   </p>
                   <button
                     onClick={() => setSelectedIds([])}
-                    className="text-xs text-slate-400 hover:text-white transition-colors"
+                    className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
                   >
                     Clear
                   </button>
@@ -1013,21 +1000,21 @@ export default function HistoryPage() {
                   <button
                     onClick={handleBulkDelete}
                     disabled={bulkAction !== null}
-                    className="flex-1 text-sm border border-red-400/20 rounded-lg py-2 text-red-300/80 hover:text-red-200 hover:border-red-400/40 transition-colors disabled:opacity-50"
+                    className="flex-1 text-sm border border-red-200 rounded-lg py-2 text-red-600 hover:text-red-700 hover:border-red-300 transition-colors disabled:opacity-50"
                   >
                     {bulkAction === "delete" ? "Deleting..." : "Delete Selected"}
                   </button>
                   <button
                     onClick={handleBulkPublish}
                     disabled={bulkAction !== null || !publishAllowed || !publishStatusLoaded}
-                    className="flex-1 text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                    className="flex-1 text-sm border border-border rounded-lg py-2 text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors disabled:opacity-50"
                   >
                     {bulkAction === "publish" ? "Publishing..." : "Publish Selected"}
                   </button>
                   <button
                     onClick={handleExportSelected}
                     disabled={bulkAction !== null}
-                    className="flex-1 text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                    className="flex-1 text-sm border border-border rounded-lg py-2 text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors disabled:opacity-50"
                   >
                     Export Selected
                   </button>
@@ -1052,14 +1039,14 @@ export default function HistoryPage() {
                     <button
                       onClick={() => handleBulkAssignMetadata()}
                       disabled={bulkAction !== null || (!bulkFolderName.trim() && !bulkTags.trim())}
-                      className="flex-1 text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                      className="flex-1 text-sm border border-border rounded-lg py-2 text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors disabled:opacity-50"
                     >
                       {bulkAction === "organize" ? "Applying..." : "Apply Metadata"}
                     </button>
                     <button
                       onClick={() => handleBulkAssignMetadata({ clearFolder: true, includeTags: false })}
                       disabled={bulkAction !== null}
-                      className="flex-1 text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                      className="flex-1 text-sm border border-border rounded-lg py-2 text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors disabled:opacity-50"
                     >
                       Clear Folder
                     </button>
@@ -1074,7 +1061,7 @@ export default function HistoryPage() {
                           key={folder}
                           onClick={() => handleBulkAssignMetadata({ folderName: folder, includeTags: false })}
                           disabled={bulkAction !== null}
-                          className="text-xs font-mono border border-border rounded px-2 py-1 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                          className="text-xs font-mono border border-border rounded px-2 py-1 text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors disabled:opacity-50"
                         >
                           Move to {folder}
                         </button>
@@ -1089,7 +1076,7 @@ export default function HistoryPage() {
                     </p>
                     <Link
                       href="/settings"
-                      className="text-xs font-mono text-accent hover:text-white transition-colors whitespace-nowrap"
+                      className="text-xs font-mono text-accent hover:text-accent-dim transition-colors whitespace-nowrap"
                     >
                       Go to Settings →
                     </Link>
@@ -1146,7 +1133,7 @@ export default function HistoryPage() {
                 />
                 <button
                   onClick={() => handleAddTagFilter()}
-                  className="px-3 py-2 text-sm border border-border rounded-lg text-muted hover:text-white hover:border-accent/40 transition-colors"
+                  className="px-3 py-2 text-sm border border-border rounded-lg text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors"
                 >
                   Add
                 </button>
@@ -1158,7 +1145,7 @@ export default function HistoryPage() {
                   <p className="text-xs font-mono text-muted uppercase tracking-wider">Tag Filters</p>
                   <button
                     onClick={() => setTagFilters([])}
-                    className="text-xs text-muted hover:text-white transition-colors"
+                    className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
                   >
                     Clear tags
                   </button>
@@ -1168,7 +1155,7 @@ export default function HistoryPage() {
                     <button
                       key={tag}
                       onClick={() => toggleTagFilter(tag)}
-                      className="text-xs font-mono border border-accent/40 bg-accent/10 text-accent rounded px-2 py-1 transition-colors hover:text-white"
+                      className="text-xs font-mono border border-accent/40 bg-accent/10 text-accent rounded px-2 py-1 transition-colors hover:text-accent-dim"
                     >
                       #{tag} ✕
                     </button>
@@ -1206,7 +1193,7 @@ export default function HistoryPage() {
                       <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => setFolderFilter("")}
-                          className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${!folderFilter ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                          className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${!folderFilter ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-slate-600 hover:text-slate-900 hover:border-accent/40"}`}
                         >
                           All folders
                         </button>
@@ -1214,7 +1201,7 @@ export default function HistoryPage() {
                           <button
                             key={folder}
                             onClick={() => setFolderFilter(folder)}
-                            className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${folderFilter === folder ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                            className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${folderFilter === folder ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-slate-600 hover:text-slate-900 hover:border-accent/40"}`}
                           >
                             📁 {folder}
                           </button>
@@ -1232,7 +1219,7 @@ export default function HistoryPage() {
                             <button
                               key={tagSummary.tag}
                               onClick={() => toggleTagFilter(tagSummary.tag)}
-                              className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                              className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${active ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-slate-600 hover:text-slate-900 hover:border-accent/40"}`}
                             >
                               #{tagSummary.tag} ({tagSummary.count})
                             </button>
@@ -1306,21 +1293,21 @@ export default function HistoryPage() {
                     <button
                       onClick={() => handleFolderAction("rename")}
                       disabled={folderActionLoading !== null}
-                      className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                      className="text-sm border border-border rounded-lg py-2 text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors disabled:opacity-50"
                     >
                       {folderActionLoading === "rename" ? "Renaming..." : "Rename"}
                     </button>
                     <button
                       onClick={() => handleFolderAction("merge")}
                       disabled={folderActionLoading !== null}
-                      className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                      className="text-sm border border-border rounded-lg py-2 text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors disabled:opacity-50"
                     >
                       {folderActionLoading === "merge" ? "Merging..." : "Merge"}
                     </button>
                     <button
                       onClick={() => handleFolderAction("delete")}
                       disabled={folderActionLoading !== null}
-                      className="text-sm border border-red-400/20 rounded-lg py-2 text-red-300/80 hover:text-red-200 hover:border-red-400/40 transition-colors disabled:opacity-50"
+                      className="text-sm border border-red-200 rounded-lg py-2 text-red-600 hover:text-red-700 hover:border-red-300 transition-colors disabled:opacity-50"
                     >
                       {folderActionLoading === "delete" ? "Deleting..." : "Delete"}
                     </button>
@@ -1339,7 +1326,7 @@ export default function HistoryPage() {
                               setFolderManagerFolder(folderSummary.folder);
                               setFolderFilter(folderSummary.folder);
                             }}
-                            className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${folderManagerFolder === folderSummary.folder || folderFilter === folderSummary.folder ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                            className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${folderManagerFolder === folderSummary.folder || folderFilter === folderSummary.folder ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-slate-600 hover:text-slate-900 hover:border-accent/40"}`}
                           >
                             {folderSummary.folder} ({folderSummary.count})
                           </button>
@@ -1382,21 +1369,21 @@ export default function HistoryPage() {
                     <button
                       onClick={() => handleTagAction("rename")}
                       disabled={tagActionLoading !== null}
-                      className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                      className="text-sm border border-border rounded-lg py-2 text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors disabled:opacity-50"
                     >
                       {tagActionLoading === "rename" ? "Renaming..." : "Rename"}
                     </button>
                     <button
                       onClick={() => handleTagAction("merge")}
                       disabled={tagActionLoading !== null}
-                      className="text-sm border border-border rounded-lg py-2 text-muted hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                      className="text-sm border border-border rounded-lg py-2 text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors disabled:opacity-50"
                     >
                       {tagActionLoading === "merge" ? "Merging..." : "Merge"}
                     </button>
                     <button
                       onClick={() => handleTagAction("delete")}
                       disabled={tagActionLoading !== null}
-                      className="text-sm border border-red-400/20 rounded-lg py-2 text-red-300/80 hover:text-red-200 hover:border-red-400/40 transition-colors disabled:opacity-50"
+                      className="text-sm border border-red-200 rounded-lg py-2 text-red-600 hover:text-red-700 hover:border-red-300 transition-colors disabled:opacity-50"
                     >
                       {tagActionLoading === "delete" ? "Deleting..." : "Delete"}
                     </button>
@@ -1415,7 +1402,7 @@ export default function HistoryPage() {
                               setTagManagerTag(tagSummary.tag);
                               toggleTagFilter(tagSummary.tag);
                             }}
-                            className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${tagManagerTag === tagSummary.tag || normalizedTagFilters.some((tag) => tag.toLowerCase() === tagSummary.tag.toLowerCase()) ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-muted hover:text-white hover:border-accent/40"}`}
+                            className={`text-xs font-mono border rounded px-2 py-1 transition-colors ${tagManagerTag === tagSummary.tag || normalizedTagFilters.some((tag) => tag.toLowerCase() === tagSummary.tag.toLowerCase()) ? "border-accent/40 bg-accent/10 text-accent" : "border-border text-slate-600 hover:text-slate-900 hover:border-accent/40"}`}
                           >
                             #{tagSummary.tag} ({tagSummary.count})
                           </button>
@@ -1450,7 +1437,7 @@ export default function HistoryPage() {
                     />
                     <button
                       onClick={handleSavePreset}
-                      className="px-3 py-2 text-sm border border-border rounded-lg text-muted hover:text-white hover:border-accent/40 transition-colors"
+                      className="px-3 py-2 text-sm border border-border rounded-lg text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors"
                     >
                       Save
                     </button>
@@ -1463,7 +1450,7 @@ export default function HistoryPage() {
                         <div key={preset.id} className="flex items-center gap-2">
                           <button
                             onClick={() => applyPreset(preset)}
-                            className="flex-1 text-left text-sm border border-border rounded-lg px-3 py-2 text-white/90 hover:border-accent/40 transition-colors"
+                            className="flex-1 text-left text-sm border border-border rounded-lg px-3 py-2 text-slate-900 hover:border-accent/40 transition-colors"
                           >
                             {preset.name}
                             <span className="block text-xs text-muted mt-1 truncate">
@@ -1474,7 +1461,7 @@ export default function HistoryPage() {
                           </button>
                           <button
                             onClick={() => deletePreset(preset.id)}
-                            className="text-xs text-muted hover:text-red-300 transition-colors px-2"
+                            className="text-xs text-slate-500 hover:text-red-600 transition-colors px-2"
                             title="Delete preset"
                           >
                             ✕
@@ -1542,7 +1529,7 @@ export default function HistoryPage() {
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-base shrink-0">{row.tool_icon}</span>
                           <div className="min-w-0">
-                            <p className="text-white text-sm truncate font-medium">{row.title}</p>
+                            <p className="text-slate-900 text-sm truncate font-medium">{row.title}</p>
                             <p className="text-muted text-xs">{row.tool_name}</p>
                           </div>
                         </div>
@@ -1602,7 +1589,7 @@ export default function HistoryPage() {
                 <button
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="w-full text-sm border border-white/10 rounded-2xl py-2.5 text-slate-300 hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                  className="w-full text-sm border border-border rounded-2xl py-2.5 text-slate-700 hover:text-slate-900 hover:border-accent/40 transition-colors disabled:opacity-50"
                 >
                   {loadingMore ? "Loading more..." : `Load More (${rows.length}/${totalRows})`}
                 </button>
@@ -1615,13 +1602,11 @@ export default function HistoryPage() {
         <div className="flex-1 shell-panel rounded-[2rem] flex flex-col overflow-hidden m-2 ml-0">
           {!selected ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="shell-panel-soft rounded-[2rem] px-8 py-10 max-w-lg mx-auto">
-                <div className="text-5xl mb-4 opacity-20">🕒</div>
-                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent mb-3">Detail View</p>
-                <p className="text-slate-400 text-sm max-w-xs mx-auto">
-                  Select a saved generation from the list to inspect metadata, manage draft status, and review the full output.
-                </p>
-              </div>
+              <EmptyState
+                icon="🕒"
+                eyebrow="Detail View"
+                description="Select a saved generation from the list to inspect metadata, manage draft status, and review the full output."
+              />
             </div>
           ) : (
             <>
@@ -1631,7 +1616,7 @@ export default function HistoryPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span>{selected.tool_icon}</span>
-                      <span className="text-white text-sm font-medium truncate">{selected.title}</span>
+                      <span className="text-slate-900 text-sm font-medium truncate">{selected.title}</span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="font-mono text-xs text-slate-500">{selected.tool_name}</span>
@@ -1648,7 +1633,7 @@ export default function HistoryPage() {
                       className={`font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
                         detailTab === "article"
                           ? "border-accent text-accent bg-accent/10"
-                          : "border-border text-muted hover:text-white hover:border-white/20"
+                          : "border-border text-slate-600 hover:text-slate-900 hover:border-slate-300"
                       }`}
                     >
                       Article
@@ -1658,7 +1643,7 @@ export default function HistoryPage() {
                       className={`font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
                         detailTab === "editor"
                           ? "border-accent text-accent bg-accent/10"
-                          : "border-border text-muted hover:text-white hover:border-white/20"
+                          : "border-border text-slate-600 hover:text-slate-900 hover:border-slate-300"
                       }`}
                     >
                       Editor
@@ -1722,7 +1707,7 @@ export default function HistoryPage() {
                     </p>
                     <Link
                       href="/settings"
-                      className="text-xs font-mono text-accent hover:text-white transition-colors whitespace-nowrap"
+                      className="text-xs font-mono text-accent hover:text-accent-dim transition-colors whitespace-nowrap"
                     >
                       Go to Settings →
                     </Link>
@@ -1738,12 +1723,12 @@ export default function HistoryPage() {
                     const hint = getPublishFailureHint(category);
                     return (
                       <div className="flex flex-col gap-0.5">
-                        <p className="text-xs text-red-300/90">
-                          <span className="font-semibold text-red-300">{categoryLabel}:</span>{" "}
+                        <p className="text-xs text-red-700">
+                          <span className="font-semibold text-red-700">{categoryLabel}:</span>{" "}
                           {selected.wp_error_message ?? "Last publish attempt failed."}{" "}
-                          Click <span className="text-white font-semibold">Retry Publish</span> above to try again without regenerating.
+                          Click <span className="text-slate-900 font-semibold">Retry Publish</span> above to try again without regenerating.
                         </p>
-                        <p className="text-xs text-red-300/60">{hint}</p>
+                        <p className="text-xs text-red-600">{hint}</p>
                       </div>
                     );
                   })()}
@@ -1761,10 +1746,10 @@ export default function HistoryPage() {
                       <div key={`${entry.timestamp}-${index}`} className="shell-panel-soft rounded-2xl px-4 py-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <span className={`text-[11px] font-mono border rounded-full px-2 py-0.5 ${entry.status === "failed" ? "border-red-400/30 bg-red-400/10 text-red-300" : "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"}`}>
+                            <span className={`text-[11px] font-mono border rounded-full px-2 py-0.5 ${entry.status === "failed" ? "border-red-200 bg-red-50 text-red-600" : "border-emerald-200 bg-emerald-50 text-emerald-600"}`}>
                               {entry.status === "failed" ? "Failed" : "Success"}
                             </span>
-                            <span className="text-xs text-slate-300">{entry.message}</span>
+                            <span className="text-xs text-slate-600">{entry.message}</span>
                           </div>
                           <span className="text-[11px] font-mono text-slate-500">{formatDate(entry.timestamp)}</span>
                         </div>
@@ -1790,7 +1775,7 @@ export default function HistoryPage() {
                   ].map((item) => (
                     <div key={item.label} className="shell-status-pill rounded-2xl px-4 py-3">
                       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
-                      <p className="text-sm text-white mt-2 truncate">{item.value}</p>
+                      <p className="text-sm text-slate-900 mt-2 truncate">{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -1868,7 +1853,7 @@ export default function HistoryPage() {
                     <input
                       type="text"
                       list="history-tag-options"
-                      className="shell-input flex-1 rounded-2xl px-3 py-2.5 text-sm text-white placeholder-muted focus:outline-none"
+                      className="shell-input flex-1 rounded-2xl px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
                       value={editingTagDraft}
                       onChange={(e) => setEditingTagDraft(e.target.value)}
                       onKeyDown={(e) => {
@@ -1881,7 +1866,7 @@ export default function HistoryPage() {
                     />
                     <button
                       onClick={() => handleAddEditingTag()}
-                      className="shell-hover-lift px-3 py-2.5 text-sm border border-white/10 rounded-2xl text-slate-300 hover:text-white hover:border-accent/40 transition-colors"
+                      className="shell-hover-lift px-3 py-2.5 text-sm border border-border rounded-2xl text-slate-700 hover:text-slate-900 hover:border-accent/40 transition-colors"
                     >
                       Add Tag
                     </button>
@@ -1891,7 +1876,7 @@ export default function HistoryPage() {
                       <button
                         key={tagSummary.tag}
                         onClick={() => handleAddEditingTag(tagSummary.tag)}
-                        className="text-xs font-mono border border-border rounded px-2 py-1 text-muted hover:text-white hover:border-accent/40 transition-colors"
+                        className="text-xs font-mono border border-border rounded px-2 py-1 text-slate-600 hover:text-slate-900 hover:border-accent/40 transition-colors"
                       >
                         #{tagSummary.tag}
                       </button>
@@ -1909,7 +1894,7 @@ export default function HistoryPage() {
                       <button
                         key={tag}
                         onClick={() => handleRemoveEditingTag(tag)}
-                        className="text-xs font-mono text-muted border border-border rounded px-2 py-1 hover:text-white hover:border-accent/40 transition-colors"
+                        className="text-xs font-mono text-slate-600 border border-border rounded px-2 py-1 hover:text-slate-900 hover:border-accent/40 transition-colors"
                         title="Remove tag"
                       >
                         #{tag} ✕
@@ -1919,7 +1904,7 @@ export default function HistoryPage() {
                   <button
                     onClick={handleSaveMetadata}
                     disabled={savingMetadata}
-                    className="shell-hover-lift text-sm border border-white/10 rounded-2xl px-3 py-2.5 text-slate-300 hover:text-white hover:border-accent/40 transition-colors disabled:opacity-50"
+                    className="shell-hover-lift text-sm border border-border rounded-2xl px-3 py-2.5 text-slate-700 hover:text-slate-900 hover:border-accent/40 transition-colors disabled:opacity-50"
                   >
                     {savingMetadata ? "Saving..." : "Save Metadata"}
                   </button>
@@ -1930,7 +1915,7 @@ export default function HistoryPage() {
                     v ? (
                       <span key={k} className="text-xs text-slate-400">
                         <span className="text-slate-500 capitalize">{k}: </span>
-                        <span className="text-white/70">{String(v).slice(0, 80)}{String(v).length > 80 ? "…" : ""}</span>
+                        <span className="text-slate-700">{String(v).slice(0, 80)}{String(v).length > 80 ? "…" : ""}</span>
                       </span>
                     ) : null
                   )}
@@ -1947,7 +1932,7 @@ export default function HistoryPage() {
                 ) : (
                   <div className="flex flex-col h-full gap-3">
                     <textarea
-                      className="flex-1 w-full min-h-[400px] bg-transparent text-white text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder-muted"
+                      className="flex-1 w-full min-h-[400px] bg-transparent text-slate-900 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-400"
                       value={editingOutput}
                       onChange={(e) => setEditingOutput(e.target.value)}
                       placeholder="Edit your content here…"

@@ -15,6 +15,7 @@ import Link from "next/link";
 import type { ParsedToolOutput } from "@/lib/output-parsers";
 import type { HandoffAction } from "@/lib/handoff-registry";
 import { buildHandoffUrl } from "@/lib/handoff-registry";
+import { SectionCard } from "@/components/DashboardPrimitives";
 
 interface HandoffCardProps {
   parsedOutput: ParsedToolOutput;
@@ -30,17 +31,17 @@ export default function HandoffCard({
   const { title, summary, keywords } = parsedOutput;
 
   return (
-    <div className="mt-8 bg-card-alt border border-border rounded-xl p-6 flex flex-col gap-4 max-w-3xl shadow-card-elevated">
+    <SectionCard className="mt-8 p-6 flex flex-col gap-4 max-w-3xl shadow-card-elevated bg-card-alt">
       {/* Card header: title + summary */}
       <div className="flex flex-col gap-1">
         <span className="font-mono text-xs text-muted uppercase tracking-widest">
           Structured Result
         </span>
         {title && (
-          <p className="text-white text-sm font-medium leading-snug">{title}</p>
+          <p className="text-slate-900 text-sm font-medium leading-snug">{title}</p>
         )}
         {summary && (
-          <p className="text-slate-200 text-sm leading-relaxed">{summary}</p>
+          <p className="text-slate-600 text-sm leading-relaxed">{summary}</p>
         )}
       </div>
 
@@ -68,13 +69,13 @@ export default function HandoffCard({
             <Link
               key={action.targetSlug}
               href={buildHandoffUrl(action, fields, parsedOutput)}
-              className="font-mono text-xs px-2.5 py-1 rounded-md border border-accent/30 text-accent hover:text-white hover:border-accent/60 transition-colors"
+              className="font-mono text-xs px-2.5 py-1 rounded-md border border-accent/30 text-accent hover:text-accent-dim hover:border-accent/60 transition-colors"
             >
               {action.label} →
             </Link>
           ))}
         </div>
       )}
-    </div>
+    </SectionCard>
   );
 }

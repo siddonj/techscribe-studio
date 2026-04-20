@@ -19,32 +19,38 @@ const PHASE_TWO_PILLARS = [
 const QUICK_ACTIONS = [
   {
     href: "/calendar",
-    label: "Open Calendar",
-    title: "Schedule the next publishing run",
-    description: "Manage backlog, today, and later lanes from a single planning surface.",
+    label: "Calendar",
+    title: "Manage the editorial calendar",
+    description: "Plan backlog, schedule approved pieces, and keep publishing dates visible across the team.",
     icon: "🗓️",
   },
   {
     href: "/history",
-    label: "Review Output",
-    title: "Trace every generated draft",
-    description: "Search prior generations, relink drafts, and organize results for reuse.",
+    label: "History",
+    title: "Review content output",
+    description: "Inspect saved generations, reopen drafts, and organize content by folder or tag.",
     icon: "🕒",
   },
   {
     href: "/settings",
-    label: "Check Integrations",
-    title: "Verify publishing is live",
-    description: "Confirm WordPress credentials before the next publishing session.",
+    label: "Integrations",
+    title: "Verify WordPress publishing",
+    description: "Check credentials, confirm draft publishing, and keep the publishing pipeline ready.",
     icon: "⚙️",
   },
   {
     href: "/automation",
     label: "Automation",
-    title: "Review batch templates and runs",
-    description: "Track saved jobs, recent automation runs, and scheduler-ready payloads.",
+    title: "Track templates and run logs",
+    description: "Monitor reusable jobs, recent runs, and scheduler-ready automation payloads.",
     icon: "🤖",
   },
+];
+
+const DASHBOARD_METRICS = [
+  { label: "Tool Library", value: TOOLS.length, meta: "available workflows" },
+  { label: "Categories", value: getAllCategories().length, meta: "organized groups" },
+  { label: "Publishing", value: "Live", meta: "WordPress ready" },
 ];
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -64,45 +70,41 @@ export default function Dashboard() {
     <div className="p-5 md:p-8 max-w-7xl mx-auto space-y-8">
       <section className="shell-panel shell-hero-grid rounded-[2rem] p-6 md:p-8 overflow-hidden relative">
         <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
-        <div className="absolute bottom-0 right-16 h-28 w-28 rounded-full bg-white/5 blur-2xl" />
+        <div className="absolute bottom-0 right-16 h-28 w-28 rounded-full bg-slate-200/70 blur-2xl" />
 
         <div className="relative grid gap-8 xl:grid-cols-[1.2fr_0.8fr] items-start">
           <div>
             <div className="inline-flex items-center gap-2 shell-badge rounded-full px-3 py-1.5 text-[11px] font-mono tracking-[0.24em] uppercase text-accent">
-              Phase 2 Control Room
+              Editorial Workspace
             </div>
             <h1
               className="mt-5 text-4xl md:text-5xl text-white max-w-3xl leading-tight"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              Plan, generate, and publish from one editorial dashboard.
+              Run planning, content generation, and publishing from one CRM-style dashboard.
             </h1>
             <p className="mt-4 text-slate-300 text-base md:text-lg max-w-2xl leading-relaxed">
-              TechScribe Studio now behaves more like a live command center: queue planning on the left, action cards in the middle, and publishing readiness always visible.
+              The UI now follows the same visual language as ResiQ CRM: a structured sidebar, light canvas, clean cards, and teal-driven status cues that keep operations easy to scan.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 href="/calendar"
-                className="rounded-2xl bg-accent text-[#08100c] px-5 py-3 text-sm font-semibold hover:bg-accent-dim transition-colors"
+                className="rounded-2xl bg-accent text-white px-5 py-3 text-sm font-semibold hover:bg-accent-dim transition-colors"
               >
-                Open Editorial Queue
+                Open Calendar
               </Link>
               <Link
                 href="/history"
-                className="rounded-2xl border border-white/10 px-5 py-3 text-sm font-semibold text-white hover:border-accent/30 hover:text-accent transition-colors"
+                className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-900 hover:border-accent/30 hover:text-accent transition-colors"
               >
-                Review Recent Drafts
+                Review History
               </Link>
             </div>
           </div>
 
           <div className="grid sm:grid-cols-3 xl:grid-cols-1 gap-3">
-            {[
-              { label: "Tools", value: TOOLS.length, meta: "Ready" },
-              { label: "Categories", value: categories.length, meta: "Indexed" },
-              { label: "Publishing", value: "WP", meta: "Connected in settings" },
-            ].map((stat) => (
+            {DASHBOARD_METRICS.map((stat) => (
               <div key={stat.label} className="shell-stat-card rounded-3xl p-5">
                 <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500">{stat.label}</p>
                 <div className="mt-3 flex items-end justify-between gap-3">
@@ -120,10 +122,10 @@ export default function Dashboard() {
       <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <div className="shell-panel rounded-[2rem] p-6 md:p-7">
           <p className="font-mono text-[11px] text-accent uppercase tracking-[0.24em] mb-3">
-            Phase 2 Focus
+            Workspace Snapshot
           </p>
           <h2 className="text-2xl md:text-3xl text-white max-w-2xl" style={{ fontFamily: "var(--font-display)" }}>
-            The planner is no longer a side feature. It is the top-level route for shaping upcoming content, assigning the right tool, and controlling what gets pushed downstream.
+            The dashboard is organized like an operations hub: a consistent sidebar for navigation, action cards for core workflows, and clean overview panels that surface what needs attention next.
             </h2>
           <div className="mt-6 grid gap-3 md:grid-cols-3">
             {PHASE_TWO_PILLARS.map((pillar) => (
@@ -140,7 +142,7 @@ export default function Dashboard() {
             <Link
               key={action.href}
               href={action.href}
-              className="group shell-panel rounded-[1.75rem] p-5 hover:border-accent/30 transition-colors"
+              className="group shell-panel rounded-[1.75rem] p-5 shell-hover-lift transition-colors"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>

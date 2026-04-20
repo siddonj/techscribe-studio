@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { PageHeader, SectionCard, SurfaceNotice } from "@/components/DashboardPrimitives";
 
 interface AutomationTemplate {
   id: number;
@@ -48,7 +49,7 @@ function getRunStatusClass(status: AutomationRun["status"]) {
 }
 
 export default function AutomationPage() {
-  const inputClassName = "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-white placeholder-muted focus:outline-none transition-colors";
+  const inputClassName = "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-colors";
   const [templates, setTemplates] = useState<AutomationTemplate[]>([]);
   const [runs, setRuns] = useState<AutomationRun[]>([]);
   const [name, setName] = useState("");
@@ -153,29 +154,27 @@ export default function AutomationPage() {
 
   return (
     <div className="p-5 md:p-8 max-w-7xl mx-auto space-y-6">
-      <section className="shell-panel rounded-[2rem] p-6 md:p-8">
-        <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
-          <span>←</span>
-          <span>Back to dashboard</span>
-        </Link>
-        <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.24em] text-accent">Automation</p>
-        <h1 className="mt-3 text-3xl md:text-4xl text-white" style={{ fontFamily: "var(--font-display)" }}>
-          Saved batch templates and run history
-        </h1>
-        <p className="mt-3 text-slate-400 max-w-3xl leading-relaxed">
-          Store reusable batch payloads for external schedulers, then inspect the latest automation runs without digging through logs.
-        </p>
-      </section>
+      <PageHeader
+        eyebrow="Automation"
+        title="Saved batch templates and run history"
+        description="Store reusable batch payloads for external schedulers, then inspect the latest automation runs without digging through logs."
+        stats={[
+          { label: "Templates", value: templates.length, meta: "saved payload sets" },
+          { label: "Recent Runs", value: runs.length, meta: "latest executions" },
+          { label: "Composer", value: parsedJobs ? `${parsedJobs.length} jobs` : "Invalid JSON", meta: "current draft" },
+          { label: "State", value: loading ? "Loading" : "Ready", meta: "automation workspace" },
+        ]}
+      />
 
       {(error || message) && (
         <section className="space-y-2">
-          {error && <div className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</div>}
-          {message && <div className="text-green-300 text-sm bg-green-400/10 border border-green-400/20 rounded-lg px-3 py-2">{message}</div>}
+          {error && <SurfaceNotice tone="error">{error}</SurfaceNotice>}
+          {message && <SurfaceNotice tone="success">{message}</SurfaceNotice>}
         </section>
       )}
 
       <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="shell-panel rounded-[2rem] p-5 md:p-6 space-y-4">
+        <SectionCard className="p-5 md:p-6 space-y-4">
           <div>
             <p className="font-mono text-xs text-accent uppercase tracking-widest">New Template</p>
             <p className="text-sm text-slate-400 mt-1">Save a reusable jobs array for cron, CI, or MCP-driven calls.</p>
@@ -185,14 +184,14 @@ export default function AutomationPage() {
           <textarea className={`${inputClassName} resize-none font-mono text-xs`} rows={14} value={jobsText} onChange={(event) => setJobsText(event.target.value)} />
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-slate-500">{parsedJobs ? `${parsedJobs.length} jobs parsed` : "Invalid JSON"}</p>
-            <button onClick={handleSaveTemplate} disabled={saving || !name.trim() || !parsedJobs} className="bg-accent text-[#08100c] font-semibold px-4 py-2 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50">
+            <button onClick={handleSaveTemplate} disabled={saving || !name.trim() || !parsedJobs} className="bg-accent text-white font-semibold px-4 py-2 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50">
               {saving ? "Saving..." : "Save Template"}
             </button>
           </div>
-        </div>
+        </SectionCard>
 
         <div className="space-y-6">
-          <div className="shell-panel rounded-[2rem] p-5 md:p-6">
+          <SectionCard className="p-5 md:p-6">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
                 <p className="font-mono text-xs text-accent uppercase tracking-widest">Templates</p>
@@ -217,7 +216,7 @@ export default function AutomationPage() {
                         <p className="text-white font-medium">{template.name}</p>
                         {template.description && <p className="text-sm text-slate-400 mt-1">{template.description}</p>}
                       </div>
-                      <button onClick={() => void handleDeleteTemplate(template.id)} className="text-xs text-red-300/80 hover:text-red-200 transition-colors">Delete</button>
+                      <button onClick={() => void handleDeleteTemplate(template.id)} className="text-xs text-red-600/80 hover:text-red-700 transition-colors">Delete</button>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
                       <span>Template #{template.id}</span>
@@ -228,9 +227,9 @@ export default function AutomationPage() {
                 );
               })}
             </div>
-          </div>
+          </SectionCard>
 
-          <div className="shell-panel rounded-[2rem] p-5 md:p-6">
+          <SectionCard className="p-5 md:p-6">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
                 <p className="font-mono text-xs text-accent uppercase tracking-widest">Recent Runs</p>
@@ -257,7 +256,7 @@ export default function AutomationPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </SectionCard>
         </div>
       </section>
     </div>

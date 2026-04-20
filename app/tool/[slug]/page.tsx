@@ -8,6 +8,7 @@ import { getHandoffActions } from "@/lib/handoff-registry";
 import { parseToolOutput, ParsedToolOutput } from "@/lib/output-parsers";
 import HandoffCard from "@/components/HandoffCard";
 import AddKnowledgeModal, { ResearchItem } from "@/components/AddKnowledgeModal";
+import { EmptyState, PageHeader, StatusStrip } from "@/components/DashboardPrimitives";
 import type { PublishState, PublishFailureCategory } from "@/lib/publish-state";
 import {
   normalizePublishState,
@@ -146,7 +147,7 @@ function FieldInput({
   onChange: (v: string) => void;
 }) {
   const base =
-    "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-white placeholder-muted focus:outline-none transition-colors";
+    "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-colors";
 
   if (field.type === "textarea") {
     return (
@@ -257,7 +258,7 @@ export default function ToolPage() {
   type OutputTab = "article" | "editor";
   const [outputTab, setOutputTab] = useState<OutputTab>("article");
 
-  const editorTextareaClassName = "w-full h-full min-h-[400px] bg-transparent text-white text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder-muted";
+  const editorTextareaClassName = "w-full h-full min-h-[400px] bg-transparent text-slate-900 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-400";
 
   // Initialize field defaults
   useEffect(() => {
@@ -555,55 +556,27 @@ export default function ToolPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <div className="p-5 md:p-8 max-w-[1600px] mx-auto w-full flex-1 flex flex-col gap-6">
-        <section className="shell-panel rounded-[2rem] p-6 md:p-8 overflow-hidden relative">
-          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
-          <div className="relative grid gap-6 xl:grid-cols-[1.15fr_0.85fr] items-start">
-            <div>
-              <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors">
-                <span>←</span>
-                <span>Back to dashboard</span>
-              </Link>
-              <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.24em] text-accent">Writing Workflow</p>
-              <div className="mt-3 flex items-center gap-3">
-                <span className="text-3xl">{tool.icon}</span>
-                <div>
-                  <h1 className="text-3xl md:text-4xl text-white" style={{ fontFamily: "var(--font-display)" }}>
-                    {tool.name}
-                  </h1>
-                  <p className="text-slate-400 mt-2 max-w-2xl leading-relaxed">{tool.description}</p>
-                </div>
-              </div>
-            </div>
+        <PageHeader
+          eyebrow="Writing Workflow"
+          title={tool.name}
+          description={tool.description}
+          icon={tool.icon}
+          stats={[
+            { label: "Category", value: tool.category },
+            { label: "Workflow", value: isOutlineMode ? "Outline" : "Direct" },
+            { label: "Calendar", value: Number.isFinite(calendarId) ? "Linked" : "Standalone" },
+            { label: "Publish", value: publishAllowed ? "Enabled" : "Restricted" },
+          ]}
+        />
 
-            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-2 gap-3">
-              {[
-                { label: "Category", value: tool.category },
-                { label: "Workflow", value: isOutlineMode ? "Outline" : "Direct" },
-                { label: "Calendar", value: Number.isFinite(calendarId) ? "Linked" : "Standalone" },
-                { label: "Publish", value: publishAllowed ? "Enabled" : "Restricted" },
-              ].map((item) => (
-                <div key={item.label} className="shell-stat-card rounded-3xl px-4 py-4">
-                  <p className="font-mono text-[11px] text-slate-500 uppercase tracking-[0.18em]">{item.label}</p>
-                  <p className="text-lg text-white mt-2 leading-snug">{item.value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="shell-status-strip rounded-[1.5rem] p-4 md:p-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {[
+        <StatusStrip
+          items={[
             { label: "Stage", value: workflowStageLabel },
             { label: "Archive", value: saveStateLabel },
             { label: "Draft Publish", value: publishStateLabel },
             { label: "Output", value: output ? `${output.trim().split(/\s+/).filter(Boolean).length} words` : "Waiting for generation" },
-          ].map((item) => (
-            <div key={item.label} className="shell-status-pill rounded-2xl px-4 py-3">
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
-              <p className="text-sm text-white mt-2">{item.value}</p>
-            </div>
-          ))}
-        </section>
+          ]}
+        />
 
         <div className="flex flex-1 overflow-hidden gap-6 min-h-0">
           <aside className="w-96 shell-panel rounded-[2rem] p-6 flex flex-col gap-4 overflow-y-auto shrink-0">
@@ -637,7 +610,7 @@ export default function ToolPage() {
               <button
                 onClick={handleGenerateArticle}
                 disabled={loading}
-                className="w-full bg-accent text-[#08100c] font-semibold py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed pulse-glow mt-2"
+                className="w-full bg-accent text-white font-semibold py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed pulse-glow mt-2"
               >
                 {loading ? "Generating Article…" : "Generate Article ✦"}
               </button>
@@ -721,7 +694,7 @@ export default function ToolPage() {
               <button
                 onClick={handleGenerate}
                 disabled={loading}
-                className="w-full bg-accent text-[#08100c] font-semibold py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed pulse-glow mt-2"
+                className="w-full bg-accent text-white font-semibold py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50 disabled:cursor-not-allowed pulse-glow mt-2"
               >
                 {loading
                   ? isOutlineMode ? "Generating Outline…" : "Generating…"
@@ -908,17 +881,15 @@ export default function ToolPage() {
           >
             {!output && !loading && (
               <div className="flex flex-col items-center justify-center h-full text-center">
-                <div className="shell-panel-soft rounded-[2rem] px-8 py-10 max-w-lg mx-auto">
-                  <div className="text-5xl mb-4 opacity-30">{tool.icon}</div>
-                  <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent mb-3">Output Bay</p>
-                  <p className="text-slate-400 text-sm max-w-xs mx-auto">
-                  Fill in the fields and click{" "}
-                  <span className="text-accent">
-                    {isOutlineMode ? "Generate Outline" : "Generate"}
-                  </span>{" "}
-                  to see your content here.
-                  </p>
-                </div>
+                <EmptyState
+                  icon={tool.icon}
+                  eyebrow="Output Bay"
+                  description={
+                    <>
+                      Fill in the fields and click <span className="text-accent">{isOutlineMode ? "Generate Outline" : "Generate"}</span> to see your content here.
+                    </>
+                  }
+                />
               </div>
             )}
 

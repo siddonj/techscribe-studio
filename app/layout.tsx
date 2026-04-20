@@ -46,10 +46,10 @@ function Sidebar() {
 
   const navigationContent = (
     <>
-      <div className="px-5 pt-5 pb-4 border-b border-white/5 relative">
+      <div className="px-6 pt-6 pb-5 border-b border-white/10 relative">
         <Link href="/" className="block" onClick={closeMobile}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="h-11 w-11 rounded-2xl shell-panel-soft shell-glow-ring flex items-center justify-center text-accent">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-11 w-11 rounded-2xl bg-white/10 shell-glow-ring flex items-center justify-center text-accent">
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
@@ -64,13 +64,13 @@ function Sidebar() {
               </div>
             </div>
           </div>
-          <p className="text-sm text-slate-400 leading-relaxed max-w-[16rem]">
-            Editorial planning, generation, and publishing in one dark control room.
+          <p className="text-sm text-slate-300 leading-relaxed max-w-[16rem]">
+            Editorial operations workspace with a CRM-style shell, shared queue visibility, and publishing controls.
           </p>
         </Link>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-6 relative">
+      <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-6 relative">
         <div className="space-y-1.5">
           {PRIMARY_NAV.map((item) => {
             const Icon = item.icon;
@@ -82,25 +82,25 @@ function Sidebar() {
                 href={item.href}
                 onClick={closeMobile}
                 data-active={active}
-                className={`shell-nav-link flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition-all ${
+                className={`shell-nav-link flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
                   active
-                    ? "bg-white/5 text-white border border-accent/20"
-                    : "text-slate-400 border border-transparent hover:text-white hover:border-white/5 hover:bg-white/[0.03]"
+                    ? "bg-accent text-white border border-accent/30 shadow-[0_10px_24px_rgba(20,184,166,0.2)]"
+                    : "text-slate-300 border border-transparent hover:text-white hover:border-white/5 hover:bg-white/[0.03]"
                 }`}
               >
-                <Icon className={`h-4 w-4 ${active ? "text-accent" : "text-slate-500"}`} />
+                <Icon className={`h-4 w-4 ${active ? "text-white" : "text-slate-400"}`} />
                 <span className="relative z-10">{item.label}</span>
               </Link>
             );
           })}
         </div>
 
-        <div className="shell-panel-soft rounded-3xl p-3">
+        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-3">
           <div className="flex items-center justify-between px-2 pb-2">
-            <p className="text-[11px] font-mono tracking-[0.24em] uppercase text-slate-500">
+            <p className="text-[11px] font-mono tracking-[0.24em] uppercase text-slate-400">
               Tool Library
             </p>
-            <span className="text-[11px] text-slate-500">{TOOLS.length}</span>
+            <span className="text-[11px] text-slate-400">{TOOLS.length}</span>
           </div>
 
           <div className="space-y-1">
@@ -109,10 +109,10 @@ function Sidebar() {
               const isOpen = !collapsed[cat];
 
               return (
-                <div key={cat} className="rounded-2xl border border-white/[0.04] bg-black/10 overflow-hidden">
+                <div key={cat} className="rounded-2xl border border-white/[0.06] bg-black/10 overflow-hidden">
                   <button
                     onClick={() => toggle(cat)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-[11px] font-mono tracking-[0.18em] text-slate-400 hover:text-white uppercase transition-colors"
+                    className="w-full flex items-center justify-between px-4 py-3 text-[11px] font-mono tracking-[0.18em] text-slate-300 hover:text-white uppercase transition-colors"
                   >
                     <span className="flex items-center gap-2.5 min-w-0">
                       <span className="text-base shrink-0">{CATEGORY_ICONS[cat] || "🔧"}</span>
@@ -132,8 +132,8 @@ function Sidebar() {
                             onClick={closeMobile}
                             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
                               active
-                                ? "bg-accent/10 text-white border border-accent/15"
-                                : "text-slate-400 border border-transparent hover:text-white hover:bg-white/[0.04]"
+                                ? "bg-white/10 text-white border border-white/10"
+                                : "text-slate-300 border border-transparent hover:text-white hover:bg-white/[0.04]"
                             }`}
                           >
                             <span className="text-base leading-none">{tool.icon}</span>
@@ -151,13 +151,13 @@ function Sidebar() {
       </nav>
 
       <div className="px-4 pb-4 relative">
-        <div className="shell-panel-soft rounded-3xl p-4">
-          <p className="text-[11px] font-mono tracking-[0.22em] uppercase text-slate-500 mb-2">
-            Phase 2
+        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
+          <p className="text-[11px] font-mono tracking-[0.22em] uppercase text-slate-400 mb-2">
+            Workspace Status
           </p>
-          <p className="text-sm text-white mb-1">Planning Layer Active</p>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Calendar scheduling, WordPress draft sync, and tool handoff are all wired into the same workflow.
+          <p className="text-sm text-white mb-1">Publishing pipeline online</p>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Calendar scheduling, WordPress sync, and tool handoff all stay visible from the same dashboard shell.
           </p>
         </div>
       </div>
@@ -166,20 +166,20 @@ function Sidebar() {
 
   return (
     <>
-      <div className="lg:hidden fixed top-0 inset-x-0 z-40 border-b border-white/5 bg-[#0d1511]/90 backdrop-blur-xl">
+      <div className="lg:hidden fixed top-0 inset-x-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center gap-3" onClick={closeMobile}>
-            <div className="h-10 w-10 rounded-2xl shell-panel-soft flex items-center justify-center text-accent">
+            <div className="h-10 w-10 rounded-2xl bg-slate-900 flex items-center justify-center text-accent">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
               <div className="text-[10px] uppercase tracking-[0.24em] text-accent font-mono">TechScribe</div>
-              <div className="text-white font-semibold" style={{ fontFamily: "var(--font-display)" }}>Studio</div>
+              <div className="text-slate-900 font-semibold" style={{ fontFamily: "var(--font-display)" }}>Studio</div>
             </div>
           </Link>
           <button
             onClick={() => setMobileOpen((current) => !current)}
-            className="h-10 w-10 rounded-2xl shell-panel-soft text-slate-300 flex items-center justify-center"
+            className="h-10 w-10 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 flex items-center justify-center"
             aria-label="Toggle navigation"
           >
             {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -192,7 +192,7 @@ function Sidebar() {
       </aside>
 
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-30 bg-black/55 backdrop-blur-sm" onClick={closeMobile}>
+        <div className="lg:hidden fixed inset-0 z-30 bg-slate-950/45 backdrop-blur-sm" onClick={closeMobile}>
           <aside
             className="shell-sidebar relative w-[88vw] max-w-sm min-h-screen flex flex-col"
             onClick={(event) => event.stopPropagation()}
@@ -214,7 +214,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="app-shell flex min-h-screen">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto pt-16 lg:pt-0">{children}</main>
+        <main className="shell-main flex-1 overflow-y-auto pt-16 lg:pt-0">{children}</main>
       </body>
     </html>
   );
