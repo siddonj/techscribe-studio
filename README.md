@@ -690,21 +690,8 @@ Sprint 4 exit criteria:
 
 ### Backlog After Phase 2 Core
 
-<<<<<<< HEAD
-- Richer weekly board or month-grid calendar views
+- Month-grid calendar view
 - Richer publishing workflows beyond draft creation
-=======
-- Scheduled or automated generation jobs
-- External keyword research integrations
-- YouTube-to-blog workflows
-
-### Recommended Delivery Order
-
-- Shared handoff framework
-- Calendar workspace expansion
-- Publishing workflow expansion
-- Deployment and operations hardening
->>>>>>> ee57193 (Approved)
 
 ## License
 
