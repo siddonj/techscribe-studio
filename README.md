@@ -4,7 +4,7 @@ TechScribe Studio is a self-hosted AI writing workspace for content teams, solo 
 
 Built with Next.js, Claude, and SQLite, it packages a broad tool library for blog writing, idea generation, SEO support, rewriting, social content, email copy, video workflows, and editorial planning into a single local-first application.
 
-Phase 1 is complete, the Phase 2 planning layer is in place, and the first Phase 3 operations layer now sits on top of it. The product covers the core content loop end to end: plan, generate, refine, save, organize, review, automate, and publish drafts to WordPress from one interface.
+Phase 1 and Phase 2 are complete. The product covers the core content loop end to end: plan, generate, refine, save, organize, review, automate, and publish drafts to WordPress from one interface.
 
 The current UI uses a darker control-room shell with a persistent tool sidebar, workflow status strips, and linked planning surfaces so the app feels closer to a live editorial system than a loose collection of individual generators.
 
@@ -613,85 +613,23 @@ jobs:
 
 ## Phase 2 Status
 
-Completed so far in Phase 2:
+Phase 2 is complete. All four sprints shipped:
 
 - Content calendar planning and scheduling flow
 - Tool prefill handoff from calendar items into generation pages
 - Calendar-to-history linkage when planned drafts are saved
 - Calendar sync when linked WordPress drafts are created or updated
 - WordPress planning metadata on calendar items, including target category, tags, and publish intent
-- Production deployment hardening and operational documentation ([docs/operations.md](docs/operations.md))
 - YouTube-to-blog workflow — convert any video transcript or description into a full blog post with the outline-first option; blog planning handoffs (Headline Generator, Outline Generator, Content Calendar) let the generated post title drive downstream planning without re-entering the topic
 - External keyword research inputs — Keyword Research Brief tool accepts Ahrefs/SEMrush/Google Keyword Planner data and produces actionable content briefs; briefs now forward researched keywords to Article Writer and Outline Generator, and a "Plan in Calendar" handoff lets users queue the planned content directly from the brief result
 - Automated generation API — `POST /api/generate/batch` endpoint for scheduler-driven content jobs (requires `BATCH_API_SECRET`); supports optional history persistence, content calendar linkage, folder, and tag assignment per job — see [docs/automation.md](docs/automation.md) for full requirements and design
+- Calendar workspace expansion — list and week views, unscheduled backlog lane, inline quick rescheduling, and shared filters across both views
+- Publishing workflow expansion — five-state publish model (draft linked, draft updated, scheduled, published live, publish failed), editable WordPress metadata (slug, excerpt, categories, tags), bulk retry for failed publishes, and WordPress-owned scheduling model
+- Deployment and operations hardening — deployment guide, operations and recovery notes, backup and persistence documentation, and smoke-test checklist (see [docs/](docs/))
 
-## Phase 2 Implementation Roadmap
-
-### Sprint 1: Structured Handoffs
-
-Goal: turn the current Blog Post Ideas handoff into a reusable workflow system.
-
-- Ticket 1: create a structured handoff registry so upstream tools and downstream targets are configured in one place
-- Ticket 2: extract reusable parsing utilities so structured results are normalized outside the page UI
-- Ticket 3: build a shared handoff card UI for parsed results and downstream actions
-- Ticket 4: add a second supported handoff, with Outline Generator to Article Writer as the recommended next path
-- Ticket 5: document supported handoffs in the README
-
-Sprint 1 exit criteria:
-
-- At least 3 total handoff paths are live
-- Parsed results use shared registry and parser logic
-- Raw output still renders as a fallback when parsing fails
-
-### Sprint 2: Calendar Workspace Expansion
-
-Goal: upgrade planning from a queue view into a true calendar workspace.
-
-- Ticket 1: add planner view modes so list and week views can coexist
-- Ticket 2: implement a weekly board layout with day columns and an unscheduled backlog lane
-- Ticket 3: add quick rescheduling interactions so items can move without opening each card in the editor
-- Ticket 4: add shared planner filters that work consistently across all planner views
-
-Sprint 2 exit criteria:
-
-- The planner supports at least list and week modes
-- Rescheduling works faster than manual per-item editing
-- Filters and summary counts stay consistent across views
-
-### Sprint 3: Publishing Workflow Expansion
-
-Goal: turn draft sync into a fuller publishing workflow.
-
-- Ticket 1: define a richer publishing state model across tool, calendar, and history views
-- Ticket 2: expand editable publish metadata such as slug, excerpt, categories, and tags
-- Ticket 3: add retry and recovery UX for WordPress publish failures
-- Ticket 4: decide whether publish scheduling is controlled in-app or remains WordPress-owned, then implement that model clearly
-
-Sprint 3 exit criteria:
-
-- Publishing state is visible across the main workflow surfaces
-- Failed publish attempts are retryable without re-generation
-- The scheduling model is explicit in the product and docs
-
-### Sprint 4: Deployment and Operations Hardening
-
-Goal: make the app easier to deploy and run as a real self-hosted service.
-
-- Ticket 1: write a deployment guide covering local development, production build, persistence, and secrets
-- Ticket 2: add operations and recovery notes for common failures such as missing env vars, SQLite persistence issues, and WordPress connection errors
-- Ticket 3: define backup and persistence expectations for the SQLite data directory
-- Ticket 4: add a short manual smoke-test checklist for the critical product path
-
-Sprint 4 exit criteria:
-
-- A new operator can deploy the app without reading implementation code
-- Persistence and recovery expectations are documented clearly
-- The critical workflow can be validated quickly before release
-
-### Backlog After Phase 2 Core
+## Backlog
 
 - Month-grid calendar view
-- Richer publishing workflows beyond draft creation
 
 ## License
 
