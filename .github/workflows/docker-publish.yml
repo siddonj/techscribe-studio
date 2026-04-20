@@ -24,7 +24,9 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci
+        # --legacy-peer-deps: next-auth@4 requires nodemailer@^7 but nodemailer@8+
+        # fixes a low-severity SMTP advisory. v7 is the highest compatible version.
+        run: npm ci --legacy-peer-deps
 
       - name: Lint
         run: npm run lint
