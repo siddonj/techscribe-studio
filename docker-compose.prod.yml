@@ -1,0 +1,76 @@
+# Production docker-compose for VPS + Traefik reverse proxy.
+#
+# Prerequisites on the VPS:
+#   - Traefik running with an HTTPS entrypoint named "websecure"
+#     and a Let's Encrypt cert resolver named "letsencrypt"
+#   - A Docker network named "traefik-public" shared with Traefik
+#   - A .env file with all required variables (see .env.local.example)
+#   - docker compose --env-file .env -f docker-compose.prod.yml up -d
+#
+# Replace "techscribe.example.com" with your actual domain.
+
+services:
+  techscribe-studio:
+    image: ghcr.io/${GITHUB_REPOSITORY:-siddonj/techscribe-studio}:latest
+    restart: unless-stopped
+    networks:
+      - traefik-public
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      WORDPRESS_SITE_URL: ${WORDPRESS_SITE_URL}
+      WORDPRESS_USERNAME: ${WORDPRESS_USERNAME}
+      WORDPRESS_APP_PASSWORD: ${WORDPRESS_APP_PASSWORD}
+      BATCH_API_SECRET: ${BATCH_API_SECRET}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+    volumes:
+      - techscribe-data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get({path:'/api/health',port:3000,timeout:8000},(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      # ── HTTP → HTTPS redirect ──────────────────────────────────────────────
+      - "traefik.http.routers.techscribe-http.rule=Host(`${DOMAIN:-techscribe.example.com}`)"
+      - "traefik.http.routers.techscribe-http.entrypoints=web"
+      - "traefik.http.routers.techscribe-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      # ── HTTPS router ───────────────────────────────────────────────────────
+      - "traefik.http.routers.techscribe.rule=Host(`${DOMAIN:-techscribe.example.com}`)"
+      - "traefik.http.routers.techscribe.entrypoints=websecure"
+      - "traefik.http.routers.techscribe.tls=true"
+      - "traefik.http.routers.techscribe.tls.certresolver=letsencrypt"
+      # ── Service ────────────────────────────────────────────────────────────
+      - "traefik.http.services.techscribe.loadbalancer.server.port=3000"
+      # Disable Traefik response buffering so streaming generation works
+      - "traefik.http.middlewares.techscribe-buffering.buffering.maxResponseBodyBytes=0"
+      - "traefik.http.routers.techscribe.middlewares=techscribe-buffering"
+
+networks:
+  traefik-public:
+    external: true
+
+volumes:
+  techscribe-data:

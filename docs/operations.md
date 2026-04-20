@@ -113,6 +113,29 @@ Open `http://localhost:3000` (or your configured port) in a browser. The dashboa
 
 ---
 
+## 2A. Docker Deployment (Recommended for production)
+
+TechScribe Studio is stateful. Ensure the SQLite database is backed by a persistent volume mounted at `/app/data`.
+
+1. Create a `.env` file in the project root with the required environment variables (same values as `.env.local`).
+2. Build and run with Docker Compose:
+
+```bash
+docker compose up -d --build
+```
+
+3. Check logs if needed:
+
+```bash
+docker compose logs -f
+```
+
+4. Verify the UI at `http://localhost:3000`.
+
+The provided `docker-compose.yml` creates a named volume `techscribe-data` mapped to `/app/data`. For backup guidance, see **[Data Persistence and Backup](data-persistence.md)**.
+
+---
+
 ## 3. Environment Configuration Reference
 
 | Variable | Required | Description |

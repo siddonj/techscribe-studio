@@ -184,6 +184,81 @@ npm run dev
 
 Then open http://localhost:3000.
 
+## Docker (Production)
+
+TechScribe Studio ships a production-grade Docker setup. The SQLite database must live on a persistent volume — all user data lives in `data/history.db`.
+
+### Quick start (local/testing)
+
+```bash
+cp .env.local.example .env
+# edit .env with your keys
+docker compose up -d --build
+```
+
+Open http://localhost:3000.
+
+### Deploying to a VPS with Traefik
+
+This is the recommended production setup. The GHCR image is built and pushed automatically by GitHub Actions on every push to `main`.
+
+**On your VPS:**
+
+```bash
+# 1. Clone the repo (for compose files and docs only)
+git clone https://github.com/siddonj/techscribe-studio.git
+cd techscribe-studio
+
+# 2. Create the environment file
+cp .env.local.example .env
+# Edit .env — set all required variables and your production DOMAIN
+nano .env
+
+# 3. Create the shared Traefik network (if it doesn't exist yet)
+docker network create traefik-public
+
+# 4. Pull the latest image and start
+docker compose -f docker-compose.prod.yml up -d
+
+# 5. Check health
+docker compose -f docker-compose.prod.yml ps
+curl https://yourdomain.com/api/health
+```
+
+**Updating to a new version:**
+
+```bash
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### GitHub Actions CI/CD
+
+On every push to `main`:
+- Lints and builds the app
+- Builds a multi-stage Docker image
+- Pushes `latest` and a `sha-*` tag to `ghcr.io/siddonj/techscribe-studio`
+
+No secrets need to be configured — the workflow uses the default `GITHUB_TOKEN` for GHCR access.
+
+### Environment variables
+
+Copy `.env.local.example` to `.env` and fill in at minimum:
+
+| Variable | Required | Notes |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | **Yes** | All generation fails without this |
+| `NEXTAUTH_SECRET` | **Yes** | `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | **Yes** | Your public URL (`https://yourdomain.com`) |
+| `GOOGLE_CLIENT_ID` | **Yes** | Google OAuth app credentials |
+| `GOOGLE_CLIENT_SECRET` | **Yes** | Google OAuth app credentials |
+| `DOMAIN` | Prod only | Your domain for Traefik routing |
+| `BATCH_API_SECRET` | Optional | Enables the batch generation API |
+| `WORDPRESS_*` | Optional | WordPress publishing fallback credentials |
+| `SMTP_*` / `ADMIN_EMAIL` | Optional | Email notifications for user sign-ups |
+
+For full operations, backup, and recovery documentation, see **[docs/operations.md](docs/operations.md)**.
+
 ## MCP Server
 
 TechScribe Studio ships a built-in [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that lets AI assistants like **Claude Desktop**, **Cursor**, and other MCP clients interact with the app directly.

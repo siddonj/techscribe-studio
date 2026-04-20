@@ -294,17 +294,16 @@ Platforms that do not provide persistent storage by default (Docker without a na
 
 ### Docker
 
-Mount a named or bind-mount volume at the project root's `data/` path:
+Mount a named or bind-mount volume at the project root's `data/` path. The included `docker-compose.yml` already does this:
 
 ```yaml
 services:
   techscribe-studio:
-    image: your-image
     volumes:
-      - /persistent/techscribe/data:/app/data
-    environment:
-      - NODE_ENV=production
-      - ANTHROPIC_API_KEY=sk-ant-YOUR_KEY_HERE
+      - techscribe-data:/app/data
+
+volumes:
+  techscribe-data:
 ```
 
 Confirm the volume is writable before starting the app:

@@ -1755,3 +1755,13 @@ export function updateUserStatus(id: number, status: UserStatus, approvedBy: str
 export function updateUserRole(id: number, role: UserRole): void {
   getDb().prepare("UPDATE users SET role = ? WHERE id = ?").run(role, id);
 }
+
+/** Returns true if the database is accessible and queryable. */
+export function checkDbHealth(): boolean {
+  try {
+    getDb().prepare("SELECT 1").get();
+    return true;
+  } catch {
+    return false;
+  }
+}

@@ -41,3 +41,6 @@ data/*.db
 data/*.db-shm
 data/*.db-wal
 techscribe-studio.zip
+
+# SQLite backups (keep locally, never commit)
+backups/

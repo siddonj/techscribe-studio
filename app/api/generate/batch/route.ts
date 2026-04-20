@@ -58,6 +58,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { getToolBySlug } from "@/lib/tools";
+import { rateLimit, getRequestIp } from "@/lib/rate-limit";
 import {
   createAutomationRun,
   getAutomationTemplateById,
@@ -249,6 +250,14 @@ async function runJob(job: BatchJob): Promise<BatchJobResult> {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = getRequestIp(req.headers);
+  if (!rateLimit(`batch:${ip}`, 10, 5 * 60_000)) {
+    return NextResponse.json(
+      { error: "Too many batch requests. Limit is 10 per 5 minutes." },
+      { status: 429, headers: { "Retry-After": "300" } }
+    );
+  }
+
   // Require BATCH_API_SECRET to be configured; disable endpoint if not set.
   const secret = process.env.BATCH_API_SECRET;
   if (!secret) {
