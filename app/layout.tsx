@@ -4,6 +4,7 @@ import "./globals.css";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useSession, signOut, SessionProvider } from "next-auth/react";
 import {
   BarChart3,
   CalendarRange,
@@ -12,9 +13,11 @@ import {
   HelpCircle,
   History,
   Home,
+  LogOut,
   Menu,
   Settings,
   Sparkles,
+  Users,
   X,
 } from "lucide-react";
 import { TOOLS, getAllCategories } from "@/lib/tools";
@@ -37,6 +40,54 @@ const PRIMARY_NAV = [
   { href: "/help", label: "Help & Docs", icon: HelpCircle },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
+
+function SidebarUserCard() {
+  const { data: session } = useSession();
+  const user = session?.user;
+  const isAdmin = (user as Record<string, unknown> | undefined)?.role === "admin";
+
+  if (!user) return null;
+
+  return (
+    <div className="px-4 pb-4 relative">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-3 space-y-3">
+        <div className="flex items-center gap-3 min-w-0">
+          {user.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.image} alt="" className="h-9 w-9 rounded-full border border-white/20 shrink-0" />
+          ) : (
+            <div className="h-9 w-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-sm font-semibold text-white shrink-0">
+              {(user.name ?? user.email ?? "?").slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-white truncate">{user.name ?? "User"}</p>
+            <p className="text-xs text-slate-400 truncate">{user.email}</p>
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          {isAdmin && (
+            <Link
+              href="/admin/users"
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-white/10 py-1.5 text-xs text-slate-300 hover:text-white hover:border-white/20 transition-colors"
+            >
+              <Users className="h-3 w-3" />
+              Users
+            </Link>
+          )}
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-white/10 py-1.5 text-xs text-slate-300 hover:text-white hover:border-white/20 transition-colors"
+          >
+            <LogOut className="h-3 w-3" />
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Sidebar() {
   const pathname = usePathname();
@@ -154,17 +205,7 @@ function Sidebar() {
         </div>
       </nav>
 
-      <div className="px-4 pb-4 relative">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-          <p className="text-[11px] font-mono tracking-[0.22em] uppercase text-slate-400 mb-2">
-            Workspace Status
-          </p>
-          <p className="text-sm text-white mb-1">Publishing pipeline online</p>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            Calendar scheduling, WordPress sync, and tool handoff all stay visible from the same dashboard shell.
-          </p>
-        </div>
-      </div>
+      <SidebarUserCard />
     </>
   );
 
@@ -217,8 +258,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="app-shell flex min-h-screen">
-        <Sidebar />
-        <main className="shell-main flex-1 overflow-y-auto pt-16 lg:pt-0">{children}</main>
+        <SessionProvider>
+          <Sidebar />
+          <main className="shell-main flex-1 overflow-y-auto pt-16 lg:pt-0">{children}</main>
+        </SessionProvider>
       </body>
     </html>
   );

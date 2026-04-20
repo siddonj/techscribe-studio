@@ -234,6 +234,23 @@ function normalizeHistoryRow(row: HistoryRowRaw | undefined): HistoryRow | undef
   };
 }
 
+function ensureUsersSchema(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      google_id   TEXT UNIQUE NOT NULL,
+      email       TEXT UNIQUE NOT NULL,
+      name        TEXT,
+      avatar      TEXT,
+      status      TEXT NOT NULL DEFAULT 'pending',
+      role        TEXT NOT NULL DEFAULT 'user',
+      created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+      approved_at TEXT,
+      approved_by TEXT
+    );
+  `);
+}
+
 function ensureAutomationSchema(db: Database.Database) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS automation_templates (
@@ -515,7 +532,8 @@ function getDb(): Database.Database {
     ensureHistorySchema(_db);
     ensureSettingsSchema(_db);
     ensureCalendarSchema(_db);
-      ensureAutomationSchema(_db);
+    ensureAutomationSchema(_db);
+    ensureUsersSchema(_db);
   }
   return _db;
 }
@@ -1665,4 +1683,75 @@ export function normalizeCalendarApprovalStatus(value: string | null | undefined
   }
 
   return "not_requested";
+}
+
+// ── USERS ────────────────────────────────────────────────────────────────────
+
+export type UserStatus = "pending" | "approved" | "rejected";
+export type UserRole = "admin" | "user";
+
+export interface UserRow {
+  id: number;
+  google_id: string;
+  email: string;
+  name: string | null;
+  avatar: string | null;
+  status: UserStatus;
+  role: UserRole;
+  created_at: string;
+  approved_at: string | null;
+  approved_by: string | null;
+}
+
+export function upsertUser(data: {
+  google_id: string;
+  email: string;
+  name: string | null;
+  avatar: string | null;
+}): void {
+  const db = getDb();
+  const userCount = (db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number }).count;
+  const isFirst = userCount === 0;
+
+  db.prepare(`
+    INSERT INTO users (google_id, email, name, avatar, status, role)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(google_id) DO UPDATE SET
+      email  = excluded.email,
+      name   = excluded.name,
+      avatar = excluded.avatar
+  `).run(
+    data.google_id,
+    data.email,
+    data.name,
+    data.avatar,
+    isFirst ? "approved" : "pending",
+    isFirst ? "admin" : "user",
+  );
+}
+
+export function getUserByGoogleId(google_id: string): UserRow | undefined {
+  return getDb()
+    .prepare("SELECT * FROM users WHERE google_id = ?")
+    .get(google_id) as UserRow | undefined;
+}
+
+export function listUsers(): UserRow[] {
+  return getDb()
+    .prepare("SELECT * FROM users ORDER BY created_at DESC")
+    .all() as UserRow[];
+}
+
+export function updateUserStatus(id: number, status: UserStatus, approvedBy: string | null): void {
+  getDb().prepare(`
+    UPDATE users
+    SET status      = ?,
+        approved_at = CASE WHEN ? = 'approved' THEN datetime('now') ELSE approved_at END,
+        approved_by = CASE WHEN ? = 'approved' THEN ? ELSE approved_by END
+    WHERE id = ?
+  `).run(status, status, status, approvedBy, id);
+}
+
+export function updateUserRole(id: number, role: UserRole): void {
+  getDb().prepare("UPDATE users SET role = ? WHERE id = ?").run(role, id);
 }
