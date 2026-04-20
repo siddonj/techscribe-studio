@@ -1295,7 +1295,7 @@ export default function CalendarPage() {
                         value={editorDraft.scheduled_for}
                         onChange={(event) => setEditorDraft((current) => current ? { ...current, scheduled_for: event.target.value } : current)}
                       />
-                      <p className="text-xs text-muted/60 mt-1">Editorial planning date. Also used as the WordPress publish date when publish intent is set to "Schedule". Publishing is always triggered manually.</p>
+                      <p className="text-xs text-muted/60 mt-1">Editorial planning date. Also used as the WordPress publish date when publish intent is set to &ldquo;Schedule&rdquo;. Publishing is always triggered manually.</p>
                     </div>
                     <div>
                       <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Review Due</label>

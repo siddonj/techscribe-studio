@@ -229,7 +229,7 @@ export default function HelpDrawer({
             <section className="rounded-xl border border-accent/20 bg-accent/5 p-3">
               <p className="text-xs font-semibold text-accent mb-1">Research inputs supported</p>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Use "+ Add Knowledge" in the Input Studio to paste in reference material, competitor content, or raw research. The AI incorporates it into the output.
+                Use &ldquo;+ Add Knowledge&rdquo; in the Input Studio to paste in reference material, competitor content, or raw research. The AI incorporates it into the output.
               </p>
             </section>
           )}
