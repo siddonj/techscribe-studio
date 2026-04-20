@@ -9,6 +9,7 @@ import {
   CalendarRange,
   ChevronDown,
   ChevronRight,
+  HelpCircle,
   History,
   Home,
   Menu,
@@ -33,6 +34,7 @@ const PRIMARY_NAV = [
   { href: "/seo", label: "SEO Workspace", icon: BarChart3 },
   { href: "/history", label: "History", icon: History },
   { href: "/calendar", label: "Calendar", icon: CalendarRange },
+  { href: "/help", label: "Help & Docs", icon: HelpCircle },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

@@ -9,6 +9,7 @@ import { parseToolOutput, ParsedToolOutput } from "@/lib/output-parsers";
 import HandoffCard from "@/components/HandoffCard";
 import AddKnowledgeModal, { ResearchItem } from "@/components/AddKnowledgeModal";
 import { EmptyState, PageHeader, StatusStrip } from "@/components/DashboardPrimitives";
+import HelpDrawer from "@/components/HelpDrawer";
 import type { PublishState, PublishFailureCategory } from "@/lib/publish-state";
 import {
   normalizePublishState,
@@ -253,6 +254,7 @@ function ToolPageContent() {
   // Research / knowledge sources state
   const [researchItems, setResearchItems] = useState<ResearchItem[]>([]);
   const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Output tab state (ARTICLE = rendered, EDITOR = editable textarea)
   type OutputTab = "article" | "editor";
@@ -581,7 +583,17 @@ function ToolPageContent() {
         <div className="flex flex-1 overflow-hidden gap-6 min-h-0">
           <aside className="w-96 shell-panel rounded-[2rem] p-6 flex flex-col gap-4 overflow-y-auto shrink-0">
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent mb-2">Input Studio</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">Input Studio</p>
+                <button
+                  onClick={() => setHelpOpen(true)}
+                  className="h-6 w-6 rounded-lg border border-border flex items-center justify-center text-muted hover:text-slate-900 hover:border-accent/40 transition-colors"
+                  aria-label="Open help"
+                  title="Help for this tool"
+                >
+                  <span className="text-xs font-mono leading-none">?</span>
+                </button>
+              </div>
               <p className="text-slate-400 text-sm mb-6">Shape the brief, tone, and constraints before you generate.</p>
               {Number.isFinite(calendarId) && (
                 <div className="shell-panel-soft rounded-2xl px-4 py-3 text-sm mb-4">
@@ -1008,6 +1020,12 @@ function ToolPageContent() {
           onAdd={(item) => setResearchItems((prev) => [...prev, item])}
         />
       )}
+
+      <HelpDrawer
+        tool={tool}
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+      />
     </div>
   );
 }
