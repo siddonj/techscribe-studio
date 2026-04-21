@@ -106,9 +106,10 @@ export async function POST(req: NextRequest) {
     if (includePhotos) {
       userPrompt +=
         "\n\nPhoto instructions: Embed 3–5 relevant royalty-free photos throughout the article at natural break points between sections. " +
-        "For each photo use this exact Markdown format on its own line:\n" +
-        "![{Descriptive alt text} — Photo via Unsplash](https://source.unsplash.com/featured/1200x628/?{relevant-keyword})\n" +
-        "Choose a specific, descriptive search keyword (no spaces — use hyphens) that will return highly relevant images for the surrounding content. " +
+        "For each photo use this exact Markdown format on its own line (replace the bracketed parts with real content):\n" +
+        "![A descriptive caption explaining what the photo shows — Photo via Unsplash](https://source.unsplash.com/featured/1200x628/?actual-keyword)\n" +
+        "For the URL, replace 'actual-keyword' with a specific, descriptive search term (use hyphens between words, no spaces) that will return highly relevant images for the surrounding content. " +
+        "Example: for a section about JavaScript performance, use 'javascript-code' or 'web-performance'. " +
         "Do not cluster photos together; spread them evenly across the article.";
     }
 

@@ -47,7 +47,7 @@ function renderMarkdown(text: string): string {
     .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
     .replace(/<\/ul>\s*<ul>/g, '')
     .replace(/\n\n/g, '</p><p>')
-    .replace(/^(?!<[hupol]|<\/[hupol]|<li|<hr|<fi)(.+)$/gm, (m) =>
+    .replace(/^(?!<[hupol]|<\/[hupol]|<li|<hr|<figure)(.+)$/gm, (m) =>
       m.startsWith('<') ? m : `<p>${m}</p>`)
     .replace(/<p><\/p>/g, '');
 }
