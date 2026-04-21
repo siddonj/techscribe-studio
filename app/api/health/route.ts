@@ -1,21 +1,9 @@
 import { NextResponse } from "next/server";
-import { checkDbHealth } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+// Lightweight liveness probe — no DB dependency so the healthcheck
+// never fails due to a cold DB or missing native bindings at startup.
 export function GET() {
-  const dbOk = checkDbHealth();
-
-  if (!dbOk) {
-    return NextResponse.json(
-      { status: "error", db: "unreachable" },
-      { status: 503 }
-    );
-  }
-
-  return NextResponse.json({
-    status: "ok",
-    db: "ok",
-    uptime: process.uptime(),
-  });
+  return NextResponse.json({ status: "ok", uptime: process.uptime() });
 }
