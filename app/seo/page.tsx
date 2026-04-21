@@ -20,7 +20,34 @@ interface SeoAnalyzeResponse {
     weight: number;
   }>;
   suggestions: string[];
+  wordCount?: number;
   analyzedAt: string;
+}
+
+function scoreLabel(score: number): string {
+  if (score >= 85) return "Excellent";
+  if (score >= 65) return "Good";
+  if (score >= 40) return "Fair";
+  return "Needs Work";
+}
+
+function scoreColorClass(score: number): string {
+  if (score >= 85) return "text-emerald-500";
+  if (score >= 65) return "text-teal-400";
+  if (score >= 40) return "text-amber-500";
+  return "text-red-500";
+}
+
+function scoreBgBarClass(score: number): string {
+  if (score >= 85) return "bg-emerald-500";
+  if (score >= 65) return "bg-teal-400";
+  if (score >= 40) return "bg-amber-500";
+  return "bg-red-500";
+}
+
+function estimateReadingTime(wordCount: number): string {
+  const minutes = Math.ceil(wordCount / 200);
+  return minutes === 1 ? "1 min read" : `${minutes} min read`;
 }
 
 const WORKFLOW_STAGES = ["Idea", "Drafting", "Optimization", "Review", "Ready to Publish"];
@@ -68,6 +95,13 @@ function SeoWorkspacePageContent() {
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [copyLabel, setCopyLabel] = useState("Copy Report");
+
+  useEffect(() => {
+    if (!saveMessage) return;
+    const timer = setTimeout(() => setSaveMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [saveMessage]);
 
   useEffect(() => {
     const load = async () => {
@@ -248,6 +282,36 @@ function SeoWorkspacePageContent() {
     }
   };
 
+  const handleCopyReport = async () => {
+    if (!selectedRow || !analysis) return;
+
+    const passing = analysis.checks.filter((c) => c.passed);
+    const failing = analysis.checks.filter((c) => !c.passed);
+
+    const lines = [
+      `SEO Report — ${selectedRow.title}`,
+      `Score: ${analysis.score}/100 (${scoreLabel(analysis.score)})`,
+      `Keyword: ${focusKeyword || "Not set"}`,
+      `Word Count: ${analysis.wordCount ?? selectedRow.word_count ?? "—"}`,
+      `Analyzed: ${formatDate(analysis.analyzedAt)}`,
+      "",
+      `✅ Passing (${passing.length})`,
+      ...passing.map((c) => `  • ${c.label}`),
+      "",
+      `⚠️ Needs Work (${failing.length})`,
+      ...failing.map((c) => `  • ${c.label}: ${c.detail}`),
+    ];
+
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      setCopyLabel("Copied!");
+      setTimeout(() => setCopyLabel("Copy Report"), 2000);
+    } catch {
+      setCopyLabel("Copy failed");
+      setTimeout(() => setCopyLabel("Copy Report"), 2000);
+    }
+  };
+
   return (
     <div className="p-5 md:p-8 max-w-7xl mx-auto space-y-6">
       <PageHeader
@@ -257,6 +321,7 @@ function SeoWorkspacePageContent() {
         stats={[
           { label: "Analyzable Drafts", value: rows.length, meta: "history entries" },
           { label: "Workflow Presets", value: WORKFLOW_PRESETS.length, meta: "guided flows" },
+          { label: "SEO Score", value: analysis ? `${analysis.score}/100` : selectedRow?.seo_score != null ? `${selectedRow.seo_score}/100` : "—", meta: "current draft" },
           { label: "Focus", value: selectedRow ? "Active" : "Idle", meta: "workspace state" },
         ]}
       />
@@ -264,7 +329,7 @@ function SeoWorkspacePageContent() {
       <StatusStrip
         items={[
           { label: "Selected Draft", value: selectedRow ? `#${selectedRow.id}` : "None" },
-          { label: "SEO Score", value: analysis ? analysis.score : "Not scored" },
+          { label: "SEO Score", value: analysis ? `${analysis.score} — ${scoreLabel(analysis.score)}` : "Not scored" },
           { label: "Workflow Stage", value: workflowStage },
           { label: "Review Status", value: collaborationStatus },
           { label: "Assignee", value: assignee || "Unassigned" },
@@ -299,6 +364,9 @@ function SeoWorkspacePageContent() {
               placeholder="e.g. developer content workflow"
               disabled={!selectedRow}
             />
+            {focusKeyword && (
+              <p className="text-[11px] text-slate-500 mt-1">{focusKeyword.length} characters · {focusKeyword.trim().split(/\s+/).filter((w) => w.length > 0).length} word(s)</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -334,6 +402,32 @@ function SeoWorkspacePageContent() {
               </select>
             </div>
           </div>
+
+          {presetId && (() => {
+            const preset = WORKFLOW_PRESETS.find((p) => p.id === presetId);
+            if (!preset) return null;
+            const currentStageIndex = WORKFLOW_STAGES.indexOf(workflowStage);
+            return (
+              <div className="shell-panel-soft rounded-3xl p-4 space-y-2">
+                <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500">{preset.name} · Steps</p>
+                <ol className="space-y-1 mt-1">
+                  {preset.steps.map((step, index) => {
+                    const stepStageIndex = preset.steps.length > 1
+                      ? Math.round((index / (preset.steps.length - 1)) * (WORKFLOW_STAGES.length - 1))
+                      : 0;
+                    const done = currentStageIndex > stepStageIndex;
+                    const active = currentStageIndex === stepStageIndex;
+                    return (
+                      <li key={step} className={`flex items-center gap-2 text-xs ${done ? "text-emerald-500" : active ? "text-white" : "text-slate-500"}`}>
+                        <span className="shrink-0">{done ? "✓" : active ? "▶" : "○"}</span>
+                        {step}
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            );
+          })()}
 
           <div className="shell-panel-soft rounded-3xl p-4 space-y-3">
             <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500">Collaboration</p>
@@ -416,7 +510,11 @@ function SeoWorkspacePageContent() {
 
         <div className="shell-panel rounded-[2rem] p-5">
           {!selectedRow ? (
-            <p className="text-slate-500 text-sm">Select a draft to view score, checklist, and optimization guidance.</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+              <span className="text-4xl opacity-30">📈</span>
+              <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500">No Draft Selected</p>
+              <p className="text-sm text-slate-400 max-w-xs">Pick a saved history draft from the left panel to load its SEO score, checklist, and optimization guidance.</p>
+            </div>
           ) : (
             <div className="space-y-4">
               <div>
@@ -424,56 +522,96 @@ function SeoWorkspacePageContent() {
                 <h2 className="text-2xl text-white mt-2" style={{ fontFamily: "var(--font-display)" }}>
                   {selectedRow.title}
                 </h2>
-                <p className="text-sm text-slate-400 mt-2">
-                  {selectedRow.tool_name} · {selectedRow.word_count} words
+                <p className="text-sm text-slate-400 mt-1">
+                  {selectedRow.tool_name} · {selectedRow.word_count ?? "—"} words
+                  {selectedRow.word_count ? ` · ${estimateReadingTime(selectedRow.word_count)}` : ""}
                 </p>
               </div>
 
-              <div className="shell-status-strip rounded-3xl p-4">
-                <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500">SEO Score</p>
-                <div className="mt-2 text-4xl text-white" style={{ fontFamily: "var(--font-display)" }}>
-                  {analysis ? analysis.score : selectedRow.seo_score ?? "--"}
+              <div className="shell-status-strip rounded-3xl p-4 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500">SEO Score</p>
+                    <div className={`mt-1 text-4xl font-bold ${analysis ? scoreColorClass(analysis.score) : "text-white"}`} style={{ fontFamily: "var(--font-display)" }}>
+                      {analysis ? analysis.score : selectedRow.seo_score ?? "--"}
+                    </div>
+                  </div>
+                  {analysis && (
+                    <div className="text-right">
+                      <span className={`text-sm font-semibold ${scoreColorClass(analysis.score)}`}>{scoreLabel(analysis.score)}</span>
+                      <p className="text-xs text-slate-500 mt-1">{analysis.checks.filter((c) => c.passed).length}/{analysis.checks.length} checks passing</p>
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
+                {analysis && (
+                  <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-2 rounded-full transition-all ${scoreBgBarClass(analysis.score)}`}
+                      style={{ width: `${analysis.score}%` }}
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-slate-500">
                   {analysis?.analyzedAt ? `Last analyzed ${formatDate(analysis.analyzedAt)}` : "Run analysis to populate checklist recommendations."}
                 </p>
               </div>
 
-              <div>
-                <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 mb-2">Checklist</p>
-                <div className="space-y-2">
-                  {(analysis?.checks ?? []).map((check) => (
-                    <div key={check.id} className="rounded-2xl border border-border px-3 py-2 bg-white/[0.03]">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm text-slate-900">{check.label}</p>
-                        <span className={`text-xs font-mono ${check.passed ? "text-emerald-500" : "text-amber-600"}`}>
-                          {check.passed ? "Pass" : "Needs work"}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 mt-1">{check.detail}</p>
-                    </div>
-                  ))}
-                  {analysis && analysis.checks.length === 0 && (
-                    <p className="text-xs text-slate-500">No checklist items yet.</p>
-                  )}
-                  {!analysis && (
-                    <p className="text-xs text-slate-500">Run SEO analysis to generate checks and recommendations.</p>
-                  )}
-                </div>
-              </div>
-
-              {analysis && analysis.suggestions.length > 0 && (
-                <div>
-                  <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 mb-2">Suggestions</p>
-                  <ul className="space-y-1">
-                    {analysis.suggestions.map((suggestion, index) => (
-                      <li key={`${suggestion}-${index}`} className="text-sm text-slate-700">
-                        • {suggestion}
-                      </li>
-                    ))}
-                  </ul>
+              {analysis && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleCopyReport}
+                    className="btn-secondary text-xs"
+                  >
+                    {copyLabel}
+                  </button>
                 </div>
               )}
+
+              <div>
+                <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 mb-2">Checklist</p>
+                {!analysis && (
+                  <p className="text-xs text-slate-500">Run SEO analysis to generate checks and recommendations.</p>
+                )}
+                {analysis && analysis.checks.length === 0 && (
+                  <p className="text-xs text-slate-500">No checklist items yet.</p>
+                )}
+                {analysis && analysis.checks.length > 0 && (() => {
+                  const passing = analysis.checks.filter((c) => c.passed);
+                  const failing = analysis.checks.filter((c) => !c.passed);
+                  return (
+                    <div className="space-y-4">
+                      {failing.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-mono text-amber-600 uppercase tracking-[0.16em]">⚠ Needs Work ({failing.length})</p>
+                          {failing.map((check) => (
+                            <div key={check.id} className="rounded-2xl border border-amber-200/40 px-3 py-2 bg-amber-50/5">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-sm text-slate-900">{check.label}</p>
+                                <span className="text-xs font-mono text-amber-600 shrink-0">Needs work</span>
+                              </div>
+                              <p className="text-xs text-slate-600 mt-1">{check.detail}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {passing.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-[11px] font-mono text-emerald-500 uppercase tracking-[0.16em]">✓ Passing ({passing.length})</p>
+                          {passing.map((check) => (
+                            <div key={check.id} className="rounded-2xl border border-emerald-200/40 px-3 py-2 bg-emerald-50/5">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-sm text-slate-900">{check.label}</p>
+                                <span className="text-xs font-mono text-emerald-500 shrink-0">Pass</span>
+                              </div>
+                              <p className="text-xs text-slate-600 mt-1">{check.detail}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           )}
         </div>
