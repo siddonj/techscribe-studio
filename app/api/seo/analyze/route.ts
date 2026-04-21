@@ -33,6 +33,17 @@ function countMatches(content: string, needle: string): number {
   return (content.match(regex) || []).length;
 }
 
+function countLinks(text: string): number {
+  // Count all URLs (both markdown and bare) by matching the protocol prefix.
+  // This avoids backtracking-prone nested quantifiers while still giving an
+  // accurate count for the SEO check.
+  return (text.match(/https?:\/\//g) ?? []).length;
+}
+
+function getFirstNWords(text: string, n: number): string {
+  return text.trim().split(/\s+/).slice(0, n).join(" ");
+}
+
 function buildChecks(title: string, output: string, focusKeyword: string): SeoCheck[] {
   const wordCount = countWords(output);
   const headingCount = countHeadings(output);
@@ -40,6 +51,11 @@ function buildChecks(title: string, output: string, focusKeyword: string): SeoCh
   const keywordMatches = countMatches(output, focusKeyword);
   const titleMatches = countMatches(title, focusKeyword);
   const keywordDensity = wordCount > 0 ? (keywordMatches / wordCount) * 100 : 0;
+  const titleLength = title.length;
+  const introText = getFirstNWords(output, 100);
+  const introKeywordMatches = countMatches(introText, focusKeyword);
+  const linkCount = countLinks(output);
+  const hasCta = /(subscribe|comment|share|read next|try|download|book|contact)/i.test(output);
 
   return [
     {
@@ -51,7 +67,19 @@ function buildChecks(title: string, output: string, focusKeyword: string): SeoCh
           ? "Great: title aligns with target keyword intent."
           : "Add the focus keyword to the title for stronger relevance."
         : "No focus keyword provided yet.",
-      weight: 18,
+      weight: 14,
+    },
+    {
+      id: "title-length",
+      label: "Title length is optimal (50–60 characters)",
+      passed: titleLength >= 50 && titleLength <= 60,
+      detail:
+        titleLength < 50
+          ? `Title is ${titleLength} characters. Aim for 50–60 to maximize SERP visibility.`
+          : titleLength > 60
+            ? `Title is ${titleLength} characters. Trim to 60 or fewer to avoid truncation in search results.`
+            : `Title is ${titleLength} characters — well within the optimal range.`,
+      weight: 8,
     },
     {
       id: "keyword-usage",
@@ -62,7 +90,18 @@ function buildChecks(title: string, output: string, focusKeyword: string): SeoCh
           ? `Keyword used ${keywordMatches} times.`
           : `Keyword appears only ${keywordMatches} time(s). Target at least 3 natural mentions.`
         : "Set a focus keyword to score keyword usage.",
-      weight: 20,
+      weight: 16,
+    },
+    {
+      id: "keyword-intro",
+      label: "Focus keyword appears in the introduction",
+      passed: !focusKeyword || introKeywordMatches > 0,
+      detail: focusKeyword
+        ? introKeywordMatches > 0
+          ? "Keyword found in the first 100 words — strong signal for search engines."
+          : "Add the focus keyword within the first 100 words to establish early relevance."
+        : "Set a focus keyword to check intro placement.",
+      weight: 8,
     },
     {
       id: "keyword-density",
@@ -71,7 +110,7 @@ function buildChecks(title: string, output: string, focusKeyword: string): SeoCh
       detail: focusKeyword
         ? `Current density: ${keywordDensity.toFixed(2)}% (recommended 0.5% - 2.5%).`
         : "Density check skipped until a focus keyword is set.",
-      weight: 12,
+      weight: 10,
     },
     {
       id: "word-count",
@@ -80,7 +119,7 @@ function buildChecks(title: string, output: string, focusKeyword: string): SeoCh
       detail: wordCount >= 900
         ? `Word count is ${wordCount}, which is suitable for long-form ranking.`
         : `Word count is ${wordCount}. Expand with examples and FAQs toward 900+ words.`,
-      weight: 15,
+      weight: 13,
     },
     {
       id: "heading-coverage",
@@ -89,7 +128,7 @@ function buildChecks(title: string, output: string, focusKeyword: string): SeoCh
       detail: headingCount >= 4
         ? `Detected ${headingCount} headings.`
         : `Only ${headingCount} headings detected. Add more H2/H3 sections for scanability.`,
-      weight: 12,
+      weight: 10,
     },
     {
       id: "paragraph-flow",
@@ -98,16 +137,25 @@ function buildChecks(title: string, output: string, focusKeyword: string): SeoCh
       detail: paragraphCount >= 8
         ? `Detected ${paragraphCount} paragraph blocks.`
         : `Only ${paragraphCount} paragraphs detected. Break long sections into smaller chunks.`,
-      weight: 9,
+      weight: 7,
+    },
+    {
+      id: "has-links",
+      label: "Article contains outbound links",
+      passed: linkCount >= 1,
+      detail: linkCount >= 1
+        ? `Found ${linkCount} link(s). Outbound links to authoritative sources help build credibility.`
+        : "No outbound links detected. Add at least one link to a credible source.",
+      weight: 4,
     },
     {
       id: "cta-presence",
       label: "Conclusion includes CTA language",
-      passed: /(subscribe|comment|share|read next|try|download|book|contact)/i.test(output),
-      detail: /(subscribe|comment|share|read next|try|download|book|contact)/i.test(output)
+      passed: hasCta,
+      detail: hasCta
         ? "CTA language detected."
         : "Add a stronger CTA in the final section.",
-      weight: 14,
+      weight: 10,
     },
   ];
 }
@@ -141,11 +189,13 @@ export async function POST(req: NextRequest) {
     );
 
     const failingChecks = checks.filter((check) => !check.passed);
+    const wordCount = countWords(output);
 
     return NextResponse.json({
       score,
       checks,
       suggestions: failingChecks.map((check) => check.detail),
+      wordCount,
       analyzedAt: new Date().toISOString(),
     });
   } catch (error) {
