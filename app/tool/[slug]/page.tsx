@@ -26,11 +26,14 @@ interface BlogIdeaSuggestion {
 
 // Simple markdown renderer (no external deps)
 function renderMarkdown(text: string): string {
+  // Tags that should not be wrapped in <p> by the catch-all rule
+  const BLOCK_TAG_PATTERN = /^(<\/?(h[1-6]|ul|ol|p|li|hr|figure|pre|blockquote|figcaption)[\s>])/;
+
   return text
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/```[\w]*\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // Render markdown images before headings/links so URLs aren't double-escaped
+    // Render markdown images before headings so URLs aren't double-escaped
     .replace(
       /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,
       (_match, alt, src) =>
@@ -47,8 +50,7 @@ function renderMarkdown(text: string): string {
     .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
     .replace(/<\/ul>\s*<ul>/g, '')
     .replace(/\n\n/g, '</p><p>')
-    .replace(/^(?!<[hupol]|<\/[hupol]|<li|<hr|<figure)(.+)$/gm, (m) =>
-      m.startsWith('<') ? m : `<p>${m}</p>`)
+    .replace(/^.+$/gm, (m) => BLOCK_TAG_PATTERN.test(m) ? m : `<p>${m}</p>`)
     .replace(/<p><\/p>/g, '');
 }
 
