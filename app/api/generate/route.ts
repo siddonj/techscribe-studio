@@ -103,9 +103,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Append photo-embedding instructions when the option is enabled.
-    // Note: source.unsplash.com/featured URLs are deprecated by Unsplash but remain
-    // functional for demonstration. To use the official Unsplash API (or Pexels/Pixabay),
-    // configure the appropriate API key and update this URL pattern accordingly.
+    // TODO: source.unsplash.com/featured is deprecated by Unsplash. To migrate to a
+    // supported API, add an UNSPLASH_ACCESS_KEY (or PEXELS_API_KEY / PIXABAY_API_KEY)
+    // environment variable, fetch a real image URL server-side before generation, and
+    // inject resolved URLs into the prompt instead of using the source redirect pattern.
     if (includePhotos) {
       userPrompt +=
         "\n\nPhoto instructions: Embed 3–5 relevant royalty-free photos throughout the article at natural break points between sections. " +
