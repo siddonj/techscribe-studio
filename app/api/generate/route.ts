@@ -102,7 +102,10 @@ export async function POST(req: NextRequest) {
       userPrompt += buildResearchSection(research);
     }
 
-    // Append photo-embedding instructions when the option is enabled
+    // Append photo-embedding instructions when the option is enabled.
+    // Note: source.unsplash.com/featured URLs are deprecated by Unsplash but remain
+    // functional for demonstration. To use the official Unsplash API (or Pexels/Pixabay),
+    // configure the appropriate API key and update this URL pattern accordingly.
     if (includePhotos) {
       userPrompt +=
         "\n\nPhoto instructions: Embed 3–5 relevant royalty-free photos throughout the article at natural break points between sections. " +

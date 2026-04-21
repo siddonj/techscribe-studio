@@ -26,8 +26,12 @@ interface BlogIdeaSuggestion {
 
 // Simple markdown renderer (no external deps)
 function renderMarkdown(text: string): string {
-  // Tags that should not be wrapped in <p> by the catch-all rule
-  const BLOCK_TAG_PATTERN = /^(<\/?(h[1-6]|ul|ol|p|li|hr|figure|pre|blockquote|figcaption)[\s>])/;
+  // Named set of block-level tag prefixes that should never be wrapped in <p>.
+  // Checked via startsWith so the pattern stays readable and easy to extend.
+  const BLOCK_TAGS = ["<h1", "<h2", "<h3", "<h4", "<h5", "<h6",
+    "<ul", "<ol", "<li", "<hr", "<p", "<pre", "<figure", "<figcaption",
+    "<blockquote", "</h", "</ul", "</ol", "</p", "</pre", "</figure",
+    "</figcaption", "</blockquote"];
 
   return text
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -50,7 +54,9 @@ function renderMarkdown(text: string): string {
     .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
     .replace(/<\/ul>\s*<ul>/g, '')
     .replace(/\n\n/g, '</p><p>')
-    .replace(/^.+$/gm, (m) => BLOCK_TAG_PATTERN.test(m) ? m : `<p>${m}</p>`)
+    // Wrap bare text lines in <p>; skip lines that already start with a block tag
+    .replace(/^.+$/gm, (m) =>
+      BLOCK_TAGS.some((tag) => m.startsWith(tag)) ? m : `<p>${m}</p>`)
     .replace(/<p><\/p>/g, '');
 }
 
@@ -264,7 +270,7 @@ function ToolPageContent() {
   const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
-  // Photos option state (only for tools with supportsPhotos)
+  // Photos option state — rendered for all tools but only displayed when tool.supportsPhotos is true
   const [includePhotos, setIncludePhotos] = useState(false);
 
   // Output tab state (ARTICLE = rendered, EDITOR = editable textarea)
