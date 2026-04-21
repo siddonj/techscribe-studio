@@ -37,7 +37,7 @@ USER nextjs
 EXPOSE 8989
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD node -e "\
-    const req = require('http').get({path:'/api/health',port:8989,timeout:8000},(r)=>process.exit(r.statusCode===200?0:1));\
+    const req = require('http').get({path:'/api/healthz',port:8989,timeout:8000},(r)=>process.exit(r.statusCode===200?0:1));\
     req.on('timeout',()=>{req.destroy();process.exit(1)});\
     req.on('error',()=>process.exit(1));"
 CMD ["node", "server.js"]
