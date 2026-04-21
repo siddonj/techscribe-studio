@@ -407,6 +407,33 @@ body::after {
   margin: 2em 0;
 }
 
+/* Inline article photos inserted by the photos option */
+.markdown-output figure.article-photo {
+  margin: 2em 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+.markdown-output figure.article-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 420px;
+  object-fit: cover;
+}
+.markdown-output figure.article-photo figcaption {
+  padding: 0.5em 1em;
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+.markdown-output figure.article-photo figcaption a {
+  color: #0c8569;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* Card shadow hierarchy */
 .shadow-card-elevated {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 0, 0.3);

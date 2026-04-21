@@ -39,12 +39,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { slug, fields, mode, outline, research } = await req.json() as {
+    const { slug, fields, mode, outline, research, includePhotos } = await req.json() as {
       slug: string;
       fields: Record<string, string>;
       mode?: string;
       outline?: string;
       research?: ResearchItem[];
+      includePhotos?: boolean;
     };
 
     if (!slug || !fields) {
@@ -99,6 +100,21 @@ export async function POST(req: NextRequest) {
     // Append any research sources to the prompt
     if (research && research.length > 0) {
       userPrompt += buildResearchSection(research);
+    }
+
+    // Append photo-embedding instructions when the option is enabled.
+    // TODO: source.unsplash.com/featured is deprecated by Unsplash. To migrate to a
+    // supported API, add an UNSPLASH_ACCESS_KEY (or PEXELS_API_KEY / PIXABAY_API_KEY)
+    // environment variable, fetch a real image URL server-side before generation, and
+    // inject resolved URLs into the prompt instead of using the source redirect pattern.
+    if (includePhotos) {
+      userPrompt +=
+        "\n\nPhoto instructions: Embed 3–5 relevant royalty-free photos throughout the article at natural break points between sections. " +
+        "For each photo use this exact Markdown format on its own line (replace the bracketed parts with real content):\n" +
+        "![A descriptive caption explaining what the photo shows — Photo via Unsplash](https://source.unsplash.com/featured/1200x628/?actual-keyword)\n" +
+        "For the URL, replace 'actual-keyword' with a specific, descriptive search term (use hyphens between words, no spaces) that will return highly relevant images for the surrounding content. " +
+        "Example: for a section about JavaScript performance, use 'javascript-code' or 'web-performance'. " +
+        "Do not cluster photos together; spread them evenly across the article.";
     }
 
     // Stream the response
