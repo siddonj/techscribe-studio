@@ -1,4 +1,2 @@
-export async function GET() {
-  return new Response("OK", { status: 200 });
-}
-
+// Alias for /api/health — used by infrastructure probes (Traefik, k8s, etc.)
+export { GET, dynamic } from "@/app/api/health/route";
