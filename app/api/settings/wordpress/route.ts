@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWordPressSettings, saveWordPressSettings } from "@/lib/db";
+import { requireApprovedSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,9 @@ function getEnvFallback() {
 }
 
 export async function GET() {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   try {
     const saved = getWordPressSettings();
 
@@ -43,6 +47,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   try {
     const body = await req.json();
     const siteUrl = String(body.site_url ?? "").trim().replace(/\/$/, "");

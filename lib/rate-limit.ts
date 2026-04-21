@@ -5,6 +5,15 @@ interface RateLimitEntry {
 
 const store = new Map<string, RateLimitEntry>();
 
+// Periodically purge expired entries to prevent unbounded memory growth.
+// Runs every 5 minutes; safe to call on a module-level interval.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of store) {
+    if (now > entry.resetAt) store.delete(key);
+  }
+}, 5 * 60 * 1000);
+
 /**
  * Simple in-memory rate limiter. Appropriate for single-instance deployments.
  * Returns true if the request is allowed, false if the limit has been exceeded.
@@ -25,7 +34,6 @@ export function rateLimit(key: string, limit: number, windowMs: number): boolean
   entry.count++;
   return true;
 }
-
 /** Extract a best-effort IP key from a Next.js request for rate limiting. */
 export function getRequestIp(headers: Headers): string {
   const forwarded = headers.get("x-forwarded-for");

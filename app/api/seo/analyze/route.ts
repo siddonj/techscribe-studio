@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireApprovedSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -112,6 +113,9 @@ function buildChecks(title: string, output: string, focusKeyword: string): SeoCh
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   try {
     const body = await req.json() as {
       title?: string;

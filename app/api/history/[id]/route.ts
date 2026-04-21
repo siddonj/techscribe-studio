@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteHistory, getHistoryById, updateHistoryMetadata, updateHistoryOutput } from "@/lib/db";
+import { requireApprovedSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -8,6 +9,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   const { id: rawId } = await params;
   const id = parseInt(rawId, 10);
   if (isNaN(id)) {
@@ -25,6 +29,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   const { id: rawId } = await params;
   const id = parseInt(rawId, 10);
   if (isNaN(id)) {
@@ -41,6 +48,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   const { id: rawId } = await params;
   const id = parseInt(rawId, 10);
 

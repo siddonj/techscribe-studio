@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAutomationTemplate, listAutomationTemplates } from "@/lib/db";
+import { requireApprovedSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   try {
     return NextResponse.json({ templates: listAutomationTemplates() });
   } catch (error) {
@@ -13,6 +17,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   try {
     const body = await req.json() as Record<string, unknown>;
     const name = String(body.name ?? "").trim();

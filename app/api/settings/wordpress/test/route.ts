@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveWordPressConfig, testWordPressConnection } from "@/lib/wordpress";
+import { requireApprovedSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   try {
     const body = await req.json();
 

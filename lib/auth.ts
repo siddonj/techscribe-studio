@@ -1,4 +1,6 @@
 import type { NextAuthOptions } from "next-auth";
+import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
 import GoogleProvider from "next-auth/providers/google";
 import { upsertUser, getUserByGoogleId } from "@/lib/db";
 import { sendNewUserNotification } from "@/lib/email";
@@ -24,7 +26,9 @@ export const authOptions: NextAuthOptions = {
       });
       if (isNew) {
         // Fire-and-forget — don't block sign-in if email fails
-        sendNewUserNotification({ name: user.name ?? null, email: user.email! }).catch(() => {});
+        sendNewUserNotification({ name: user.name ?? null, email: user.email! }).catch((err) => {
+          console.error("New user notification email failed:", err);
+        });
       }
       return true;
     },
@@ -56,3 +60,23 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+
+/**
+ * Call at the top of any API route handler that requires an approved user.
+ * Returns { error: NextResponse } if the request should be rejected,
+ * or { session } if the user is authenticated and approved.
+ */
+export async function requireApprovedSession(): Promise<
+  | { error: NextResponse }
+  | { session: NonNullable<Awaited<ReturnType<typeof getServerSession>>> }
+> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  }
+  const status = (session.user as Record<string, unknown>).status;
+  if (status !== "approved") {
+    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+  return { session: session as NonNullable<typeof session> };
+}
