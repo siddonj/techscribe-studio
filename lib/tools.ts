@@ -26,6 +26,8 @@ export interface Tool {
   articleWithOutlinePromptTemplate?: string;
   /** When true, the Input Studio shows an "+ Add Knowledge" research panel */
   supportsResearch?: boolean;
+  /** When true, the Input Studio shows a photo toggle to automatically embed royalty-free images */
+  supportsPhotos?: boolean;
 }
 
 
@@ -60,7 +62,8 @@ export const TOOLS: Tool[] = [
     outlineSystemPrompt: `You are an expert content strategist for a tech blog called TechScribe. Your job is to produce a clear, well-structured article outline using Markdown headings. Return ONLY the outline — no article body, no explanations, just the structure.`,
     outlineUserPromptTemplate: `Create a detailed blog article outline for:\nTopic: {topic}\nTarget keywords: {keywords}\nContext / brief: {context}\nTone: {tone}\nLength: {length}\nAudience: {audience}\n\nStructure the outline as:\n# Suggested Article Title\n## Introduction\n## [Main Section 1] (4-6 main sections total)\n### [Subsection]\n### [Subsection]\n## [Main Section 2]\n...\n## Conclusion\n\nReturn only the outline — no body content.`,
     articleWithOutlinePromptTemplate: `Write a {length} blog article about: {topic}\n\nTarget keywords: {keywords}\nContext / brief: {context}\nTone: {tone}\nTarget audience: {audience}\n\nFollow this outline exactly:\n{outline}\n\nExpand every section with full paragraphs. Include a compelling introduction, practical examples throughout, and a strong conclusion with a CTA. Format in Markdown.`,
-      supportsResearch: true,
+    supportsResearch: true,
+    supportsPhotos: true,
   },
   {
     slug: "listicle-writer",

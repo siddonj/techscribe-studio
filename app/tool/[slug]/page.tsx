@@ -30,6 +30,12 @@ function renderMarkdown(text: string): string {
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/```[\w]*\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Render markdown images before headings/links so URLs aren't double-escaped
+    .replace(
+      /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,
+      (_match, alt, src) =>
+        `<figure class="article-photo"><img src="${src}" alt="${alt}" loading="lazy" /><figcaption><a href="${src}" target="_blank" rel="noopener noreferrer">${alt || "Photo"}</a></figcaption></figure>`
+    )
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
     .replace(/^# (.+)$/gm, '<h1>$1</h1>')
@@ -41,7 +47,7 @@ function renderMarkdown(text: string): string {
     .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
     .replace(/<\/ul>\s*<ul>/g, '')
     .replace(/\n\n/g, '</p><p>')
-    .replace(/^(?!<[hupol]|<\/[hupol]|<li|<hr)(.+)$/gm, (m) =>
+    .replace(/^(?!<[hupol]|<\/[hupol]|<li|<hr|<fi)(.+)$/gm, (m) =>
       m.startsWith('<') ? m : `<p>${m}</p>`)
     .replace(/<p><\/p>/g, '');
 }
@@ -256,6 +262,9 @@ function ToolPageContent() {
   const [showKnowledgeModal, setShowKnowledgeModal] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
+  // Photos option state (only for tools with supportsPhotos)
+  const [includePhotos, setIncludePhotos] = useState(false);
+
   // Output tab state (ARTICLE = rendered, EDITOR = editable textarea)
   type OutputTab = "article" | "editor";
   const [outputTab, setOutputTab] = useState<OutputTab>("article");
@@ -289,6 +298,7 @@ function ToolPageContent() {
     setArticleStep("input");
     setEditableOutline("");
     setResearchItems([]);
+    setIncludePhotos(false);
   }, [searchParams, slug, tool]);
 
   // Auto-scroll output
@@ -358,7 +368,7 @@ function ToolPageContent() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: tool.slug, fields, mode, research: researchItems }),
+        body: JSON.stringify({ slug: tool.slug, fields, mode, research: researchItems, includePhotos: isOutlineMode ? false : includePhotos }),
       });
 
       if (!res.ok) {
@@ -411,7 +421,7 @@ function ToolPageContent() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: tool.slug, fields, mode: "article", outline: editableOutline, research: researchItems }),
+        body: JSON.stringify({ slug: tool.slug, fields, mode: "article", outline: editableOutline, research: researchItems, includePhotos }),
       });
 
       if (!res.ok) {
@@ -543,6 +553,7 @@ function ToolPageContent() {
     setEditableOutline("");
     setOutputTab("article");
     setResearchItems([]);
+    setIncludePhotos(false);
   };
 
   const handleReset = () => {
@@ -695,6 +706,35 @@ function ToolPageContent() {
                     <span className="text-base leading-none">+</span> Add Knowledge
                   </button>
                 </div>
+              )}
+
+              {/* Photos toggle — shown for tools with supportsPhotos */}
+              {tool.supportsPhotos && (
+                <label className="flex items-center justify-between gap-3 shell-panel-soft rounded-2xl px-4 py-3 cursor-pointer select-none">
+                  <div>
+                    <p className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-0.5">Auto-insert Photos</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Embed royalty-free images from Unsplash at natural break points in the article.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={includePhotos}
+                    onClick={() => setIncludePhotos((v) => !v)}
+                    className={`relative shrink-0 h-6 w-11 rounded-full border transition-colors focus:outline-none ${
+                      includePhotos
+                        ? "bg-accent border-accent"
+                        : "bg-subtle border-border"
+                    }`}
+                  >
+                    <span
+                      className={`block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                        includePhotos ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </label>
               )}
 
               {error && (
