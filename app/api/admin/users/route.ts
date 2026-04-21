@@ -35,7 +35,9 @@ export async function PATCH(req: Request) {
     const userBefore = listUsers().find((u) => u.id === body.id);
     updateUserStatus(body.id, body.status, adminEmail);
     if (body.status === "approved" && userBefore?.status !== "approved") {
-      sendApprovalNotification({ name: userBefore?.name ?? null, email: userBefore?.email ?? "" }).catch(() => {});
+      sendApprovalNotification({ name: userBefore?.name ?? null, email: userBefore?.email ?? "" }).catch((err) => {
+        console.error("Approval notification email failed:", err);
+      });
     }
   }
 

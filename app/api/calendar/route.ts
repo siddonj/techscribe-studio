@@ -8,6 +8,7 @@ import {
 } from "@/lib/db";
 import { type CalendarChecklistItem, isCalendarApprovalStatus, isCalendarPublishIntent, isCalendarStatus } from "@/lib/calendar";
 import { getToolBySlug } from "@/lib/tools";
+import { requireApprovedSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,9 @@ function normalizeChecklistItems(value: unknown) {
 }
 
 export async function GET(req: NextRequest) {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   try {
     const { searchParams } = new URL(req.url);
     const statusParam = searchParams.get("status")?.trim() ?? "";
@@ -73,6 +77,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   try {
     const body = await req.json() as Record<string, unknown>;
     const title = String(body.title ?? "").trim();

@@ -8,6 +8,7 @@ import {
 } from "@/lib/db";
 import { type CalendarChecklistItem, isCalendarApprovalStatus, isCalendarPublishIntent, isCalendarStatus } from "@/lib/calendar";
 import { getToolBySlug } from "@/lib/tools";
+import { requireApprovedSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -52,6 +53,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   try {
     const { id: rawId } = await params;
     const id = parseId(rawId);
@@ -124,6 +128,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireApprovedSession();
+  if ("error" in auth) return auth.error;
+
   try {
     const { id: rawId } = await params;
     const id = parseId(rawId);
