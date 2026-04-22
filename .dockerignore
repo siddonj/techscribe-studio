@@ -1,10 +1,56 @@
+# Version control
 .git
 .gitignore
-.next
+.gitattributes
+
+# Dependencies — reinstalled inside the container
 node_modules
+
+# Next.js build output — produced inside the container
+.next
+
+# Runtime / persistent data — never bake into the image
 data
 backups
-.env*
+
+# Environment files — secrets must never enter the build context
+.env
+.env.*
+!.env.example
+
+# Test & coverage artifacts
+coverage
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/__tests__
+**/__mocks__
+**/*.test.js
+**/*.spec.js
+
+# Logs
+*.log
+logs
 npm-debug.log*
 yarn-error.log*
+yarn-debug.log*
+
+# Build & CI helpers (not needed inside the image)
+docker-build.sh
+.github
+.husky
+
+# Editor / OS artifacts
+.vscode
+.idea
 .DS_Store
+Thumbs.db
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Documentation
+docs
+*.md
+!README.md

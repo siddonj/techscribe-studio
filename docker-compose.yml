@@ -1,39 +1,60 @@
 services:
   techscribe-studio:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: techscribe-studio:local
-    ports:
-      - "8989:8989"
+
+    # Load all secrets/config from .env; override infrastructure-only vars inline.
+    env_file: .env
     environment:
       NODE_ENV: production
-      PORT: 8989
+      PORT: "8989"
       HOSTNAME: "0.0.0.0"
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:8989}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      WORDPRESS_SITE_URL: ${WORDPRESS_SITE_URL}
-      WORDPRESS_USERNAME: ${WORDPRESS_USERNAME}
-      WORDPRESS_APP_PASSWORD: ${WORDPRESS_APP_PASSWORD}
-      BATCH_API_SECRET: ${BATCH_API_SECRET}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      SMTP_FROM: ${SMTP_FROM}
-      ADMIN_EMAIL: ${ADMIN_EMAIL}
+
+    ports:
+      - "8989:8989"
+
     volumes:
-      - techscribe-data:/app/data
+      - techscribe-data:/app/data   # SQLite database — persists across container restarts
+
+    # Writable scratch space for Next.js fetch cache and OS temp files.
+    # These are in-memory and discarded on container stop.
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /app/.next/cache:size=128m,uid=1001,gid=1001
+
     restart: unless-stopped
+
+    # ── Resource limits ──────────────────────────────────────────────────────
+    mem_limit: 1g
+    cpus: "1.0"
+
+    # ── Security hardening ───────────────────────────────────────────────────
+    read_only: true               # container filesystem is immutable at runtime
+    security_opt:
+      - no-new-privileges:true    # prevent setuid/setgid privilege escalation
+    cap_drop:
+      - ALL                       # drop every Linux capability …
+    # cap_add: []                 # … none needed: port 8989 > 1024, no raw sockets
+
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get({path:'/api/healthz',port:8989,timeout:8000},(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - >-
+          require('http')
+            .get({path:'/api/healthz',port:8989,timeout:8000},
+                 (r) => process.exit(r.statusCode === 200 ? 0 : 1))
+            .on('error', () => process.exit(1))
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
 
 volumes:
   techscribe-data:
     name: techscribe-data
+    driver: local

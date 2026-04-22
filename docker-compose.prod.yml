@@ -1,47 +1,61 @@
-# Production docker-compose for VPS + Traefik reverse proxy.
+# Production compose for a VPS running Traefik as a reverse proxy.
 #
 # Prerequisites on the VPS:
 #   - Traefik running with an HTTPS entrypoint named "websecure"
 #     and a Let's Encrypt cert resolver named "letsencrypt"
 #   - A Docker network named "traefik-public" shared with Traefik
-#   - A .env file with all required variables (see .env.local.example)
-#   - docker compose --env-file .env -f docker-compose.prod.yml up -d
+#   - A .env file with all required variables (see .env.example)
 #
-# Replace "techscribe.example.com" with your actual domain.
+# Deploy:
+#   docker compose --env-file .env -f docker-compose.prod.yml pull
+#   docker compose --env-file .env -f docker-compose.prod.yml up -d
 
 services:
   techscribe-studio:
-    image: ghcr.io/${GITHUB_REPOSITORY:-siddonj/techscribe-studio}:latest
+    image: ghcr.io/${GITHUB_REPOSITORY:-siddonj/techscribe-studio}:${IMAGE_TAG:-latest}
     restart: unless-stopped
+
     networks:
       - traefik-public
+
+    # Load all secrets/config from .env; override infrastructure-only vars inline.
+    env_file: .env
     environment:
       NODE_ENV: production
-      PORT: 8989
+      PORT: "8989"
       HOSTNAME: "0.0.0.0"
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: ${NEXTAUTH_URL}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      WORDPRESS_SITE_URL: ${WORDPRESS_SITE_URL}
-      WORDPRESS_USERNAME: ${WORDPRESS_USERNAME}
-      WORDPRESS_APP_PASSWORD: ${WORDPRESS_APP_PASSWORD}
-      BATCH_API_SECRET: ${BATCH_API_SECRET}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      SMTP_FROM: ${SMTP_FROM}
-      ADMIN_EMAIL: ${ADMIN_EMAIL}
+
     volumes:
-      - techscribe-data:/app/data
+      - techscribe-data:/app/data   # SQLite database — survives deployments
+
+    # Writable scratch space for Next.js fetch cache and OS temp files.
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /app/.next/cache:size=128m,uid=1001,gid=1001
+
+    # ── Security hardening ───────────────────────────────────────────────────
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get({path:'/api/health',port:8989,timeout:8000},(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - >-
+          require('http')
+            .get({path:'/api/healthz',port:8989,timeout:8000},
+                 (r) => process.exit(r.statusCode === 200 ? 0 : 1))
+            .on('error', () => process.exit(1))
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
+
+    # ── Resource limits ──────────────────────────────────────────────────────
     deploy:
       resources:
         limits:
@@ -50,22 +64,24 @@ services:
         reservations:
           cpus: "0.25"
           memory: 256M
+
+    # ── Traefik labels ───────────────────────────────────────────────────────
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"
-      # ── HTTP → HTTPS redirect ──────────────────────────────────────────────
+      # HTTP → HTTPS redirect
       - "traefik.http.routers.techscribe-http.rule=Host(`${DOMAIN:-techscribe.example.com}`)"
       - "traefik.http.routers.techscribe-http.entrypoints=web"
       - "traefik.http.routers.techscribe-http.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      # ── HTTPS router ───────────────────────────────────────────────────────
+      # HTTPS router
       - "traefik.http.routers.techscribe.rule=Host(`${DOMAIN:-techscribe.example.com}`)"
       - "traefik.http.routers.techscribe.entrypoints=websecure"
       - "traefik.http.routers.techscribe.tls=true"
       - "traefik.http.routers.techscribe.tls.certresolver=letsencrypt"
-      # ── Service ────────────────────────────────────────────────────────────
+      # Service backend port
       - "traefik.http.services.techscribe.loadbalancer.server.port=8989"
-      # Disable Traefik response buffering so streaming generation works
+      # Disable response buffering so streaming AI generation works correctly
       - "traefik.http.middlewares.techscribe-buffering.buffering.maxResponseBodyBytes=0"
       - "traefik.http.routers.techscribe.middlewares=techscribe-buffering"
 
@@ -76,3 +92,4 @@ networks:
 volumes:
   techscribe-data:
     name: techscribe-data
+    driver: local
