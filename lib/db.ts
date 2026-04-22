@@ -38,20 +38,13 @@ function closeDb() {
   }
 }
 
-// Checkpoint the WAL and close the database cleanly when the process exits so
-// that all committed writes are flushed to the main database file before the
-// Docker container stops.  better-sqlite3's db.close() is fully synchronous
-// and blocks until the WAL checkpoint is complete, so it is safe to call
-// process.exit() immediately after.
-process.once("SIGTERM", () => {
-  closeDb();
-  process.exit(0);
-});
-process.once("SIGINT", () => {
-  closeDb();
-  process.exit(0);
-});
-process.once("beforeExit", closeDb);
+// Close the database on process exit. Using the 'exit' event (not SIGTERM/SIGINT
+// directly) because Next.js registers its own SIGTERM handler via startServer
+// that calls process.exit(143) before our signal handler would run. The 'exit'
+// event fires synchronously inside process.exit() regardless of who initiated
+// it, so this is the only reliable hook in a Next.js standalone container.
+// better-sqlite3's db.close() is synchronous and triggers a WAL checkpoint.
+process.on("exit", closeDb);
 
 type CalendarEntryRow = Omit<CalendarEntry, "checklist_items"> & {
   checklist_items: CalendarChecklistItem[] | string[] | string | null;
@@ -522,6 +515,9 @@ export function getDb(): Database.Database {
   if (!_db) {
     _db = new Database(DB_PATH);
     _db.pragma("journal_mode = WAL");
+    // Checkpoint to the main DB file every 100 pages so data is durably written
+    // frequently, not only on process exit.
+    _db.pragma("wal_autocheckpoint = 100");
     _db.exec(`
       CREATE TABLE IF NOT EXISTS history (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
