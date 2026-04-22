@@ -209,18 +209,17 @@ export default function KnowledgePage() {
                 </div>
                 <p className="text-slate-400 text-sm leading-relaxed line-clamp-3">
                   {entry.type === "url" ? (
-                    isSafeUrl(entry.content) ? (
-                      <a
-                        href={entry.content}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-accent hover:text-accent-dim transition-colors truncate block"
-                      >
-                        {entry.content}
-                      </a>
-                    ) : (
-                      <span className="truncate block">{entry.content}</span>
-                    )
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isSafeUrl(entry.content)) {
+                          window.open(entry.content, "_blank", "noopener,noreferrer");
+                        }
+                      }}
+                      className="text-accent hover:text-accent-dim transition-colors truncate block text-left"
+                    >
+                      {entry.content}
+                    </button>
                   ) : (
                     entry.content
                   )}
