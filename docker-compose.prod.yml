@@ -75,3 +75,4 @@ networks:
 
 volumes:
   techscribe-data:
+    name: techscribe-data

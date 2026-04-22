@@ -32,6 +32,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Persistent data directory for SQLite (mounted as a volume in production)
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+VOLUME /app/data
 
 USER nextjs
 EXPOSE 8989
