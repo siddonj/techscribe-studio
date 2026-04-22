@@ -24,6 +24,32 @@ if (!fs.existsSync(DATA_DIR)) {
 
 let _db: Database.Database | null = null;
 
+function closeDb() {
+  if (_db) {
+    try {
+      _db.close();
+    } catch (err) {
+      console.error("[db] Error closing database during shutdown:", err);
+    }
+    _db = null;
+  }
+}
+
+// Checkpoint the WAL and close the database cleanly when the process exits so
+// that all committed writes are flushed to the main database file before the
+// Docker container stops.  better-sqlite3's db.close() is fully synchronous
+// and blocks until the WAL checkpoint is complete, so it is safe to call
+// process.exit() immediately after.
+process.once("SIGTERM", () => {
+  closeDb();
+  process.exit(0);
+});
+process.once("SIGINT", () => {
+  closeDb();
+  process.exit(0);
+});
+process.once("beforeExit", closeDb);
+
 type CalendarEntryRow = Omit<CalendarEntry, "checklist_items"> & {
   checklist_items: CalendarChecklistItem[] | string[] | string | null;
   checklist_json?: string | null;
