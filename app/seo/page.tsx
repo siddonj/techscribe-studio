@@ -581,7 +581,7 @@ function SeoWorkspacePageContent() {
                   <div className="rounded-xl border border-border bg-white p-4 font-sans text-left">
                     <p className="text-xs text-emerald-700 truncate mb-0.5">techscribstudio.com › blog</p>
                     <p className="text-base text-blue-700 font-medium leading-snug hover:underline cursor-pointer truncate">
-                      {selectedRow.title.length > 60 ? `${selectedRow.title.slice(0, 57)}…` : selectedRow.title}
+                      {selectedRow.title.length > 60 ? `${selectedRow.title.slice(0, 59)}…` : selectedRow.title}
                     </p>
                     {selectedRow.title.length > 60 && (
                       <p className="text-[11px] text-amber-600 mt-0.5">Title exceeds 60 characters — may be truncated in search results.</p>

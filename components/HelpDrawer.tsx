@@ -36,7 +36,7 @@ const TOOL_TIPS: Partial<Record<string, string[]>> = {
   ],
   "schema-markup": [
     "Choose the schema type that matches your content: Article or BlogPosting for blog posts, FAQPage for FAQ sections, HowTo for step-by-step guides.",
-    "Paste the generated JSON-LD into a <script type=\"application/ld+json\"> tag in your page's <head> — or use your CMS's structured data field.",
+    "Paste the generated JSON-LD into a script tag with type application/ld+json in your page head, or use your CMS's structured data field.",
     "Test your schema using Google's Rich Results Test (search.google.com/test/rich-results) to verify it qualifies for rich snippets.",
     "For FAQPage schemas, list each question on a new line in the 'Additional Details' field so the AI formats them correctly.",
   ],

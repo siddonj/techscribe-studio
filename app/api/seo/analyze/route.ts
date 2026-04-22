@@ -41,6 +41,9 @@ function countLinks(text: string): number {
 }
 
 function countSyllables(word: string): number {
+  // Syllable count uses a vowel-group heuristic — results are approximations
+  // and may be off for irregular English words (e.g. words ending in '-le',
+  // compound words, or words with silent vowel clusters).
   const cleaned = word.toLowerCase().replace(/[^a-z]/g, "");
   if (cleaned.length === 0) return 0;
   if (cleaned.length <= 3) return 1;
