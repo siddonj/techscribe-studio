@@ -21,6 +21,8 @@ interface SeoAnalyzeResponse {
   }>;
   suggestions: string[];
   wordCount?: number;
+  readabilityScore?: number;
+  readabilityGrade?: string;
   analyzedAt: string;
 }
 
@@ -96,6 +98,7 @@ function SeoWorkspacePageContent() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [copyLabel, setCopyLabel] = useState("Copy Report");
+  const [metaDescription, setMetaDescription] = useState("");
 
   useEffect(() => {
     if (!saveMessage) return;
@@ -540,6 +543,9 @@ function SeoWorkspacePageContent() {
                     <div className="text-right">
                       <span className={`text-sm font-semibold ${scoreColorClass(analysis.score)}`}>{scoreLabel(analysis.score)}</span>
                       <p className="text-xs text-slate-500 mt-1">{analysis.checks.filter((c) => c.passed).length}/{analysis.checks.length} checks passing</p>
+                      {analysis.readabilityScore !== undefined && (
+                        <p className="text-xs text-slate-500 mt-1">Readability: {analysis.readabilityScore}/100 — {analysis.readabilityGrade}</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -555,6 +561,42 @@ function SeoWorkspacePageContent() {
                   {analysis?.analyzedAt ? `Last analyzed ${formatDate(analysis.analyzedAt)}` : "Run analysis to populate checklist recommendations."}
                 </p>
               </div>
+
+              {selectedRow && (
+                <div className="shell-panel-soft rounded-3xl p-4 space-y-3">
+                  <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500">SERP Preview</p>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">Meta Description (for preview)</label>
+                    <input
+                      className="w-full input-base text-xs"
+                      value={metaDescription}
+                      onChange={(e) => setMetaDescription(e.target.value)}
+                      placeholder="Enter your meta description to preview how it appears in Google…"
+                      maxLength={160}
+                    />
+                    {metaDescription && (
+                      <p className="text-[11px] text-slate-500 mt-1">{metaDescription.length}/160 characters</p>
+                    )}
+                  </div>
+                  <div className="rounded-xl border border-border bg-white p-4 font-sans text-left">
+                    <p className="text-xs text-emerald-700 truncate mb-0.5">techscribstudio.com › blog</p>
+                    <p className="text-base text-blue-700 font-medium leading-snug hover:underline cursor-pointer truncate">
+                      {selectedRow.title.length > 60 ? `${selectedRow.title.slice(0, 59)}…` : selectedRow.title}
+                    </p>
+                    {selectedRow.title.length > 60 && (
+                      <p className="text-[11px] text-amber-600 mt-0.5">Title exceeds 60 characters — may be truncated in search results.</p>
+                    )}
+                    <p className="text-sm text-slate-600 mt-1 leading-snug">
+                      {metaDescription
+                        ? metaDescription.length > 160
+                          ? `${metaDescription.slice(0, 157)}…`
+                          : metaDescription
+                        : <span className="text-slate-400 italic">No meta description set. Search engines will auto-generate one from your content.</span>}
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-slate-500">Use the <strong>Meta Description Generator</strong> and <strong>Meta Title Generator</strong> tools to craft optimized snippets.</p>
+                </div>
+              )}
 
               {analysis && (
                 <div className="flex justify-end">
