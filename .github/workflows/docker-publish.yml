@@ -38,7 +38,7 @@ jobs:
           # Provide stub values so Next.js builds without real secrets
           ANTHROPIC_API_KEY: sk-ant-build-placeholder
           NEXTAUTH_SECRET: build-placeholder-secret-at-least-32-chars
-          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_URL: http://localhost:8989
           GOOGLE_CLIENT_ID: placeholder
           GOOGLE_CLIENT_SECRET: placeholder
 
@@ -77,6 +77,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
