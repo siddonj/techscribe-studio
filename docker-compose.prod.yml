@@ -10,6 +10,11 @@
 #   docker compose --env-file .env -f docker-compose.prod.yml pull
 #   docker compose --env-file .env -f docker-compose.prod.yml up -d
 
+# Lock the project name so the volume is always "techscribe-studio_techscribe-data"
+# regardless of what directory this file is run from. Changing this would orphan
+# existing data — do not rename without migrating the volume first.
+name: techscribe-studio
+
 services:
   techscribe-studio:
     image: ghcr.io/${GITHUB_REPOSITORY:-siddonj/techscribe-studio}:${IMAGE_TAG:-latest}
@@ -93,3 +98,6 @@ volumes:
   techscribe-data:
     name: techscribe-data
     driver: local
+    # WARNING: never run "docker compose down -v" — the -v flag deletes this
+    # volume and all history/settings data with it. Use "docker compose down"
+    # (no -v) to stop and remove containers while keeping data intact.

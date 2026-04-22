@@ -48,8 +48,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static    ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public          ./public
 
-# Pre-create the SQLite data directory so the volume mount inherits ownership.
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+# Pre-create persistent and tmpfs mount points so Docker can overlay them
+# at startup without needing to write to the read-only container filesystem.
+RUN mkdir -p /app/data /app/.next/cache \
+ && chown nextjs:nodejs /app/data /app/.next/cache
 VOLUME /app/data
 
 USER nextjs
