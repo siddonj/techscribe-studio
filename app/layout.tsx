@@ -10,12 +10,16 @@ import {
   CalendarRange,
   ChevronDown,
   ChevronRight,
+  FolderKanban,
   HelpCircle,
   History,
   Home,
+  Library,
   LogOut,
   Menu,
+  Mic2,
   Settings,
+  SlidersHorizontal,
   Sparkles,
   Users,
   X,
@@ -39,6 +43,12 @@ const PRIMARY_NAV = [
   { href: "/calendar", label: "Calendar", icon: CalendarRange },
   { href: "/help", label: "Help & Docs", icon: HelpCircle },
   { href: "/settings", label: "Settings", icon: Settings },
+];
+
+const CUSTOMIZATION_NAV = [
+  { href: "/customization/projects", label: "Projects", icon: FolderKanban },
+  { href: "/customization/mytone", label: "MyTone", icon: Mic2 },
+  { href: "/customization/knowledge", label: "Knowledge", icon: Library },
 ];
 
 function SidebarUserCard() {
@@ -93,6 +103,7 @@ function Sidebar() {
   const pathname = usePathname();
   const categories = getAllCategories();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [customizationOpen, setCustomizationOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const toggle = (cat: string) =>
@@ -148,6 +159,49 @@ function Sidebar() {
               </Link>
             );
           })}
+        </div>
+
+        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-3">
+          <button
+            onClick={() => setCustomizationOpen((prev) => !prev)}
+            className="w-full flex items-center justify-between px-2 pb-2"
+          >
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />
+              <p className="text-[11px] font-mono tracking-[0.24em] uppercase text-slate-400">
+                Customization
+              </p>
+            </div>
+            {customizationOpen ? (
+              <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+            )}
+          </button>
+
+          {customizationOpen && (
+            <div className="space-y-1">
+              {CUSTOMIZATION_NAV.map((item) => {
+                const Icon = item.icon;
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={closeMobile}
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                      active
+                        ? "bg-white/10 text-white border border-white/10"
+                        : "text-slate-300 border border-transparent hover:text-white hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`} />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-3">
