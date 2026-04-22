@@ -44,7 +44,7 @@ export default function ProjectsPage() {
         <PageHeader
           eyebrow="Customization"
           title="Projects"
-          description="Organise your content work into projects. Each project can hold its own context, tone settings, and knowledge sources."
+          description="Organize your content work into projects. Each project can hold its own context, tone settings, and knowledge sources."
           backHref="/"
           backLabel="Back to dashboard"
           icon={<FolderKanban className="h-8 w-8 text-accent" />}
@@ -112,7 +112,7 @@ export default function ProjectsPage() {
           <EmptyState
             icon={<FolderKanban />}
             eyebrow="No projects yet"
-            description="Create your first project to organise content, tone settings, and knowledge sources in one place."
+            description="Create your first project to organize content, tone settings, and knowledge sources in one place."
           />
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

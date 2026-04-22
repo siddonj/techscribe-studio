@@ -6,6 +6,15 @@ import { PageHeader, SectionCard, EmptyState, SurfaceNotice } from "@/components
 
 type SourceType = "text" | "url";
 
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 interface KnowledgeEntry {
   id: string;
   title: string;
@@ -27,12 +36,16 @@ export default function KnowledgePage() {
       setError("Please fill in both the title and content fields.");
       return;
     }
+    if (sourceType === "url" && !isSafeUrl(content.trim())) {
+      setError("Please enter a valid URL starting with http:// or https://.");
+      return;
+    }
     setError(null);
     const entry: KnowledgeEntry = {
       id: crypto.randomUUID(),
       title: title.trim(),
       type: sourceType,
-      content: content.trim(),
+      content: sourceType === "url" ? new URL(content.trim()).href : content.trim(),
       createdAt: new Date().toISOString(),
     };
     setEntries((prev) => [entry, ...prev]);
@@ -196,14 +209,18 @@ export default function KnowledgePage() {
                 </div>
                 <p className="text-slate-400 text-sm leading-relaxed line-clamp-3">
                   {entry.type === "url" ? (
-                    <a
-                      href={entry.content}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-accent hover:text-accent-dim transition-colors truncate block"
-                    >
-                      {entry.content}
-                    </a>
+                    isSafeUrl(entry.content) ? (
+                      <a
+                        href={entry.content}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-accent hover:text-accent-dim transition-colors truncate block"
+                      >
+                        {entry.content}
+                      </a>
+                    ) : (
+                      <span className="truncate block">{entry.content}</span>
+                    )
                   ) : (
                     entry.content
                   )}
