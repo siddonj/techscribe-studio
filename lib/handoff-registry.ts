@@ -69,12 +69,63 @@ export const HANDOFF_REGISTRY: HandoffRegistry = {
       targetSlug: "outline-generator",
       fieldMap: { topic: "topic" },
     },
+    {
+      label: "Generate Meta Title",
+      targetSlug: "meta-title",
+      fieldMap: { topic: "topic" },
+    },
   ],
   "outline-generator": [
     {
       label: "Write Article",
       targetSlug: "article-writer",
       fieldMap: { topic: "topic", keywords: "keywords", audience: "audience" },
+    },
+  ],
+  "article-writer": [
+    {
+      label: "Generate Meta Title",
+      targetSlug: "meta-title",
+      fieldMap: { topic: "topic", keywords: "keyword" },
+    },
+    {
+      label: "Write Meta Description",
+      targetSlug: "meta-description",
+      fieldMap: { topic: "topic", keywords: "keyword" },
+    },
+    {
+      label: "Generate Schema Markup",
+      targetSlug: "schema-markup",
+      fieldMap: { topic: "title" },
+    },
+    {
+      label: "Generate OG Tags",
+      targetSlug: "og-meta-tags",
+      fieldMap: { topic: "title" },
+    },
+  ],
+  "meta-title": [
+    {
+      label: "Write Meta Description",
+      targetSlug: "meta-description",
+      fieldMap: { topic: "topic", keyword: "keyword" },
+    },
+    {
+      label: "Generate OG Tags",
+      targetSlug: "og-meta-tags",
+      fieldMap: { topic: "title" },
+    },
+  ],
+  "meta-description": [
+    {
+      label: "Generate Meta Title",
+      targetSlug: "meta-title",
+      fieldMap: { topic: "topic", keyword: "keyword" },
+    },
+    {
+      label: "Generate OG Tags",
+      targetSlug: "og-meta-tags",
+      fieldMap: { topic: "title" },
     },
   ],
   "youtube-to-blog": [

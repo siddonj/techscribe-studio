@@ -40,6 +40,47 @@ function countLinks(text: string): number {
   return (text.match(/https?:\/\//g) ?? []).length;
 }
 
+function countSyllables(word: string): number {
+  const cleaned = word.toLowerCase().replace(/[^a-z]/g, "");
+  if (cleaned.length === 0) return 0;
+  if (cleaned.length <= 3) return 1;
+  // Remove silent trailing 'e'
+  const withoutSilentE = cleaned.replace(/e$/, "");
+  // Count vowel groups
+  const groups = withoutSilentE.match(/[aeiouy]+/g);
+  return Math.max(1, groups ? groups.length : 1);
+}
+
+function countSentences(text: string): number {
+  const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+  return Math.max(1, sentences.length);
+}
+
+function computeFleschKincaid(text: string): { score: number; grade: string } {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const wordCount = words.length;
+  const sentenceCount = countSentences(text);
+  const syllableCount = words.reduce((sum, w) => sum + countSyllables(w), 0);
+
+  if (wordCount === 0) return { score: 0, grade: "N/A" };
+
+  const asl = wordCount / sentenceCount;
+  const asw = syllableCount / wordCount;
+  const raw = 206.835 - 1.015 * asl - 84.6 * asw;
+  const score = Math.max(0, Math.min(100, Math.round(raw)));
+
+  let grade: string;
+  if (score >= 90) grade = "Very Easy";
+  else if (score >= 80) grade = "Easy";
+  else if (score >= 70) grade = "Fairly Easy";
+  else if (score >= 60) grade = "Standard";
+  else if (score >= 50) grade = "Fairly Difficult";
+  else if (score >= 30) grade = "Difficult";
+  else grade = "Very Difficult";
+
+  return { score, grade };
+}
+
 function getFirstNWords(text: string, n: number): string {
   return text.trim().split(/\s+/).slice(0, n).join(" ");
 }
@@ -56,6 +97,7 @@ function buildChecks(title: string, output: string, focusKeyword: string): SeoCh
   const introKeywordMatches = countMatches(introText, focusKeyword);
   const linkCount = countLinks(output);
   const hasCta = /(subscribe|comment|share|read next|try|download|book|contact)/i.test(output);
+  const { score: readabilityScore, grade: readabilityGrade } = computeFleschKincaid(output);
 
   return [
     {
@@ -157,6 +199,17 @@ function buildChecks(title: string, output: string, focusKeyword: string): SeoCh
         : "Add a stronger CTA in the final section.",
       weight: 10,
     },
+    {
+      id: "readability",
+      label: "Content is readable (Flesch-Kincaid ≥ 50)",
+      passed: readabilityScore >= 50,
+      detail: `Flesch-Kincaid reading ease: ${readabilityScore}/100 — ${readabilityGrade}. ${
+        readabilityScore >= 50
+          ? "Content is accessible to a broad audience."
+          : "Simplify sentences and use shorter words to improve readability."
+      }`,
+      weight: 8,
+    },
   ];
 }
 
@@ -190,12 +243,15 @@ export async function POST(req: NextRequest) {
 
     const failingChecks = checks.filter((check) => !check.passed);
     const wordCount = countWords(output);
+    const { score: readabilityScore, grade: readabilityGrade } = computeFleschKincaid(output);
 
     return NextResponse.json({
       score,
       checks,
       suggestions: failingChecks.map((check) => check.detail),
       wordCount,
+      readabilityScore,
+      readabilityGrade,
       analyzedAt: new Date().toISOString(),
     });
   } catch (error) {
