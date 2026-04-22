@@ -14,12 +14,18 @@ export async function proxy(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
   if (!token) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", req.url);
     return NextResponse.redirect(loginUrl);
   }
 
   if (token.status !== "approved") {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
     return NextResponse.redirect(new URL("/pending", req.url));
   }
 
