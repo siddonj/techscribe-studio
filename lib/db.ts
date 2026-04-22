@@ -14,10 +14,13 @@ import {
   type CalendarSummary,
 } from "@/lib/calendar";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// DATA_DIR can be overridden via env var so the path is explicit in Docker
+// regardless of what process.cwd() resolves to at runtime.
+const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "history.db");
 
-// Ensure data directory exists
+console.log(`[db] data directory: ${DATA_DIR}`);
+
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
