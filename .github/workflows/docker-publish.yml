@@ -99,6 +99,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
           script: |
             cd ${{ secrets.VPS_DEPLOY_PATH }}
             docker compose --env-file .env -f docker-compose.prod.yml pull
