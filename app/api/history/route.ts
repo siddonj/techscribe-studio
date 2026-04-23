@@ -1,9 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
-import { countHistory, getCalendarEntryById, linkCalendarEntryToHistory, saveHistory, listHistory } from "@/lib/db";
+import { countHistory, getCalendarEntryById, linkCalendarEntryToHistory, saveHistory, listHistory, type HistoryRow } from "@/lib/db";
 import { getToolBySlug } from "@/lib/tools";
 import { requireApprovedSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
+
+const STOP_WORDS = new Set(["a","an","the","and","or","but","in","on","at","to","for","of","with","by","from","is","are","was","were","be","been","has","have","had","do","does","did","will","would","could","should","may","might","i","you","he","she","it","we","they","this","that","these","those","how","what","when","where","why","which","who","about","like","just","not","can","get","use","make","into"]);
+
+function extractKeywords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[\s,;|/\\+\-–—]+/)
+    .map((w) => w.replace(/[^a-z0-9]/g, ""))
+    .filter((w) => w.length > 3 && !STOP_WORDS.has(w));
+}
+
+function checkCannibalization(
+  title: string,
+  keywords: string,
+  excludeId: number
+): Array<{ id: number; title: string }> | null {
+  try {
+    const newKeywords = new Set([...extractKeywords(title), ...extractKeywords(keywords)]);
+    if (newKeywords.size === 0) return null;
+
+    // Search recent history for any entry whose title shares 2+ significant keywords
+    const recent = listHistory(200, {}, 0) as HistoryRow[];
+    const matches: Array<{ id: number; title: string }> = [];
+
+    for (const row of recent) {
+      if (row.id === excludeId) continue;
+      const rowKeywords = new Set([
+        ...extractKeywords(row.title),
+        ...extractKeywords(JSON.parse(row.fields as string)?.keywords ?? ""),
+      ]);
+      const overlap = [...newKeywords].filter((kw) => rowKeywords.has(kw));
+      if (overlap.length >= 2) {
+        matches.push({ id: row.id, title: row.title });
+      }
+    }
+
+    return matches.length > 0 ? matches.slice(0, 3) : null;
+  } catch {
+    return null;
+  }
+}
 
 function toIsoStart(date: string | null) {
   if (!date) return undefined;
@@ -125,7 +166,14 @@ export async function POST(req: NextRequest) {
       linkCalendarEntryToHistory(calendarId, entry.id);
     }
 
-    return NextResponse.json(entry, { status: 201 });
+    // Cannibalization check: find existing history entries that share keywords/topic
+    const cannibalizationWarning = checkCannibalization(
+      String(title),
+      String(fields.keywords ?? fields.keyword ?? fields.seedKeyword ?? ""),
+      entry.id
+    );
+
+    return NextResponse.json({ ...entry, cannibalizationWarning }, { status: 201 });
   } catch (err) {
     console.error("History POST error:", err);
     return NextResponse.json({ error: "Failed to save history" }, { status: 500 });

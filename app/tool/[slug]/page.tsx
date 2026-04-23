@@ -8,7 +8,11 @@ import { getHandoffActions } from "@/lib/handoff-registry";
 import { parseToolOutput, ParsedToolOutput } from "@/lib/output-parsers";
 import HandoffCard from "@/components/HandoffCard";
 import AddKnowledgeModal, { ResearchItem } from "@/components/AddKnowledgeModal";
-import { EmptyState, PageHeader, StatusStrip } from "@/components/DashboardPrimitives";
+import { BookOpen, FileText, Link2, Pencil, SearchX, Sparkles } from "lucide-react";
+import { EmptyState, PageHeader } from "@/components/DashboardPrimitives";
+import { useToast } from "@/components/Toast";
+import { useKnowledgeBase } from "@/lib/use-knowledge-base";
+import { useMyTone, buildToneInstruction } from "@/lib/use-my-tone";
 import HelpDrawer from "@/components/HelpDrawer";
 import type { PublishState, PublishFailureCategory } from "@/lib/publish-state";
 import {
@@ -203,6 +207,53 @@ function FieldInput({
   );
 }
 
+function WorkflowStepper({
+  steps,
+  currentStep,
+  hint,
+}: {
+  steps: string[];
+  currentStep: number;
+  hint?: string;
+}) {
+  return (
+    <div className="flex items-center gap-4 px-6 py-3 border-b border-white/5 bg-white/[0.02]">
+      <div className="flex items-center">
+        {steps.map((step, i) => {
+          const done = i < currentStep;
+          const active = i === currentStep;
+          return (
+            <span key={step} className="flex items-center">
+              <span className={`flex items-center gap-1.5 text-xs font-medium px-1.5 py-1 rounded-lg transition-all ${
+                done ? "text-emerald-400" : active ? "text-white" : "text-slate-600"
+              }`}>
+                <span className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold border shrink-0 transition-all ${
+                  done
+                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
+                    : active
+                      ? "bg-accent/15 border-accent/60 text-accent"
+                      : "bg-transparent border-white/15 text-slate-600"
+                }`}>
+                  {done ? "✓" : i + 1}
+                </span>
+                <span className={active ? "font-semibold" : ""}>{step}</span>
+              </span>
+              {i < steps.length - 1 && (
+                <span className={`w-8 h-px mx-1 block transition-all ${
+                  i < currentStep ? "bg-emerald-500/30" : "bg-white/10"
+                }`} />
+              )}
+            </span>
+          );
+        })}
+      </div>
+      {hint && (
+        <span className="text-xs text-slate-500 border-l border-white/10 pl-4 hidden sm:block">{hint}</span>
+      )}
+    </div>
+  );
+}
+
 function ToolPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -212,12 +263,14 @@ function ToolPageContent() {
   const calendarId = calendarIdParam ? Number.parseInt(calendarIdParam, 10) : null;
   const handoffActions = getHandoffActions(slug);
 
+  const { toast } = useToast();
+  const { entries: knowledgeEntries } = useKnowledgeBase();
+  const { config: toneConfig } = useMyTone();
+
   const [fields, setFields] = useState<Record<string, string>>({});
   const [output, setOutput] = useState("");
   const [parsedOutput, setParsedOutput] = useState<ParsedToolOutput | null>(null);
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [historyId, setHistoryId] = useState<number | null>(null);
   const [draftPostId, setDraftPostId] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -250,7 +303,6 @@ function ToolPageContent() {
       : output
         ? "Output ready"
         : "Ready";
-  const saveStateLabel = historyId ? `Saved #${historyId}` : saved ? "Saved" : "Not saved";
   const publishStateLabel = draftPostId
     ? publishedDraftUrl
       ? "Draft linked"
@@ -272,6 +324,7 @@ function ToolPageContent() {
 
   // Photos option state — rendered for all tools but only displayed when tool.supportsPhotos is true
   const [includePhotos, setIncludePhotos] = useState(false);
+  const [includeKnowledge, setIncludeKnowledge] = useState(false);
 
   // Output tab state (ARTICLE = rendered, EDITOR = editable textarea)
   type OutputTab = "article" | "editor";
@@ -296,7 +349,7 @@ function ToolPageContent() {
     setOutput("");
     setParsedOutput(null);
     setError("");
-    setSaved(false);
+
     setHistoryId(null);
     setDraftPostId(null);
     setPublishedDraftUrl(null);
@@ -332,11 +385,46 @@ function ToolPageContent() {
     void loadPublishStatus();
   }, []);
 
+  const generateFnRef = useRef<() => void>(() => {});
+  const [draftOutput, setDraftOutput] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        generateFnRef.current?.();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    setDraftOutput(null);
+    try {
+      const raw = localStorage.getItem(`techscribe_draft_${slug}`);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as { output: string; timestamp: number };
+      if (Date.now() - saved.timestamp < 48 * 60 * 60 * 1000 && saved.output) {
+        setDraftOutput(saved.output);
+      }
+    } catch { /* ignore */ }
+  }, [slug]);
+
+  useEffect(() => {
+    if (!output || !slug) return;
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(`techscribe_draft_${slug}`, JSON.stringify({ output, timestamp: Date.now() }));
+      } catch { /* ignore */ }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [output, slug]);
+
   if (!tool) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="text-4xl mb-4">🔍</div>
+          <SearchX className="w-10 h-10 mx-auto mb-4 text-slate-500 opacity-50" />
           <div className="text-white text-lg mb-2">Tool not found</div>
           <Link href="/" className="text-accent text-sm hover:underline">
             ← Back to Dashboard
@@ -361,7 +449,7 @@ function ToolPageContent() {
     setOutput("");
     setParsedOutput(null);
     setError("");
-    setSaved(false);
+
     setHistoryId(null);
     setDraftPostId(null);
     setPublishedDraftUrl(null);
@@ -376,7 +464,18 @@ function ToolPageContent() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: tool.slug, fields, mode, research: researchItems, includePhotos: isOutlineMode ? false : includePhotos }),
+        body: JSON.stringify({
+          slug: tool.slug,
+          fields,
+          mode,
+          research: [
+            ...researchItems,
+            ...(includeKnowledge ? knowledgeEntries.map((e) => ({ id: e.id, type: e.type === "url" ? "url" : "text" as const, label: e.title, content: e.content })) : []),
+          ],
+          includePhotos: isOutlineMode ? false : includePhotos,
+          toneInstruction: buildToneInstruction(toneConfig),
+          model: localStorage.getItem("techscribe_model") ?? "claude-sonnet-4-6",
+        }),
       });
 
       if (!res.ok) {
@@ -416,7 +515,7 @@ function ToolPageContent() {
     setLoading(true);
     setOutput("");
     setError("");
-    setSaved(false);
+
     setHistoryId(null);
     setDraftPostId(null);
     setPublishedDraftUrl(null);
@@ -429,7 +528,19 @@ function ToolPageContent() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: tool.slug, fields, mode: "article", outline: editableOutline, research: researchItems, includePhotos }),
+        body: JSON.stringify({
+          slug: tool.slug,
+          fields,
+          mode: "article",
+          outline: editableOutline,
+          research: [
+            ...researchItems,
+            ...(includeKnowledge ? knowledgeEntries.map((e) => ({ id: e.id, type: e.type === "url" ? "url" : "text" as const, label: e.title, content: e.content })) : []),
+          ],
+          includePhotos,
+          toneInstruction: buildToneInstruction(toneConfig),
+          model: localStorage.getItem("techscribe_model") ?? "claude-sonnet-4-6",
+        }),
       });
 
       if (!res.ok) {
@@ -460,8 +571,7 @@ function ToolPageContent() {
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(output);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    toast("Copied to clipboard");
   };
 
   const handleSave = async (): Promise<number | null> => {
@@ -479,13 +589,19 @@ function ToolPageContent() {
       });
       if (res.ok) {
         const entry = await res.json();
-        setSaved(true);
         setHistoryId(entry.id);
-        setTimeout(() => setSaved(false), 3000);
+        toast("Saved to history");
+        try { localStorage.removeItem(`techscribe_draft_${slug}`); } catch { /* ignore */ }
+        setDraftOutput(null);
+        if (entry.cannibalizationWarning?.length) {
+          const titles = entry.cannibalizationWarning.map((e: { title: string }) => `"${e.title}"`).join(", ");
+          toast(`Keyword overlap detected with ${titles}`, "info");
+        }
         return entry.id as number;
       }
+      toast("Save failed — please try again", "error");
     } catch {
-      // silently ignore
+      toast("Save failed — please try again", "error");
     }
 
     return null;
@@ -539,6 +655,7 @@ function ToolPageContent() {
       if (currentHistoryId) {
         setHistoryId(currentHistoryId);
       }
+      toast("Published to WordPress", "success");
     } catch (err) {
       setError(err instanceof Error ? err.message : "WordPress publish failed");
     } finally {
@@ -550,7 +667,7 @@ function ToolPageContent() {
     setOutput("");
     setParsedOutput(null);
     setError("");
-    setSaved(false);
+
     setHistoryId(null);
     setDraftPostId(null);
     setPublishedDraftUrl(null);
@@ -574,30 +691,59 @@ function ToolPageContent() {
     setFields(defaults);
   };
 
+  generateFnRef.current = loading ? () => {} : articleStep === "outline-editing" ? handleGenerateArticle : handleGenerate;
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="p-5 md:p-8 max-w-[1600px] mx-auto w-full flex-1 flex flex-col gap-6">
         <PageHeader
-          eyebrow="Writing Workflow"
+          eyebrow={tool.category}
           title={tool.name}
           description={tool.description}
           icon={tool.icon}
           stats={[
-            { label: "Category", value: tool.category },
-            { label: "Workflow", value: isOutlineMode ? "Outline" : "Direct" },
+            { label: "Mode", value: isOutlineMode ? "Outline → Article" : "Direct generation" },
             { label: "Calendar", value: Number.isFinite(calendarId) ? "Linked" : "Standalone" },
             { label: "Publish", value: publishAllowed ? "Enabled" : "Restricted" },
           ]}
         />
 
-        <StatusStrip
-          items={[
-            { label: "Stage", value: workflowStageLabel },
-            { label: "Archive", value: saveStateLabel },
-            { label: "Draft Publish", value: publishStateLabel },
-            { label: "Output", value: output ? `${output.trim().split(/\s+/).filter(Boolean).length} words` : "Waiting for generation" },
-          ]}
-        />
+        {isOutlineMode ? (
+          <WorkflowStepper
+            steps={["Brief", "Outline", "Article", "Save"]}
+            currentStep={
+              articleStep === "input" ? 0
+              : articleStep === "outline-streaming" || articleStep === "outline-editing" ? 1
+              : articleStep === "article-streaming" ? 2
+              : historyId !== null ? 3
+              : 2
+            }
+            hint={
+              articleStep === "input" ? "Fill in the brief, then generate an outline"
+              : articleStep === "outline-streaming" ? "Generating your outline…"
+              : articleStep === "outline-editing" ? "Review and edit the outline, then generate the full article"
+              : articleStep === "article-streaming" ? "Writing your article…"
+              : articleStep === "article-done" && !historyId ? "Article ready — save or publish to finish"
+              : "Saved to history"
+            }
+          />
+        ) : (
+          <WorkflowStepper
+            steps={["Brief", "Generate", "Save"]}
+            currentStep={
+              !output && !loading ? 0
+              : loading ? 1
+              : historyId !== null ? 2
+              : 1
+            }
+            hint={
+              !output && !loading ? "Fill in the brief and click Generate"
+              : loading ? "Generating with Claude…"
+              : historyId !== null ? "Saved to history"
+              : "Output ready — save or copy to finish"
+            }
+          />
+        )}
 
         <div className="flex flex-1 overflow-hidden gap-6 min-h-0">
           <aside className="w-96 shell-panel rounded-[2rem] p-6 flex flex-col gap-4 overflow-y-auto shrink-0">
@@ -621,6 +767,29 @@ function ToolPageContent() {
               </div>
               )}
             </div>
+
+          {draftOutput && (
+            <div className="shell-panel-soft rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-amber-300/90">Unsaved draft recovered</p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => { setOutput(draftOutput); setDraftOutput(null); }}
+                  className="text-xs text-accent hover:text-white transition-colors font-medium"
+                >
+                  Restore
+                </button>
+                <button
+                  onClick={() => {
+                    try { localStorage.removeItem(`techscribe_draft_${slug}`); } catch { /* ignore */ }
+                    setDraftOutput(null);
+                  }}
+                  className="text-xs text-muted hover:text-white transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Outline-editing phase: show summary + outline actions */}
           {isOutlineMode && articleStep === "outline-editing" ? (
@@ -650,7 +819,7 @@ function ToolPageContent() {
                   setArticleStep("input");
                   setOutput("");
                   setEditableOutline("");
-                  setSaved(false);
+              
                   setHistoryId(null);
                   setPublishedDraftUrl(null);
                   setPublishState(null);
@@ -690,8 +859,8 @@ function ToolPageContent() {
                           key={item.id}
                           className="flex items-start gap-2 bg-subtle border border-border rounded-lg px-3 py-2 text-xs"
                         >
-                          <span className="mt-0.5 shrink-0 font-mono text-accent">
-                            {item.type === "url" ? "🔗" : item.type === "file" ? "📄" : "📝"}
+                          <span className="mt-0.5 shrink-0 text-accent">
+                            {item.type === "url" ? <Link2 className="w-3.5 h-3.5" /> : item.type === "file" ? <FileText className="w-3.5 h-3.5" /> : <Pencil className="w-3.5 h-3.5" />}
                           </span>
                           <span className="flex-1 text-white/80 break-all line-clamp-2" title={item.label}>{item.label}</span>
                           <button
@@ -741,6 +910,32 @@ function ToolPageContent() {
                         includePhotos ? "translate-x-6" : "translate-x-1"
                       }`}
                     />
+                  </button>
+                </label>
+              )}
+
+              {/* Knowledge base toggle — always visible when entries exist */}
+              {knowledgeEntries.length > 0 && (
+                <label className="flex items-center justify-between gap-3 shell-panel-soft rounded-2xl px-4 py-3 cursor-pointer select-none">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <BookOpen className="w-4 h-4 text-accent shrink-0" />
+                    <div>
+                      <p className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-0.5">Knowledge Base</p>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Include {knowledgeEntries.length} saved source{knowledgeEntries.length !== 1 ? "s" : ""} from your library.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={includeKnowledge}
+                    onClick={() => setIncludeKnowledge((v) => !v)}
+                    className={`relative shrink-0 h-6 w-11 rounded-full border transition-colors focus:outline-none ${
+                      includeKnowledge ? "bg-accent border-accent" : "bg-subtle border-border"
+                    }`}
+                  >
+                    <span className={`block h-4 w-4 rounded-full bg-white shadow transition-transform ${includeKnowledge ? "translate-x-6" : "translate-x-1"}`} />
                   </button>
                 </label>
               )}
@@ -831,7 +1026,7 @@ function ToolPageContent() {
                     onClick={handleCopy}
                     className="flex items-center gap-1.5 btn-secondary"
                   >
-                    {copied ? "✓ Copied!" : "Copy"}
+                    Copy
                   </button>
                   {!loading && (
                     <button
@@ -857,7 +1052,7 @@ function ToolPageContent() {
                       onClick={handleSave}
                       className="flex items-center gap-1.5 btn-secondary"
                     >
-                      {saved ? "✓ Saved!" : "Save"}
+                      Save
                     </button>
                   )}
                   {/* Edit & Run Again / Reset Form — shown when article is done */}
@@ -942,7 +1137,7 @@ function ToolPageContent() {
             {!output && !loading && (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <EmptyState
-                  icon={tool.icon}
+                  icon={<Sparkles />}
                   eyebrow="Output Bay"
                   description={
                     <>

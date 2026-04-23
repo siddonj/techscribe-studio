@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Cpu } from "lucide-react";
 import { PageHeader, SectionCard, SurfaceNotice } from "@/components/DashboardPrimitives";
+
+const MODEL_OPTIONS = [
+  { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5", description: "Fast & economical. Best for short-form content and quick drafts." },
+  { id: "claude-sonnet-4-6", label: "Sonnet 4.6", description: "Balanced performance. Recommended for most tools. (Default)" },
+  { id: "claude-opus-4-7", label: "Opus 4.7", description: "Most capable. Ideal for long-form, research-heavy, or complex content." },
+];
+const MODEL_STORAGE_KEY = "techscribe_model";
 
 interface WordPressSettingsResponse {
   site_url: string;
@@ -49,6 +57,15 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [testMessage, setTestMessage] = useState<string | null>(null);
   const [verifiedSignature, setVerifiedSignature] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState("claude-sonnet-4-6");
+  const [modelSaved, setModelSaved] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(MODEL_STORAGE_KEY);
+      if (saved && MODEL_OPTIONS.some((m) => m.id === saved)) setSelectedModel(saved);
+    } catch { /* ignore */ }
+  }, []);
 
   const currentPasswordToken = appPassword || (hasSavedPassword ? "__saved_password__" : "");
   const currentConfigSignature = getConfigSignature(siteUrl, username, currentPasswordToken);
@@ -173,15 +190,21 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveModel = () => {
+    try { localStorage.setItem(MODEL_STORAGE_KEY, selectedModel); } catch { /* ignore */ }
+    setModelSaved(true);
+    setTimeout(() => setModelSaved(false), 2000);
+  };
+
   const inputClassName = "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-colors";
 
   return (
     <div className="min-h-screen flex flex-col">
       <div className="p-5 md:p-8 max-w-6xl w-full mx-auto space-y-6">
         <PageHeader
-          eyebrow="Integrations"
-          title="WordPress Setup"
-          description="Save your publishing credentials, verify the connection, and keep draft publishing enabled without touching environment files."
+          eyebrow="Configuration"
+          title="Settings"
+          description="Manage your publishing credentials, generation model, and other workspace preferences."
           stats={[
             { label: "Source", value: loading ? "..." : source },
             { label: "Password", value: hasSavedPassword ? "Saved" : "Missing" },
@@ -190,7 +213,40 @@ export default function SettingsPage() {
           ]}
         />
 
+        <SectionCard className="space-y-5">
+          <div className="flex items-center gap-3">
+            <Cpu className="h-5 w-5 text-accent shrink-0" />
+            <div>
+              <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-0.5">Generation Model</p>
+              <p className="text-sm text-slate-400">Choose which Claude model powers all content generation. Applies to every tool.</p>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {MODEL_OPTIONS.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setSelectedModel(m.id)}
+                className={`text-left rounded-2xl border p-4 transition-colors ${
+                  selectedModel === m.id
+                    ? "border-accent bg-accent/10 text-white"
+                    : "border-white/10 text-slate-300 hover:border-white/20 hover:text-white"
+                }`}
+              >
+                <p className="font-medium text-sm">{m.label}</p>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">{m.description}</p>
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handleSaveModel}
+            className="inline-flex items-center gap-2 bg-accent text-white font-semibold px-5 py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors"
+          >
+            {modelSaved ? "Saved ✓" : "Save Model Preference"}
+          </button>
+        </SectionCard>
+
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <p className="col-span-full font-mono text-xs text-slate-500 uppercase tracking-wider">WordPress Integration</p>
           <SectionCard className="space-y-5">
             <div>
               <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-1">Connection</p>

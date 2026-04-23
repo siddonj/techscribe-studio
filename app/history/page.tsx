@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
+import { Clock } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import type { HistoryFolderSummary, HistoryRow, HistoryTagSummary } from "@/lib/db";
 import { TOOLS } from "@/lib/tools";
@@ -1855,7 +1856,7 @@ function HistoryPageContent() {
           {!selected ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <EmptyState
-                icon="🕒"
+                icon={<Clock />}
                 eyebrow="Detail View"
                 description="Select a saved generation from the list to inspect metadata, manage draft status, and review the full output."
               />

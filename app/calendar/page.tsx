@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { CalendarDays, Search } from "lucide-react";
 import {
   CALENDAR_APPROVAL_STATUSES,
   CALENDAR_APPROVAL_STATUS_LABELS,
@@ -288,6 +289,8 @@ export default function CalendarPage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
   const [quickRescheduling, setQuickRescheduling] = useState(false);
+  const [editorTab, setEditorTab] = useState<"details" | "brief" | "workflow" | "publishing">("details");
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // When arriving via a "Plan in Calendar" handoff from a keyword research
   // brief, URL params pre-fill the Quick Plan form so the user can schedule
@@ -605,17 +608,16 @@ export default function CalendarPage() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="font-mono text-xs text-accent uppercase tracking-widest">Quick Plan</p>
-              <p className="text-sm text-slate-200 mt-1">Add a topic, assign a tool, and give it a date so the queue stays visible.</p>
-              <p className="text-xs text-muted/60 mt-0.5">Dates are planning guides only — publishing to WordPress is always triggered manually.</p>
+              <p className="text-sm text-slate-200 mt-1">Add a title, pick a tool, and set a date.</p>
             </div>
-            <Link href={buildToolHref(createDraft)} className="text-sm border border-border rounded-2xl px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:border-accent/40 transition-colors">
-              Open Tool Draft
+            <Link href={buildToolHref(createDraft)} className="text-sm border border-border rounded-2xl px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:border-accent/40 transition-colors shrink-0">
+              Open Tool
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-3 items-end">
             <input
-              className={`${inputClassName} md:col-span-2`}
+              className={inputClassName}
               placeholder="Content title or angle"
               value={createDraft.title}
               onChange={(event) => setCreateDraft((current) => ({ ...current, title: event.target.value }))}
@@ -635,92 +637,97 @@ export default function CalendarPage() {
               value={createDraft.scheduled_for}
               onChange={(event) => setCreateDraft((current) => ({ ...current, scheduled_for: event.target.value }))}
             />
-            <input
-              type="date"
-              className={inputClassName}
-              value={createDraft.review_due_at}
-              onChange={(event) => setCreateDraft((current) => ({ ...current, review_due_at: event.target.value }))}
-            />
-            <input
-              className={inputClassName}
-              placeholder="Keywords"
-              value={createDraft.keywords}
-              onChange={(event) => setCreateDraft((current) => ({ ...current, keywords: event.target.value }))}
-            />
-            <input
-              className={inputClassName}
-              placeholder="Audience"
-              value={createDraft.audience}
-              onChange={(event) => setCreateDraft((current) => ({ ...current, audience: event.target.value }))}
-            />
-            <select
-              className={inputClassName}
-              value={createDraft.status}
-              onChange={(event) => setCreateDraft((current) => ({ ...current, status: event.target.value as CalendarEntryStatus }))}
-            >
-              {CALENDAR_STATUSES.map((status) => (
-                <option key={status} value={status}>{CALENDAR_STATUS_LABELS[status]}</option>
-              ))}
-            </select>
             <button
               onClick={handleCreateEntry}
               disabled={creating || !createDraft.title.trim()}
-              className="bg-accent text-white font-semibold px-4 py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50"
+              className="bg-accent text-white font-semibold px-5 py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50 whitespace-nowrap"
             >
-              {creating ? "Adding..." : "Add to Calendar"}
+              {creating ? "Adding..." : "Add"}
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <input
-              className={inputClassName}
-              placeholder="Owner"
-              value={createDraft.owner}
-              onChange={(event) => setCreateDraft((current) => ({ ...current, owner: event.target.value }))}
-            />
-            <input
-              className={inputClassName}
-              placeholder="Reviewer"
-              value={createDraft.reviewer}
-              onChange={(event) => setCreateDraft((current) => ({ ...current, reviewer: event.target.value }))}
-            />
-            <select
-              className={inputClassName}
-              value={createDraft.approval_status}
-              onChange={(event) => setCreateDraft((current) => ({
-                ...current,
-                approval_status: event.target.value as CalendarApprovalStatus,
-                blocked_reason: event.target.value === "blocked" ? current.blocked_reason : "",
-              }))}
-            >
-              {CALENDAR_APPROVAL_STATUSES.map((status) => (
-                <option key={status} value={status}>{CALENDAR_APPROVAL_STATUS_LABELS[status]}</option>
-              ))}
-            </select>
-            <input
-              className={`${inputClassName} disabled:opacity-50`}
-              placeholder="Blocked reason"
-              value={createDraft.blocked_reason}
-              disabled={createDraft.approval_status !== "blocked"}
-              onChange={(event) => setCreateDraft((current) => ({ ...current, blocked_reason: event.target.value }))}
-            />
-          </div>
+          <button
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <span className={`transition-transform ${showAdvanced ? "rotate-90" : ""}`}>›</span>
+            {showAdvanced ? "Hide" : "Advanced"} options
+          </button>
 
-          <textarea
-            className={`${inputClassName} resize-none`}
-            rows={2}
-            placeholder="Brief or planning note"
-            value={createDraft.brief}
-            onChange={(event) => setCreateDraft((current) => ({ ...current, brief: event.target.value }))}
-          />
-
-          <textarea
-            className={`${inputClassName} resize-none`}
-            rows={4}
-            placeholder="Checklist items, one per line"
-            value={createDraft.checklist_text}
-            onChange={(event) => setCreateDraft((current) => ({ ...current, checklist_text: event.target.value }))}
-          />
+          {showAdvanced && (
+            <div className="space-y-3 pt-1">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <input
+                  className={inputClassName}
+                  placeholder="Keywords"
+                  value={createDraft.keywords}
+                  onChange={(event) => setCreateDraft((current) => ({ ...current, keywords: event.target.value }))}
+                />
+                <input
+                  className={inputClassName}
+                  placeholder="Audience"
+                  value={createDraft.audience}
+                  onChange={(event) => setCreateDraft((current) => ({ ...current, audience: event.target.value }))}
+                />
+                <input
+                  type="date"
+                  className={inputClassName}
+                  value={createDraft.review_due_at}
+                  onChange={(event) => setCreateDraft((current) => ({ ...current, review_due_at: event.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <input
+                  className={inputClassName}
+                  placeholder="Owner"
+                  value={createDraft.owner}
+                  onChange={(event) => setCreateDraft((current) => ({ ...current, owner: event.target.value }))}
+                />
+                <input
+                  className={inputClassName}
+                  placeholder="Reviewer"
+                  value={createDraft.reviewer}
+                  onChange={(event) => setCreateDraft((current) => ({ ...current, reviewer: event.target.value }))}
+                />
+                <select
+                  className={inputClassName}
+                  value={createDraft.status}
+                  onChange={(event) => setCreateDraft((current) => ({ ...current, status: event.target.value as CalendarEntryStatus }))}
+                >
+                  {CALENDAR_STATUSES.map((status) => (
+                    <option key={status} value={status}>{CALENDAR_STATUS_LABELS[status]}</option>
+                  ))}
+                </select>
+                <select
+                  className={inputClassName}
+                  value={createDraft.approval_status}
+                  onChange={(event) => setCreateDraft((current) => ({
+                    ...current,
+                    approval_status: event.target.value as CalendarApprovalStatus,
+                    blocked_reason: event.target.value === "blocked" ? current.blocked_reason : "",
+                  }))}
+                >
+                  {CALENDAR_APPROVAL_STATUSES.map((status) => (
+                    <option key={status} value={status}>{CALENDAR_APPROVAL_STATUS_LABELS[status]}</option>
+                  ))}
+                </select>
+              </div>
+              <textarea
+                className={`${inputClassName} resize-none`}
+                rows={2}
+                placeholder="Brief or planning note"
+                value={createDraft.brief}
+                onChange={(event) => setCreateDraft((current) => ({ ...current, brief: event.target.value }))}
+              />
+              <textarea
+                className={`${inputClassName} resize-none`}
+                rows={3}
+                placeholder="Checklist items, one per line"
+                value={createDraft.checklist_text}
+                onChange={(event) => setCreateDraft((current) => ({ ...current, checklist_text: event.target.value }))}
+              />
+            </div>
+          )}
         </section>
 
         {(error || message) && (
@@ -856,7 +863,7 @@ export default function CalendarPage() {
 
                 {!loading && rows.length === 0 && (statusFilter !== "all" || toolFilter !== "all" || publishIntentFilter !== "all") && (
                   <div className="p-6 text-center">
-                    <div className="text-4xl opacity-30 mb-3">🔍</div>
+                    <Search className="w-8 h-8 opacity-30 text-slate-400 mx-auto mb-3" />
                     <p className="text-sm text-slate-400">No items match the active filters.</p>
                     <button
                       onClick={() => { setStatusFilter("all"); setToolFilter("all"); setPublishIntentFilter("all"); }}
@@ -869,7 +876,7 @@ export default function CalendarPage() {
 
                 {!loading && rows.length === 0 && statusFilter === "all" && toolFilter === "all" && publishIntentFilter === "all" && (
                   <div className="p-6 text-center">
-                    <div className="text-4xl opacity-30 mb-3">🗓️</div>
+                    <CalendarDays className="w-8 h-8 opacity-30 text-slate-400 mx-auto mb-3" />
                     <p className="text-sm text-slate-400">No planned content yet.</p>
                     <p className="text-xs text-slate-500 mt-1">Add your first scheduled item above to start building the queue.</p>
                   </div>
@@ -967,7 +974,7 @@ export default function CalendarPage() {
 
                 {!loading && rows.length === 0 && (statusFilter !== "all" || toolFilter !== "all" || publishIntentFilter !== "all") && (
                   <div className="p-6 text-center">
-                    <div className="text-4xl opacity-30 mb-3">🔍</div>
+                    <Search className="w-8 h-8 opacity-30 text-slate-400 mx-auto mb-3" />
                     <p className="text-sm text-slate-400">No items match the active filters.</p>
                     <button
                       onClick={() => { setStatusFilter("all"); setToolFilter("all"); setPublishIntentFilter("all"); }}
@@ -980,7 +987,7 @@ export default function CalendarPage() {
 
                 {!loading && rows.length === 0 && statusFilter === "all" && toolFilter === "all" && publishIntentFilter === "all" && (
                   <div className="p-6 text-center">
-                    <div className="text-4xl opacity-30 mb-3">🗓️</div>
+                    <CalendarDays className="w-8 h-8 opacity-30 text-slate-400 mx-auto mb-3" />
                     <p className="text-sm text-slate-400">No planned content yet.</p>
                     <p className="text-xs text-slate-500 mt-1">Add your first scheduled item above to start building the queue.</p>
                   </div>
@@ -1097,7 +1104,7 @@ export default function CalendarPage() {
 
                 {!loading && rows.length === 0 && (statusFilter !== "all" || toolFilter !== "all" || publishIntentFilter !== "all") && (
                   <div className="p-6 text-center">
-                    <div className="text-4xl opacity-30 mb-3">🔍</div>
+                    <Search className="w-8 h-8 opacity-30 text-slate-400 mx-auto mb-3" />
                     <p className="text-sm text-slate-400">No items match the active filters.</p>
                     <button
                       onClick={() => { setStatusFilter("all"); setToolFilter("all"); setPublishIntentFilter("all"); }}
@@ -1110,7 +1117,7 @@ export default function CalendarPage() {
 
                 {!loading && rows.length === 0 && statusFilter === "all" && toolFilter === "all" && publishIntentFilter === "all" && (
                   <div className="p-6 text-center">
-                    <div className="text-4xl opacity-30 mb-3">🗓️</div>
+                    <CalendarDays className="w-8 h-8 opacity-30 text-slate-400 mx-auto mb-3" />
                     <p className="text-sm text-slate-400">No planned content yet.</p>
                     <p className="text-xs text-slate-500 mt-1">Add your first scheduled item above to start building the queue.</p>
                   </div>
@@ -1217,230 +1224,255 @@ export default function CalendarPage() {
             {!selectedEntry || !editorDraft ? (
               <div className="flex-1 flex items-center justify-center text-center p-8">
                 <EmptyState
-                  icon="🗓️"
+                  icon={<CalendarDays />}
                   eyebrow="Planned Item"
                   description="Select a calendar entry to update scheduling details, refine the brief, or jump into the assigned writing tool."
                 />
               </div>
             ) : (
               <>
-                <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between gap-4">
-                  <div>
+                {/* Editor header */}
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
                     <p className="font-mono text-xs text-accent uppercase tracking-widest">Planned Item</p>
-                    <h2 className="text-slate-900 text-lg mt-1">{selectedEntry.title}</h2>
+                    <h2 className="text-slate-900 text-base font-semibold mt-0.5 truncate">{selectedEntry.title}</h2>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <Link
                       href={buildToolHref(editorDraft)}
-                      className="shell-hover-lift text-sm border border-border rounded-2xl px-3 py-2 text-slate-700 hover:text-slate-900 hover:border-accent/40 transition-colors"
+                      className="text-sm border border-border rounded-xl px-3 py-1.5 text-slate-700 hover:text-slate-900 hover:border-accent/40 transition-colors"
                     >
                       Open Tool
                     </Link>
                     <button
                       onClick={handleDeleteSelected}
                       disabled={deleting}
-                      className="text-sm border border-red-200 rounded-lg px-3 py-2 text-red-600 hover:text-red-700 hover:border-red-300 transition-colors disabled:opacity-50"
+                      className="text-sm border border-red-200 rounded-xl px-3 py-1.5 text-red-600 hover:border-red-300 transition-colors disabled:opacity-50"
                     >
-                      {deleting ? "Deleting..." : "Delete"}
+                      {deleting ? "…" : "Delete"}
                     </button>
                     <button
                       onClick={handleSaveSelected}
                       disabled={saving}
-                      className="shell-hover-lift bg-accent text-white font-semibold px-4 py-2 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50"
+                      className="bg-accent text-white font-semibold px-4 py-1.5 rounded-xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50"
                     >
-                      {saving ? "Saving..." : "Save Changes"}
+                      {saving ? "Saving…" : "Save"}
                     </button>
                   </div>
                 </div>
 
-                <div className="p-6 flex-1 overflow-y-auto space-y-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Title</label>
-                      <input
-                        className={inputClassName}
-                        value={editorDraft.title}
-                        onChange={(event) => setEditorDraft((current) => current ? { ...current, title: event.target.value } : current)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Tool</label>
-                      <select
-                        className={inputClassName}
-                        value={editorDraft.tool_slug}
-                        onChange={(event) => setEditorDraft((current) => current ? { ...current, tool_slug: event.target.value } : current)}
-                      >
-                        {TOOLS.map((tool) => (
-                          <option key={tool.slug} value={tool.slug}>{tool.icon} {tool.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
-                      <select
-                        className={inputClassName}
-                        value={editorDraft.status}
-                        onChange={(event) => setEditorDraft((current) => current ? { ...current, status: event.target.value as CalendarEntryStatus } : current)}
-                      >
-                        {CALENDAR_STATUSES.map((status) => (
-                          <option key={status} value={status}>{CALENDAR_STATUS_LABELS[status]}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Scheduled For</label>
-                      <input
-                        type="date"
-                        className={inputClassName}
-                        value={editorDraft.scheduled_for}
-                        onChange={(event) => setEditorDraft((current) => current ? { ...current, scheduled_for: event.target.value } : current)}
-                      />
-                      <p className="text-xs text-muted/60 mt-1">Editorial planning date. Also used as the WordPress publish date when publish intent is set to &ldquo;Schedule&rdquo;. Publishing is always triggered manually.</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Review Due</label>
-                      <input
-                        type="date"
-                        className={inputClassName}
-                        value={editorDraft.review_due_at}
-                        onChange={(event) => setEditorDraft((current) => current ? { ...current, review_due_at: event.target.value } : current)}
-                      />
-                      <p className="text-xs text-muted/60 mt-1">Separate sign-off deadline for editorial review. This does not change publish timing.</p>
-                    </div>
-                  </div>
+                {/* Tab bar */}
+                <div className="flex border-b border-white/5 px-2 pt-1 shrink-0">
+                  {(["details", "brief", "workflow", "publishing"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setEditorTab(tab)}
+                      className={`px-3 py-2 text-xs font-mono uppercase tracking-[0.16em] rounded-t-xl transition-colors ${
+                        editorTab === tab
+                          ? "bg-white/[0.04] text-slate-900 border-b-2 border-accent"
+                          : "text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      {tab === "brief" ? "Brief & Notes" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </button>
+                  ))}
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Keywords</label>
-                      <input
-                        className={inputClassName}
-                        placeholder="primary keyword, cluster, search phrase"
-                        value={editorDraft.keywords}
-                        onChange={(event) => setEditorDraft((current) => current ? { ...current, keywords: event.target.value } : current)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Audience</label>
-                      <input
-                        className={inputClassName}
-                        placeholder="who this piece is for"
-                        value={editorDraft.audience}
-                        onChange={(event) => setEditorDraft((current) => current ? { ...current, audience: event.target.value } : current)}
-                      />
-                    </div>
-                  </div>
+                {/* Tab content */}
+                <div className="p-5 flex-1 overflow-y-auto space-y-4">
 
-                  <div className="bg-card-alt border border-border rounded-xl p-5 space-y-4 shadow-card-inset">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-mono text-xs text-muted uppercase tracking-wider">Workflow</p>
-                      <span className={`text-[11px] font-mono border rounded-full px-2.5 py-1 ${getApprovalBadgeClass(editorDraft.approval_status)}`}>
-                        {CALENDAR_APPROVAL_STATUS_LABELS[editorDraft.approval_status]}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Details tab */}
+                  {editorTab === "details" && (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Title</label>
+                          <input
+                            className={inputClassName}
+                            value={editorDraft.title}
+                            onChange={(event) => setEditorDraft((current) => current ? { ...current, title: event.target.value } : current)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Tool</label>
+                          <select
+                            className={inputClassName}
+                            value={editorDraft.tool_slug}
+                            onChange={(event) => setEditorDraft((current) => current ? { ...current, tool_slug: event.target.value } : current)}
+                          >
+                            {TOOLS.map((tool) => (
+                              <option key={tool.slug} value={tool.slug}>{tool.icon} {tool.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
+                          <select
+                            className={inputClassName}
+                            value={editorDraft.status}
+                            onChange={(event) => setEditorDraft((current) => current ? { ...current, status: event.target.value as CalendarEntryStatus } : current)}
+                          >
+                            {CALENDAR_STATUSES.map((status) => (
+                              <option key={status} value={status}>{CALENDAR_STATUS_LABELS[status]}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Scheduled For</label>
+                          <input
+                            type="date"
+                            className={inputClassName}
+                            value={editorDraft.scheduled_for}
+                            onChange={(event) => setEditorDraft((current) => current ? { ...current, scheduled_for: event.target.value } : current)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Review Due</label>
+                          <input
+                            type="date"
+                            className={inputClassName}
+                            value={editorDraft.review_due_at}
+                            onChange={(event) => setEditorDraft((current) => current ? { ...current, review_due_at: event.target.value } : current)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Keywords</label>
+                          <input
+                            className={inputClassName}
+                            placeholder="primary keyword, cluster..."
+                            value={editorDraft.keywords}
+                            onChange={(event) => setEditorDraft((current) => current ? { ...current, keywords: event.target.value } : current)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Audience</label>
+                          <input
+                            className={inputClassName}
+                            placeholder="who this piece is for"
+                            value={editorDraft.audience}
+                            onChange={(event) => setEditorDraft((current) => current ? { ...current, audience: event.target.value } : current)}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 pt-1">
+                        <div className="shell-panel-soft rounded-xl p-3">
+                          <p className="font-mono text-[11px] text-slate-500 uppercase tracking-wider">Created</p>
+                          <p className="text-xs text-slate-800 mt-1">{new Date(selectedEntry.created_at).toLocaleString()}</p>
+                        </div>
+                        <div className="shell-panel-soft rounded-xl p-3">
+                          <p className="font-mono text-[11px] text-slate-500 uppercase tracking-wider">Updated</p>
+                          <p className="text-xs text-slate-800 mt-1">{new Date(selectedEntry.updated_at).toLocaleString()}</p>
+                        </div>
+                        <div className="shell-panel-soft rounded-xl p-3">
+                          <p className="font-mono text-[11px] text-slate-500 uppercase tracking-wider">Tool</p>
+                          <p className="text-xs text-slate-800 mt-1">{getToolBySlug(editorDraft.tool_slug)?.name ?? editorDraft.tool_slug}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Brief & Notes tab */}
+                  {editorTab === "brief" && (
+                    <>
                       <div>
-                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">Owner</label>
-                        <input
-                          className={inputClassName}
-                          placeholder="Who owns delivery"
-                          value={editorDraft.owner}
-                          onChange={(event) => setEditorDraft((current) => current ? { ...current, owner: event.target.value } : current)}
+                        <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Brief</label>
+                        <textarea
+                          className={`${inputClassName} resize-none`}
+                          rows={4}
+                          placeholder="Short description of the angle, hook, or desired outcome"
+                          value={editorDraft.brief}
+                          onChange={(event) => setEditorDraft((current) => current ? { ...current, brief: event.target.value } : current)}
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">Reviewer</label>
-                        <input
-                          className={inputClassName}
-                          placeholder="Who signs off"
-                          value={editorDraft.reviewer}
-                          onChange={(event) => setEditorDraft((current) => current ? { ...current, reviewer: event.target.value } : current)}
+                        <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Notes</label>
+                        <textarea
+                          className={`${inputClassName} resize-none`}
+                          rows={7}
+                          placeholder="Research notes, links, CTA ideas, internal reminders..."
+                          value={editorDraft.notes}
+                          onChange={(event) => setEditorDraft((current) => current ? { ...current, notes: event.target.value } : current)}
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">Approval Status</label>
-                        <select
-                          className={inputClassName}
-                          value={editorDraft.approval_status}
-                          onChange={(event) => setEditorDraft((current) => current ? {
-                            ...current,
-                            approval_status: event.target.value as CalendarApprovalStatus,
-                            blocked_reason: event.target.value === "blocked" ? current.blocked_reason : "",
-                          } : current)}
-                        >
-                          {CALENDAR_APPROVAL_STATUSES.map((status) => (
-                            <option key={status} value={status}>{CALENDAR_APPROVAL_STATUS_LABELS[status]}</option>
-                          ))}
-                        </select>
+                        <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Checklist</label>
+                        <textarea
+                          className={`${inputClassName} resize-none`}
+                          rows={5}
+                          placeholder="[ ] Draft outline&#10;[ ] Final review&#10;[x] Keyword research done"
+                          value={editorDraft.checklist_text}
+                          onChange={(event) => setEditorDraft((current) => current ? { ...current, checklist_text: event.target.value } : current)}
+                        />
+                        <p className="text-xs text-muted/60 mt-1">Use <code>[ ]</code> and <code>[x]</code> to track completion.</p>
                       </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">Blocked Reason</label>
-                      <textarea
-                        className={`${inputClassName} resize-none disabled:opacity-50`}
-                        rows={3}
-                        disabled={editorDraft.approval_status !== "blocked"}
-                        placeholder="Missing source material, awaiting sign-off, legal review, or another blocker"
-                        value={editorDraft.blocked_reason}
-                        onChange={(event) => setEditorDraft((current) => current ? { ...current, blocked_reason: event.target.value } : current)}
-                      />
-                      <p className="text-xs text-muted/60 mt-1">Use this when a piece cannot move forward yet. Clearing the blocked status also clears the reason on save.</p>
-                    </div>
-                  </div>
+                    </>
+                  )}
 
-                  <div>
-                    <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Brief</label>
-                    <textarea
-                      className={`${inputClassName} resize-none`}
-                      rows={4}
-                      placeholder="Short description of the angle, hook, or desired outcome"
-                      value={editorDraft.brief}
-                      onChange={(event) => setEditorDraft((current) => current ? { ...current, brief: event.target.value } : current)}
-                    />
-                  </div>
+                  {/* Workflow tab */}
+                  {editorTab === "workflow" && (
+                    <>
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <p className="text-xs font-mono text-slate-500 uppercase tracking-wider">Approval</p>
+                        <span className={`text-[11px] font-mono border rounded-full px-2.5 py-1 ${getApprovalBadgeClass(editorDraft.approval_status)}`}>
+                          {CALENDAR_APPROVAL_STATUS_LABELS[editorDraft.approval_status]}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Owner</label>
+                          <input
+                            className={inputClassName}
+                            placeholder="Who owns delivery"
+                            value={editorDraft.owner}
+                            onChange={(event) => setEditorDraft((current) => current ? { ...current, owner: event.target.value } : current)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Reviewer</label>
+                          <input
+                            className={inputClassName}
+                            placeholder="Who signs off"
+                            value={editorDraft.reviewer}
+                            onChange={(event) => setEditorDraft((current) => current ? { ...current, reviewer: event.target.value } : current)}
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Approval Status</label>
+                          <select
+                            className={inputClassName}
+                            value={editorDraft.approval_status}
+                            onChange={(event) => setEditorDraft((current) => current ? {
+                              ...current,
+                              approval_status: event.target.value as CalendarApprovalStatus,
+                              blocked_reason: event.target.value === "blocked" ? current.blocked_reason : "",
+                            } : current)}
+                          >
+                            {CALENDAR_APPROVAL_STATUSES.map((status) => (
+                              <option key={status} value={status}>{CALENDAR_APPROVAL_STATUS_LABELS[status]}</option>
+                            ))}
+                          </select>
+                        </div>
+                        {editorDraft.approval_status === "blocked" && (
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Blocked Reason</label>
+                            <textarea
+                              className={`${inputClassName} resize-none`}
+                              rows={3}
+                              placeholder="Missing source material, awaiting sign-off, legal review..."
+                              value={editorDraft.blocked_reason}
+                              onChange={(event) => setEditorDraft((current) => current ? { ...current, blocked_reason: event.target.value } : current)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
 
-                  <div>
-                    <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Notes</label>
-                    <textarea
-                      className={`${inputClassName} resize-none`}
-                      rows={8}
-                      placeholder="Research notes, links, CTA ideas, internal reminders, or production steps"
-                      value={editorDraft.notes}
-                      onChange={(event) => setEditorDraft((current) => current ? { ...current, notes: event.target.value } : current)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Checklist</label>
-                    <textarea
-                      className={`${inputClassName} resize-none`}
-                      rows={6}
-                      placeholder="One line per production step, asset, or approval task"
-                      value={editorDraft.checklist_text}
-                      onChange={(event) => setEditorDraft((current) => current ? { ...current, checklist_text: event.target.value } : current)}
-                    />
-                    <p className="text-xs text-muted/60 mt-1">Use lines like [ ] Draft outline or [x] Final review to preserve completion state.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="shell-panel-soft rounded-2xl p-4">
-                      <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">Created</p>
-                      <p className="text-sm text-slate-900 mt-2">{new Date(selectedEntry.created_at).toLocaleString()}</p>
-                    </div>
-                    <div className="shell-panel-soft rounded-2xl p-4">
-                      <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">Last Updated</p>
-                      <p className="text-sm text-slate-900 mt-2">{new Date(selectedEntry.updated_at).toLocaleString()}</p>
-                    </div>
-                    <div className="shell-panel-soft rounded-2xl p-4">
-                      <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">Current Tool</p>
-                      <p className="text-sm text-slate-900 mt-2">{getToolBySlug(editorDraft.tool_slug)?.name ?? editorDraft.tool_slug}</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-card-alt border border-border rounded-xl p-5 space-y-3 shadow-card-inset">
-                    <p className="font-mono text-xs text-muted uppercase tracking-wider">Publishing</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Publishing tab */}
+                  {editorTab === "publishing" && (
+                    <>
                       <div>
-                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">Publish Intent</label>
+                        <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Publish Intent</label>
                         <select
                           className={inputClassName}
                           value={selectedEntry.publish_intent}
@@ -1453,9 +1485,7 @@ export default function CalendarPage() {
                                 body: JSON.stringify({ ...toPayload(editorDraft), publish_intent: newIntent }),
                               });
                               const data = await res.json();
-                              if (!res.ok) {
-                                throw new Error(data.error || "Failed to update publish intent");
-                              }
+                              if (!res.ok) throw new Error(data.error || "Failed to update publish intent");
                               await fetchCalendar(selectedEntry.id);
                             } catch (intentError) {
                               setError(intentError instanceof Error ? intentError.message : "Failed to update publish intent");
@@ -1463,47 +1493,48 @@ export default function CalendarPage() {
                           }}
                         >
                           <option value="draft">Draft — send to WordPress as draft</option>
-                          <option value="publish">Publish — make live on WordPress immediately</option>
-                          <option value="schedule">Schedule — queue on WordPress using the planned date (WordPress controls timing)</option>
+                          <option value="publish">Publish — make live immediately</option>
+                          <option value="schedule">Schedule — use planned date (WordPress controls timing)</option>
                         </select>
-                        <p className="text-xs text-muted/60 mt-1">Controls what happens on the next manual publish action. Scheduling hands the publish date to WordPress — the app does not auto-publish.</p>
+                        <p className="text-xs text-muted/60 mt-1">Publishing is always triggered manually from History.</p>
                       </div>
+
                       <div>
-                        <p className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">WordPress Status</p>
+                        <p className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">WordPress Status</p>
                         {selectedEntry.wp_post_id ? (
-                          <div className="space-y-1">
-                            <span className="inline-block text-xs font-mono border border-green-200 text-green-600 rounded px-2 py-1 bg-green-50">
-                              Post #{selectedEntry.wp_post_id} synced
-                            </span>
-                          </div>
+                          <span className="inline-block text-xs font-mono border border-green-200 text-green-600 rounded-lg px-3 py-1.5 bg-green-50">
+                            Post #{selectedEntry.wp_post_id} synced
+                          </span>
                         ) : (
                           <p className="text-sm text-muted/60">Not yet published to WordPress</p>
                         )}
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">WP Category IDs</label>
-                        <input
-                          className={inputClassName}
-                          placeholder="1, 5, 12"
-                          value={editorDraft.wp_category}
-                          onChange={(event) => setEditorDraft((current) => current ? { ...current, wp_category: event.target.value } : current)}
-                        />
-                        <p className="text-xs text-muted/60 mt-1">Comma-separated WordPress category IDs sent on publish.</p>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">WP Category IDs</label>
+                          <input
+                            className={inputClassName}
+                            placeholder="1, 5, 12"
+                            value={editorDraft.wp_category}
+                            onChange={(event) => setEditorDraft((current) => current ? { ...current, wp_category: event.target.value } : current)}
+                          />
+                          <p className="text-xs text-muted/60 mt-1">Comma-separated category IDs.</p>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">WP Tag IDs</label>
+                          <input
+                            className={inputClassName}
+                            placeholder="3, 7"
+                            value={editorDraft.wp_tags}
+                            onChange={(event) => setEditorDraft((current) => current ? { ...current, wp_tags: event.target.value } : current)}
+                          />
+                          <p className="text-xs text-muted/60 mt-1">Comma-separated tag IDs.</p>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">WP Tag IDs</label>
-                        <input
-                          className={inputClassName}
-                          placeholder="3, 7"
-                          value={editorDraft.wp_tags}
-                          onChange={(event) => setEditorDraft((current) => current ? { ...current, wp_tags: event.target.value } : current)}
-                        />
-                        <p className="text-xs text-muted/60 mt-1">Comma-separated WordPress tag IDs sent on publish.</p>
-                      </div>
-                    </div>
-                  </div>
+                    </>
+                  )}
+
                 </div>
               </>
             )}

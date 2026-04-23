@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { TrendingUp } from "lucide-react";
 import { PageHeader, StatusStrip } from "@/components/DashboardPrimitives";
 import type { HistoryRow } from "@/lib/db";
 import { WORKFLOW_PRESETS } from "@/lib/workflow-presets";
@@ -99,6 +100,7 @@ function SeoWorkspacePageContent() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [copyLabel, setCopyLabel] = useState("Copy Report");
   const [metaDescription, setMetaDescription] = useState("");
+  const [leftTab, setLeftTab] = useState<"analysis" | "workflow" | "collaboration">("analysis");
 
   useEffect(() => {
     if (!saveMessage) return;
@@ -340,181 +342,237 @@ function SeoWorkspacePageContent() {
       />
 
       <section className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="shell-panel rounded-[2rem] p-5 space-y-4">
-          <div>
-            <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 mb-2">Draft Source</p>
-            <select
-              className="w-full input-base"
-              value={selectedId ?? ""}
-              onChange={(event) => setSelectedId(event.target.value ? Number(event.target.value) : null)}
-              disabled={loadingRows}
-            >
-              <option value="">Select a saved history draft...</option>
-              {rows.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.tool_icon} {row.title}
-                </option>
-              ))}
-            </select>
+        <div className="shell-panel rounded-[2rem] overflow-hidden flex flex-col">
+          {/* Tab bar */}
+          <div className="flex border-b border-white/10 px-2 pt-2">
+            {(["analysis", "workflow", "collaboration"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setLeftTab(tab)}
+                className={`px-4 py-2.5 text-xs font-mono uppercase tracking-[0.18em] rounded-t-xl transition-colors ${
+                  leftTab === tab
+                    ? "bg-white/[0.06] text-white border-b-2 border-accent"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                {tab === "analysis" ? "Analysis" : tab === "workflow" ? "Workflow" : "Collaboration"}
+              </button>
+            ))}
           </div>
 
-          <div>
-            <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 mb-2">Focus Keyword</p>
-            <input
-              className="w-full input-base"
-              value={focusKeyword}
-              onChange={(event) => setFocusKeyword(event.target.value)}
-              placeholder="e.g. developer content workflow"
-              disabled={!selectedRow}
-            />
-            {focusKeyword && (
-              <p className="text-[11px] text-slate-500 mt-1">{focusKeyword.length} characters · {focusKeyword.trim().split(/\s+/).filter((w) => w.length > 0).length} word(s)</p>
+          <div className="p-5 space-y-4 flex-1 overflow-y-auto">
+            {/* Analysis tab */}
+            {leftTab === "analysis" && (
+              <>
+                <div>
+                  <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 mb-2">Draft Source</p>
+                  <select
+                    className="w-full input-base"
+                    value={selectedId ?? ""}
+                    onChange={(event) => setSelectedId(event.target.value ? Number(event.target.value) : null)}
+                    disabled={loadingRows}
+                  >
+                    <option value="">Select a saved history draft...</option>
+                    {rows.map((row) => (
+                      <option key={row.id} value={row.id}>
+                        {row.tool_icon} {row.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 mb-2">Focus Keyword</p>
+                  <input
+                    className="w-full input-base"
+                    value={focusKeyword}
+                    onChange={(event) => setFocusKeyword(event.target.value)}
+                    placeholder="e.g. developer content workflow"
+                    disabled={!selectedRow}
+                  />
+                  {focusKeyword && (
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      {focusKeyword.length} chars · {focusKeyword.trim().split(/\s+/).filter((w) => w.length > 0).length} word(s)
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button onClick={handleAnalyze} disabled={!selectedRow || analyzing} className="btn-primary">
+                    {analyzing ? "Analyzing..." : "Run SEO Analysis"}
+                  </button>
+                  <button onClick={handleSave} disabled={!selectedRow || saving} className="btn-secondary">
+                    {saving ? "Saving..." : "Save Metadata"}
+                  </button>
+                </div>
+                {saveMessage && <p className="text-sm text-slate-600">{saveMessage}</p>}
+              </>
+            )}
+
+            {/* Workflow tab */}
+            {leftTab === "workflow" && (
+              <>
+                <div>
+                  <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 mb-2">Workflow Preset</p>
+                  <select
+                    className="w-full input-base"
+                    value={presetId}
+                    onChange={(event) => setPresetId(event.target.value)}
+                    disabled={!selectedRow}
+                  >
+                    <option value="">None</option>
+                    {WORKFLOW_PRESETS.map((preset) => (
+                      <option key={preset.id} value={preset.id}>{preset.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 mb-2">Workflow Stage</p>
+                  <div className="flex flex-wrap gap-2">
+                    {WORKFLOW_STAGES.map((stage, i) => {
+                      const currentIndex = WORKFLOW_STAGES.indexOf(workflowStage);
+                      const done = i < currentIndex;
+                      const active = i === currentIndex;
+                      return (
+                        <button
+                          key={stage}
+                          onClick={() => selectedRow && setWorkflowStage(stage)}
+                          disabled={!selectedRow}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all disabled:opacity-40 ${
+                            active
+                              ? "bg-accent text-white border-accent/30"
+                              : done
+                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                              : "bg-white/[0.03] text-slate-500 border-white/10 hover:text-slate-300"
+                          }`}
+                        >
+                          {done ? "✓ " : ""}{stage}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {presetId && (() => {
+                  const preset = WORKFLOW_PRESETS.find((p) => p.id === presetId);
+                  if (!preset) return null;
+                  const currentStageIndex = WORKFLOW_STAGES.indexOf(workflowStage);
+                  return (
+                    <div className="shell-panel-soft rounded-2xl p-4 space-y-2">
+                      <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500">{preset.name} — Steps</p>
+                      <ol className="space-y-1.5 mt-1">
+                        {preset.steps.map((step, index) => {
+                          const stepStageIndex = preset.steps.length > 1
+                            ? Math.round((index / (preset.steps.length - 1)) * (WORKFLOW_STAGES.length - 1))
+                            : 0;
+                          const done = currentStageIndex > stepStageIndex;
+                          const active = currentStageIndex === stepStageIndex;
+                          return (
+                            <li key={step} className={`flex items-center gap-2 text-xs ${done ? "text-emerald-400" : active ? "text-white" : "text-slate-500"}`}>
+                              <span className={`h-4 w-4 rounded-full border flex items-center justify-center shrink-0 text-[9px] ${done ? "border-emerald-500 bg-emerald-500/20" : active ? "border-accent bg-accent/20" : "border-white/20"}`}>
+                                {done ? "✓" : active ? "▶" : ""}
+                              </span>
+                              {step}
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    </div>
+                  );
+                })()}
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button onClick={handleSave} disabled={!selectedRow || saving} className="btn-secondary">
+                    {saving ? "Saving..." : "Save Stage"}
+                  </button>
+                </div>
+                {saveMessage && <p className="text-sm text-slate-600">{saveMessage}</p>}
+              </>
+            )}
+
+            {/* Collaboration tab */}
+            {leftTab === "collaboration" && (
+              <>
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Review Status</label>
+                    <select
+                      className="w-full input-base"
+                      value={collaborationStatus}
+                      onChange={(event) => setCollaborationStatus(event.target.value)}
+                      disabled={!selectedRow}
+                    >
+                      {COLLABORATION_STATUSES.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-1.5">Assignee</label>
+                    <input
+                      className="w-full input-base"
+                      value={assignee}
+                      onChange={(event) => setAssignee(event.target.value)}
+                      placeholder="Owner or reviewer name"
+                      disabled={!selectedRow}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono text-slate-500 uppercase tracking-wider mb-2">Add Note</label>
+                  <div className="flex gap-2">
+                    <input
+                      className="input-base w-28 shrink-0"
+                      value={commentAuthor}
+                      onChange={(event) => setCommentAuthor(event.target.value)}
+                      placeholder="Author"
+                      disabled={!selectedRow}
+                    />
+                    <input
+                      className="input-base flex-1"
+                      value={commentDraft}
+                      onChange={(event) => setCommentDraft(event.target.value)}
+                      placeholder="Note"
+                      disabled={!selectedRow}
+                    />
+                    <button onClick={handleAddComment} className="btn-secondary shrink-0" disabled={!selectedRow}>
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {comments.length === 0 && (
+                    <p className="text-xs text-slate-500 py-4 text-center">No notes yet.</p>
+                  )}
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="rounded-2xl border border-border bg-white/[0.03] px-3 py-2.5">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-xs font-semibold text-slate-800">{comment.author}</span>
+                        <span className="text-[11px] text-slate-500">{formatDate(comment.created_at)}</span>
+                      </div>
+                      <p className="text-sm text-slate-700">{comment.message}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button onClick={handleSave} disabled={!selectedRow || saving} className="btn-secondary">
+                    {saving ? "Saving..." : "Save"}
+                  </button>
+                </div>
+                {saveMessage && <p className="text-sm text-slate-600">{saveMessage}</p>}
+              </>
             )}
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 mb-2">Workflow Preset</p>
-              <select
-                className="w-full input-base"
-                value={presetId}
-                onChange={(event) => setPresetId(event.target.value)}
-                disabled={!selectedRow}
-              >
-                <option value="">None</option>
-                {WORKFLOW_PRESETS.map((preset) => (
-                  <option key={preset.id} value={preset.id}>
-                    {preset.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500 mb-2">Workflow Stage</p>
-              <select
-                className="w-full input-base"
-                value={workflowStage}
-                onChange={(event) => setWorkflowStage(event.target.value)}
-                disabled={!selectedRow}
-              >
-                {WORKFLOW_STAGES.map((stage) => (
-                  <option key={stage} value={stage}>
-                    {stage}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {presetId && (() => {
-            const preset = WORKFLOW_PRESETS.find((p) => p.id === presetId);
-            if (!preset) return null;
-            const currentStageIndex = WORKFLOW_STAGES.indexOf(workflowStage);
-            return (
-              <div className="shell-panel-soft rounded-3xl p-4 space-y-2">
-                <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500">{preset.name} · Steps</p>
-                <ol className="space-y-1 mt-1">
-                  {preset.steps.map((step, index) => {
-                    const stepStageIndex = preset.steps.length > 1
-                      ? Math.round((index / (preset.steps.length - 1)) * (WORKFLOW_STAGES.length - 1))
-                      : 0;
-                    const done = currentStageIndex > stepStageIndex;
-                    const active = currentStageIndex === stepStageIndex;
-                    return (
-                      <li key={step} className={`flex items-center gap-2 text-xs ${done ? "text-emerald-500" : active ? "text-white" : "text-slate-500"}`}>
-                        <span className="shrink-0">{done ? "✓" : active ? "▶" : "○"}</span>
-                        {step}
-                      </li>
-                    );
-                  })}
-                </ol>
-              </div>
-            );
-          })()}
-
-          <div className="shell-panel-soft rounded-3xl p-4 space-y-3">
-            <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500">Collaboration</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Review Status</label>
-                <select
-                  className="w-full input-base"
-                  value={collaborationStatus}
-                  onChange={(event) => setCollaborationStatus(event.target.value)}
-                  disabled={!selectedRow}
-                >
-                  {COLLABORATION_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-500 mb-1">Assignee</label>
-                <input
-                  className="w-full input-base"
-                  value={assignee}
-                  onChange={(event) => setAssignee(event.target.value)}
-                  placeholder="Owner or reviewer name"
-                  disabled={!selectedRow}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-[0.3fr_0.7fr_auto] gap-2">
-              <input
-                className="input-base"
-                value={commentAuthor}
-                onChange={(event) => setCommentAuthor(event.target.value)}
-                placeholder="Author"
-                disabled={!selectedRow}
-              />
-              <input
-                className="input-base"
-                value={commentDraft}
-                onChange={(event) => setCommentDraft(event.target.value)}
-                placeholder="Add collaboration note"
-                disabled={!selectedRow}
-              />
-              <button
-                onClick={handleAddComment}
-                className="btn-secondary"
-                disabled={!selectedRow}
-              >
-                Add
-              </button>
-            </div>
-
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {comments.length === 0 && <p className="text-xs text-slate-500">No comments yet.</p>}
-              {comments.map((comment) => (
-                <div key={comment.id} className="rounded-2xl border border-border bg-white/[0.04] px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-slate-900">{comment.author}</span>
-                    <span className="text-[11px] text-slate-500">{formatDate(comment.created_at)}</span>
-                  </div>
-                  <p className="text-sm text-slate-700 mt-1">{comment.message}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button onClick={handleAnalyze} disabled={!selectedRow || analyzing} className="btn-primary">
-              {analyzing ? "Analyzing..." : "Run SEO Analysis"}
-            </button>
-            <button onClick={handleSave} disabled={!selectedRow || saving} className="btn-secondary">
-              {saving ? "Saving..." : "Save Metadata"}
-            </button>
-          </div>
-          {saveMessage && <p className="text-sm text-slate-600">{saveMessage}</p>}
         </div>
 
         <div className="shell-panel rounded-[2rem] p-5">
           {!selectedRow ? (
             <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
-              <span className="text-4xl opacity-30">📈</span>
+              <TrendingUp className="w-10 h-10 opacity-30 text-slate-400" />
               <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-slate-500">No Draft Selected</p>
               <p className="text-sm text-slate-400 max-w-xs">Pick a saved history draft from the left panel to load its SEO score, checklist, and optimization guidance.</p>
             </div>

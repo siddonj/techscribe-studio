@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Mic2, Save } from "lucide-react";
 import { PageHeader, SectionCard, SurfaceNotice } from "@/components/DashboardPrimitives";
+import { useMyTone, type ToneConfig } from "@/lib/use-my-tone";
+import { useToast } from "@/components/Toast";
 
 const TONE_PRESETS = [
   { id: "professional", label: "Professional", description: "Clear, authoritative, and polished. Ideal for business and technical content." },
@@ -17,16 +19,19 @@ const SENTENCE_LENGTHS = ["Short & Punchy", "Balanced", "Long & Detailed"];
 const VOICE_TYPES = ["Active", "Passive", "Mixed"];
 
 export default function MyTonePage() {
-  const [selectedPreset, setSelectedPreset] = useState("conversational");
-  const [formality, setFormality] = useState(2);
-  const [sentenceLength, setSentenceLength] = useState(1);
-  const [voiceType, setVoiceType] = useState(0);
-  const [customInstructions, setCustomInstructions] = useState("");
-  const [saved, setSaved] = useState(false);
+  const { config, save } = useMyTone();
+  const { toast } = useToast();
+
+  const [selectedPreset, setSelectedPreset] = useState(config.preset);
+  const [formality, setFormality] = useState(config.formality);
+  const [sentenceLength, setSentenceLength] = useState(config.sentenceLength);
+  const [voiceType, setVoiceType] = useState(config.voiceType);
+  const [customInstructions, setCustomInstructions] = useState(config.customInstructions);
 
   const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    const next: ToneConfig = { preset: selectedPreset, formality, sentenceLength, voiceType, customInstructions };
+    save(next);
+    toast("Tone settings saved — applied to all future generations");
   };
 
   const inputClassName =
@@ -147,8 +152,6 @@ export default function MyTonePage() {
               />
             </SectionCard>
 
-            {saved && <SurfaceNotice tone="success">Your tone settings have been saved.</SurfaceNotice>}
-
             <button
               onClick={handleSave}
               className="inline-flex items-center gap-2 bg-accent text-white font-semibold px-5 py-3 rounded-2xl text-sm hover:bg-accent-dim transition-colors"
@@ -164,24 +167,24 @@ export default function MyTonePage() {
               <div className="space-y-3">
                 <div>
                   <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Preset</p>
-                  <p className="text-white text-sm capitalize">{selectedPreset}</p>
+                  <p className="text-slate-900 text-sm capitalize">{selectedPreset}</p>
                 </div>
                 <div>
                   <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Formality</p>
-                  <p className="text-white text-sm">{FORMALITY_LEVELS[formality]}</p>
+                  <p className="text-slate-900 text-sm">{FORMALITY_LEVELS[formality]}</p>
                 </div>
                 <div>
                   <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Sentence Length</p>
-                  <p className="text-white text-sm">{SENTENCE_LENGTHS[sentenceLength]}</p>
+                  <p className="text-slate-900 text-sm">{SENTENCE_LENGTHS[sentenceLength]}</p>
                 </div>
                 <div>
                   <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Voice</p>
-                  <p className="text-white text-sm">{VOICE_TYPES[voiceType]}</p>
+                  <p className="text-slate-900 text-sm">{VOICE_TYPES[voiceType]}</p>
                 </div>
                 {customInstructions && (
                   <div>
                     <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Custom Instructions</p>
-                    <p className="text-white text-sm leading-relaxed line-clamp-4">{customInstructions}</p>
+                    <p className="text-slate-900 text-sm leading-relaxed line-clamp-4">{customInstructions}</p>
                   </div>
                 )}
               </div>
@@ -189,10 +192,10 @@ export default function MyTonePage() {
 
             <SectionCard className="space-y-3 h-fit">
               <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">How it works</p>
-              <div className="space-y-2 text-sm text-slate-400">
-                <p>Your tone profile is applied automatically when you generate content with any tool.</p>
-                <p>You can override the tone on individual tools without changing your global settings.</p>
-                <p>Custom instructions are appended to every prompt as system-level guidance.</p>
+              <div className="space-y-2 text-sm text-slate-500">
+                <p>Your tone profile is injected into every generation automatically — no need to set it per-tool.</p>
+                <p>Custom instructions are appended to the system prompt for every request.</p>
+                <p>Settings are stored in your browser and travel with you across sessions.</p>
               </div>
             </SectionCard>
           </div>

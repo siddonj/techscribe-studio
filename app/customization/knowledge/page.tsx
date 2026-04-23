@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Library, Plus, Trash2, FileText, Link as LinkIcon } from "lucide-react";
 import { PageHeader, SectionCard, EmptyState, SurfaceNotice } from "@/components/DashboardPrimitives";
+import { useKnowledgeBase } from "@/lib/use-knowledge-base";
 
 type SourceType = "text" | "url";
 
@@ -15,16 +16,8 @@ function isSafeUrl(url: string): boolean {
   }
 }
 
-interface KnowledgeEntry {
-  id: string;
-  title: string;
-  type: SourceType;
-  content: string;
-  createdAt: string;
-}
-
 export default function KnowledgePage() {
-  const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
+  const { entries, addEntry, removeEntry } = useKnowledgeBase();
   const [showForm, setShowForm] = useState(false);
   const [sourceType, setSourceType] = useState<SourceType>("text");
   const [title, setTitle] = useState("");
@@ -41,22 +34,17 @@ export default function KnowledgePage() {
       return;
     }
     setError(null);
-    const entry: KnowledgeEntry = {
-      id: crypto.randomUUID(),
+    addEntry({
       title: title.trim(),
       type: sourceType,
       content: sourceType === "url" ? new URL(content.trim()).href : content.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    setEntries((prev) => [entry, ...prev]);
+    });
     setTitle("");
     setContent("");
     setShowForm(false);
   };
 
-  const handleDelete = (id: string) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
-  };
+  const handleDelete = (id: string) => removeEntry(id);
 
   const inputClassName =
     "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-colors";

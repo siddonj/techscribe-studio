@@ -130,7 +130,7 @@ export function SurfaceNotice({ tone = "info", children, className }: SurfaceNot
 export function EmptyState({ icon, eyebrow, description, className }: EmptyStateProps) {
   return (
     <div className={clsx("shell-panel-soft rounded-[2rem] px-8 py-10 max-w-lg mx-auto text-center", className)}>
-      <div className="text-5xl mb-4 opacity-30">{icon}</div>
+      <div className="mb-4 opacity-30 flex justify-center text-5xl [&>svg]:w-12 [&>svg]:h-12">{icon}</div>
       <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent mb-3">{eyebrow}</p>
       <p className="text-slate-400 text-sm max-w-xs mx-auto">{description}</p>
     </div>

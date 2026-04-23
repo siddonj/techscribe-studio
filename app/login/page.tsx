@@ -57,6 +57,22 @@ function LoginContent() {
           <p className="text-xs text-center text-slate-400">
             Access is restricted. Your account will be reviewed by an admin before you can use the workspace.
           </p>
+
+          {process.env.NODE_ENV === "development" && (
+            <>
+              <div className="relative flex items-center gap-3">
+                <div className="flex-1 h-px bg-slate-200" />
+                <span className="text-xs text-slate-400 shrink-0">dev only</span>
+                <div className="flex-1 h-px bg-slate-200" />
+              </div>
+              <button
+                onClick={() => signIn("dev-login", { callbackUrl })}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 hover:border-accent/50 hover:text-accent transition-all"
+              >
+                Skip auth — Dev login
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
