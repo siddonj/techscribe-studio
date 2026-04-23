@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
 
     networks:
-      - traefik-public
+      - traefik_default
 
     # Load all secrets/config from .env; override infrastructure-only vars inline.
     env_file: .env
@@ -73,7 +73,7 @@ services:
     # ── Traefik labels ───────────────────────────────────────────────────────
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=traefik-public"
+      - "traefik.docker.network=traefik_default"
       # HTTP → HTTPS redirect
       - "traefik.http.routers.techscribe-http.rule=Host(`${DOMAIN:-techscribe.example.com}`)"
       - "traefik.http.routers.techscribe-http.entrypoints=web"
@@ -91,7 +91,7 @@ services:
       - "traefik.http.routers.techscribe.middlewares=techscribe-buffering"
 
 networks:
-  traefik-public:
+  traefik_default:
     external: true
 
 # No named volumes — data lives at ./data on the host.
