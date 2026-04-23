@@ -20,8 +20,8 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY:-siddonj/techscribe-studio}:${IMAGE_TAG:-latest}
     restart: unless-stopped
 
-    networks:
-      - traefik_default
+    ports:
+      - "8989:8989"
 
     # Load all secrets/config from .env; override infrastructure-only vars inline.
     env_file: .env
@@ -69,29 +69,5 @@ services:
         reservations:
           cpus: "0.25"
           memory: 256M
-
-    # ── Traefik labels ───────────────────────────────────────────────────────
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik_default"
-      # HTTP → HTTPS redirect
-      - "traefik.http.routers.techscribe-http.rule=Host(`${DOMAIN:-techscribe.example.com}`)"
-      - "traefik.http.routers.techscribe-http.entrypoints=web"
-      - "traefik.http.routers.techscribe-http.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      # HTTPS router
-      - "traefik.http.routers.techscribe.rule=Host(`${DOMAIN:-techscribe.example.com}`)"
-      - "traefik.http.routers.techscribe.entrypoints=websecure"
-      - "traefik.http.routers.techscribe.tls=true"
-      - "traefik.http.routers.techscribe.tls.certresolver=letsencrypt"
-      # Service backend port
-      - "traefik.http.services.techscribe.loadbalancer.server.port=8989"
-      # Disable response buffering so streaming AI generation works correctly
-      - "traefik.http.middlewares.techscribe-buffering.buffering.maxResponseBodyBytes=0"
-      - "traefik.http.routers.techscribe.middlewares=techscribe-buffering"
-
-networks:
-  traefik_default:
-    external: true
 
 # No named volumes — data lives at ./data on the host.
