@@ -24,8 +24,6 @@ COPY . .
 RUN npm run build
 
 # ── Runner stage: minimal production image ────────────────────────────────────
-# Pin to the same bookworm-slim variant as the build stages; update the patch
-# version here when Node 20.x releases security fixes.
 FROM node:20.19.0-bookworm-slim AS runner
 WORKDIR /app
 
@@ -39,31 +37,17 @@ LABEL org.opencontainers.image.title="TechScribe Studio" \
       org.opencontainers.image.source="https://github.com/siddonj/techscribe-studio" \
       org.opencontainers.image.licenses="UNLICENSED"
 
-# su-exec: minimal setuid helper so the entrypoint can fix bind-mount
-# ownership as root then drop to nextjs before exec-ing the server.
-RUN apt-get update && apt-get install -y --no-install-recommends gosu \
- && rm -rf /var/lib/apt/lists/*
-
-# Create a non-root system user/group before copying any files.
-RUN addgroup --system --gid 1001 nodejs \
- && adduser  --system --uid 1001 --ingroup nodejs nextjs
-
 # Standalone output is a self-contained Node server; copy only what it needs.
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static    ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public          ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static    ./.next/static
+COPY --from=builder /app/public          ./public
 
-# Entrypoint: fixes /app/data ownership then drops to nextjs user.
-COPY --chmod=755 scripts/docker-entrypoint.sh /usr/local/bin/entrypoint.sh
+# Pre-create the data directory. Running as root means the bind-mount
+# directory on the host is always writable regardless of host ownership.
+RUN mkdir -p /app/data /app/.next/cache
 
-# Pre-create mount points so Docker can overlay them at startup.
-RUN mkdir -p /app/data /app/.next/cache \
- && chown nextjs:nodejs /app/data /app/.next/cache
-
-# Runs as root so entrypoint can chown the bind-mount dir; drops to nextjs inside entrypoint.
 EXPOSE 8989
 
-# Inline health check avoids a curl/wget dependency in the minimal image.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD node -e "\
     const req = require('http').get( \
@@ -72,5 +56,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     ); \
     req.on('timeout', () => { req.destroy(); process.exit(1); }); \
     req.on('error',   () => process.exit(1));"
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["node", "server.js"]
