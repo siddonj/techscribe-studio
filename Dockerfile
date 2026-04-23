@@ -39,7 +39,7 @@ LABEL org.opencontainers.image.title="TechScribe Studio" \
       org.opencontainers.image.source="https://github.com/siddonj/techscribe-studio" \
       org.opencontainers.image.licenses="UNLICENSED"
 
-# su-exec: minimal setuid helper so the entrypoint can fix bind-mount
+# gosu: minimal setuid helper so the entrypoint can fix bind-mount
 # ownership as root then drop to nextjs before exec-ing the server.
 RUN apt-get update && apt-get install -y --no-install-recommends gosu \
  && rm -rf /var/lib/apt/lists/*
