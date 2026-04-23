@@ -6,4 +6,4 @@ set -e
 # This runs as root first, fixes ownership, then drops privileges.
 chown -R nextjs:nodejs /app/data 2>/dev/null || true
 
-exec su-exec nextjs "$@"
+exec gosu nextjs "$@"
