@@ -38,13 +38,16 @@ function closeDb() {
   }
 }
 
-// Close the database on process exit. Using the 'exit' event (not SIGTERM/SIGINT
-// directly) because Next.js registers its own SIGTERM handler via startServer
-// that calls process.exit(143) before our signal handler would run. The 'exit'
-// event fires synchronously inside process.exit() regardless of who initiated
-// it, so this is the only reliable hook in a Next.js standalone container.
+// Primary shutdown hook: fires synchronously inside process.exit() regardless
+// of who initiated it (Next.js calls process.exit(143) on SIGTERM).
 // better-sqlite3's db.close() is synchronous and triggers a WAL checkpoint.
 process.on("exit", closeDb);
+
+// Belt-and-suspenders: if something bypasses process.exit() entirely, still
+// checkpoint the WAL. These handlers call process.exit() which fires the
+// "exit" event above, so closeDb() only ever runs once.
+process.once("SIGTERM", () => process.exit(0));
+process.once("SIGINT",  () => process.exit(0));
 
 type CalendarEntryRow = Omit<CalendarEntry, "checklist_items"> & {
   checklist_items: CalendarChecklistItem[] | string[] | string | null;
