@@ -39,13 +39,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { slug, fields, mode, outline, research, includePhotos } = await req.json() as {
+    const { slug, fields, mode, outline, research, includePhotos, toneInstruction, model } = await req.json() as {
       slug: string;
       fields: Record<string, string>;
       mode?: string;
       outline?: string;
       research?: ResearchItem[];
       includePhotos?: boolean;
+      toneInstruction?: string;
+      model?: string;
     };
 
     if (!slug || !fields) {
@@ -97,6 +99,11 @@ export async function POST(req: NextRequest) {
       userPrompt = userPrompt.replaceAll("{contextSection}", contextSection);
     }
 
+    // Append MyTone instructions to the system prompt when provided
+    if (toneInstruction?.trim()) {
+      systemPrompt += toneInstruction;
+    }
+
     // Append any research sources to the prompt
     if (research && research.length > 0) {
       userPrompt += buildResearchSection(research);
@@ -117,9 +124,12 @@ export async function POST(req: NextRequest) {
         "Do not cluster photos together; spread them evenly across the article.";
     }
 
+    const ALLOWED_MODELS = new Set(["claude-haiku-4-5-20251001", "claude-sonnet-4-6", "claude-opus-4-7"]);
+    const resolvedModel = (model && ALLOWED_MODELS.has(model)) ? model : "claude-sonnet-4-6";
+
     // Stream the response
     const stream = await client.messages.stream({
-      model: "claude-opus-4-5",
+      model: resolvedModel,
       max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],

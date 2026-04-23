@@ -17,7 +17,7 @@ const config: Config = {
         accent: "#0FA882",
         "accent-dim": "#0c8569",
         purple: "#7c3aed",
-        muted: "#8896A8",
+        muted: "#64748b",
         subtle: "#e2e8f0",
         status: {
           success: "#22c55e",

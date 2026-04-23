@@ -289,6 +289,21 @@ export const TOOLS: Tool[] = [
     userPromptTemplate: `Create a detailed SEO content brief from this keyword research data.\n\nContent Topic: {topic}\nTarget Audience: {audience}\nPrimary Search Intent: {intent}\n\nKeyword Research Data:\n{researchNotes}\n\nDeliver a complete content brief including:\n1. **Recommended Title** (SEO-optimized, under 60 chars)\n2. **Primary Keyword** and monthly search volume\n3. **Secondary Keywords** (5-10 supporting terms)\n4. **LSI Keywords** (semantic variations to include naturally)\n5. **Content Angle** — the unique positioning or hook\n6. **Recommended Word Count** based on keyword difficulty\n7. **Content Outline** (H2/H3 structure)\n8. **Key Points to Cover** (what top-ranking pages include)\n9. **CTA Recommendation**\n\nFormat clearly so a writer can act on it immediately.`,
   },
 
+  {
+    slug: "key-takeaways",
+    name: "Key Takeaways",
+    category: "Content Creation",
+    description: "Extract the core lessons and actionable insights from any article.",
+    icon: "🎯",
+    fields: [
+      { name: "content", label: "Article / Content", type: "textarea", placeholder: "Paste your blog post or article...", required: true, rows: 7 },
+      { name: "count", label: "Number of Takeaways", type: "select", options: ["3", "5", "7", "10"] },
+      { name: "format", label: "Output Format", type: "select", options: ["Bullet list", "Numbered list", "TL;DR paragraph + bullets", "Twitter-thread style"] },
+    ],
+    systemPrompt: `You are an expert content editor who extracts the most valuable, actionable insights from articles. Each takeaway should be something the reader can apply or remember — not just a summary of what was said.`,
+    userPromptTemplate: `Extract {count} key takeaways from this content, formatted as {format}:\n\n{content}\n\nMake each takeaway actionable and self-contained (readable without the article).`,
+  },
+
   // ── EDITING & REWRITING ──────────────────────────────────────
   {
     slug: "rewriter",
@@ -331,6 +346,33 @@ export const TOOLS: Tool[] = [
     userPromptTemplate: `Summarize the following content as a {format}:\n\n{content}`,
   },
   {
+    slug: "paraphrase",
+    name: "Paraphrase Tool",
+    category: "Editing & Rewriting",
+    description: "Rephrase text in different words while preserving the original meaning.",
+    icon: "🔁",
+    fields: [
+      { name: "content", label: "Text to Paraphrase", type: "textarea", placeholder: "Paste the text you want to rephrase...", required: true, rows: 6 },
+      { name: "style", label: "Style", type: "select", options: ["Natural rephrase", "More formal", "More casual", "Simpler language", "Creative (varied structure)"] },
+      { name: "count", label: "Variations", type: "select", options: ["1", "2", "3"] },
+    ],
+    systemPrompt: `You are an expert editor who paraphrases text accurately. Preserve all key information and meaning while using different words and sentence structures. Never change facts or omit key points.`,
+    userPromptTemplate: `Paraphrase this text {count} time(s) in a {style} style:\n\n{content}\n\nLabel each as "Version 1:", "Version 2:", etc. Preserve all meaning and facts.`,
+  },
+  {
+    slug: "grammar-fixer",
+    name: "Grammar & Style Fixer",
+    category: "Editing & Rewriting",
+    description: "Fix grammar, spelling, punctuation, and improve overall writing style.",
+    icon: "✅",
+    fields: [
+      { name: "content", label: "Text to Fix", type: "textarea", placeholder: "Paste your text here...", required: true, rows: 6 },
+      { name: "level", label: "Correction Level", type: "select", options: ["Grammar & spelling only", "Grammar + style improvements", "Full proofreading (grammar, style, clarity)"] },
+    ],
+    systemPrompt: `You are a professional proofreader and editor. Fix grammatical errors, spelling mistakes, and improve clarity as requested. Return the corrected text followed by a brief summary of changes.`,
+    userPromptTemplate: `Proofread and correct this text (level: {level}):\n\n{content}\n\nReturn:\n1. The fully corrected text\n2. A brief "Changes Made" section listing the key corrections`,
+  },
+  {
     slug: "explain-like-five",
     name: "Explain Like I'm 5",
     category: "Editing & Rewriting",
@@ -342,6 +384,38 @@ export const TOOLS: Tool[] = [
     ],
     systemPrompt: `You are a brilliant explainer who can make complex tech concepts understandable to anyone. Use simple words, real-world analogies, and short sentences. Avoid jargon entirely.`,
     userPromptTemplate: `Explain this in simple terms for a {audience}:\n\n{concept}\n\nUse an analogy from everyday life to make it click. Keep it friendly and encouraging.`,
+  },
+
+  // ── SEO & KEYWORDS (additions) ───────────────────────────────
+  // (existing: meta-title, meta-description, keyword-cluster, faq-writer, schema-markup, og-meta-tags, keyword-research-brief)
+
+  {
+    slug: "permalink-generator",
+    name: "URL / Permalink Generator",
+    category: "SEO & Keywords",
+    description: "Generate clean, SEO-friendly URL slugs for blog posts and pages.",
+    icon: "🔗",
+    fields: [
+      { name: "title", label: "Page Title or Topic", type: "text", placeholder: "e.g. The Complete Guide to React Hooks for Beginners", required: true },
+      { name: "keyword", label: "Primary Keyword (optional)", type: "text", placeholder: "e.g. react hooks tutorial" },
+      { name: "count", label: "Number of Options", type: "select", options: ["3", "5"] },
+    ],
+    systemPrompt: `You are an SEO specialist who creates clean, keyword-rich URL slugs. Follow best practices: lowercase, hyphens not underscores, remove stop words, under 75 characters, descriptive but concise.`,
+    userPromptTemplate: `Generate {count} URL slug options for:\nTitle: {title}\nPrimary keyword: {keyword}\n\nFor each:\n- Use hyphens between words\n- Remove stop words (the, a, an, for, in, etc.) unless they change meaning\n- Keep under 75 characters\n- Include the primary keyword when possible\n- Show character count\n\nFormat: /your-slug-here (XX chars)`,
+  },
+  {
+    slug: "content-gap",
+    name: "Content Gap Analyzer",
+    category: "SEO & Keywords",
+    description: "Compare your content against a competitor to find the topics and angles you're missing.",
+    icon: "🔭",
+    fields: [
+      { name: "yourContent", label: "Your Content / Topics Covered", type: "textarea", placeholder: "List your existing blog posts, topics, or paste an outline of what you've written about...", required: true, rows: 5 },
+      { name: "competitorContent", label: "Competitor Content / Topics", type: "textarea", placeholder: "Paste competitor post titles, a URL list, or describe what topics they cover...", required: true, rows: 5 },
+      { name: "niche", label: "Niche / Topic Area", type: "text", placeholder: "e.g. JavaScript development for beginners" },
+    ],
+    systemPrompt: `You are an SEO content strategist specialising in content gap analysis. Compare two content libraries and identify specific topics, angles, and keyword opportunities the first is missing. Be specific and actionable.`,
+    userPromptTemplate: `Perform a content gap analysis.\n\nNiche: {niche}\n\nMy Content:\n{yourContent}\n\nCompetitor Content:\n{competitorContent}\n\nDeliver:\n1. **Content Gaps** — Topics they cover that I don't (10+ specific ideas)\n2. **Angle Gaps** — Different approaches to shared topics I'm missing\n3. **Quick Wins** — 3 posts I should create first and why\n4. **Priority Ranking** — Which gaps to fill first based on likely traffic value`,
   },
 
   // ── SOCIAL MEDIA ─────────────────────────────────────────────
@@ -398,6 +472,34 @@ export const TOOLS: Tool[] = [
     userPromptTemplate: `Write a Pinterest pin description for a blog post about: {topic}\nKeywords to include: {keywords}\n\nMake it scannable, benefit-focused, and end with a soft CTA.`,
   },
 
+  {
+    slug: "instagram-caption",
+    name: "Instagram Caption",
+    category: "Social Media",
+    description: "Write engaging Instagram captions with hashtags for blog and content promotion.",
+    icon: "📸",
+    fields: [
+      { name: "topic", label: "Content / Post Topic", type: "text", placeholder: "e.g. My new article on the best AI tools for writers", required: true },
+      { name: "tone", label: "Tone", type: "select", options: ["Engaging & casual", "Inspirational", "Educational", "Behind-the-scenes", "Promotional"] },
+      { name: "count", label: "Number of Options", type: "select", options: ["2", "3"] },
+    ],
+    systemPrompt: `You are an Instagram content strategist for tech and content creators. Write captions with a strong hook first line, engaging body, and relevant hashtags. Keep it authentic and platform-native.`,
+    userPromptTemplate: `Write {count} Instagram caption options for: {topic}\nTone: {tone}\n\nFor each:\n- Strong hook first line\n- Body (2-4 sentences)\n- 8-12 relevant hashtags\n\nLabel each as "Option 1:", "Option 2:", etc.`,
+  },
+  {
+    slug: "tiktok-caption",
+    name: "TikTok Caption & Ideas",
+    category: "Social Media",
+    description: "Generate TikTok video ideas and captions to repurpose your blog content.",
+    icon: "🎵",
+    fields: [
+      { name: "topic", label: "Blog Post or Content Topic", type: "text", placeholder: "e.g. 5 VS Code extensions that changed my workflow", required: true },
+      { name: "style", label: "Video Style", type: "select", options: ["Quick tip / hack", "Storytime", "Tutorial teaser", "Hot take / opinion", "Trending sound concept"] },
+    ],
+    systemPrompt: `You are a TikTok content strategist for tech creators. Generate punchy video ideas and captions for TikTok's fast-paced format. Hook in the first second, deliver value throughout.`,
+    userPromptTemplate: `Generate 3 TikTok video ideas and captions based on: {topic}\nStyle: {style}\n\nFor each:\n- Video Concept (what to film, 1-2 sentences)\n- Caption (max 150 chars)\n- Hook line (first words of the video)\n- 5-7 hashtags`,
+  },
+
   // ── EMAIL & MARKETING ────────────────────────────────────────
   {
     slug: "email-subject-line",
@@ -439,6 +541,37 @@ export const TOOLS: Tool[] = [
     ],
     systemPrompt: `You are a direct response copywriter using the AIDA framework. Write persuasive copy that grabs attention, builds interest, creates desire, and compels action. Label each section clearly.`,
     userPromptTemplate: `Write AIDA copy for: {product}\nAudience: {audience}\n\nStructure:\n**Attention** — Grab them immediately\n**Interest** — Build curiosity about the problem/solution\n**Desire** — Paint the outcome they want\n**Action** — Clear, specific CTA`,
+  },
+
+  {
+    slug: "press-release",
+    name: "Press Release",
+    category: "Email & Marketing",
+    description: "Write a professional press release for product launches, announcements, or news.",
+    icon: "📰",
+    fields: [
+      { name: "headline", label: "News Headline", type: "text", placeholder: "e.g. TechScribe Studio Launches AI-Powered Content Calendar", required: true },
+      { name: "summary", label: "Key Details", type: "textarea", placeholder: "What happened? Key facts, context, any quotes...", required: true, rows: 5 },
+      { name: "company", label: "Company / Brand Name", type: "text", placeholder: "e.g. TechScribe Inc." },
+      { name: "contact", label: "Contact Information", type: "text", placeholder: "e.g. press@techscribe.com" },
+    ],
+    systemPrompt: `You are a PR professional who writes clear, newswire-ready press releases. Follow the standard inverted pyramid structure: dateline, strong lede, supporting details, quote, boilerplate, contact.`,
+    userPromptTemplate: `Write a professional press release:\n\nHeadline: {headline}\nKey Details: {summary}\nCompany: {company}\nContact: {contact}\n\nFormat:\n- FOR IMMEDIATE RELEASE header\n- City, Date — Lede (most important facts first)\n- Supporting body paragraphs\n- Quote paragraph\n- About / boilerplate\n- ### end marker\n- Contact info`,
+  },
+  {
+    slug: "newsletter-writer",
+    name: "Newsletter Writer",
+    category: "Email & Marketing",
+    description: "Write a complete email newsletter issue from your latest blog content.",
+    icon: "📩",
+    fields: [
+      { name: "topic", label: "Main Story / Blog Post Title", type: "text", placeholder: "e.g. 10 AI tools every developer needs in 2025", required: true },
+      { name: "summary", label: "Key Points to Highlight", type: "textarea", placeholder: "3-5 bullet points from your content...", rows: 4 },
+      { name: "tone", label: "Tone", type: "select", options: ["Friendly & personal", "Professional", "Curated & editorial", "Enthusiastic"] },
+      { name: "extras", label: "Extra Section", type: "select", options: ["None", "Quick tip of the week", "Tool recommendation", "Reader question", "What's coming next"] },
+    ],
+    systemPrompt: `You are an email newsletter writer for content creators. Write newsletters that feel like a letter from a friend — personal, valuable, and worth reading. Clear sections, scannable format.`,
+    userPromptTemplate: `Write a newsletter issue featuring: {topic}\nKey highlights: {summary}\nTone: {tone}\nExtra section: {extras}\n\nStructure:\n1. Suggested subject line\n2. Opening hook (personal, 2-3 sentences)\n3. Main story section (teaser of the post)\n4. Key takeaways (3 bullets)\n5. {extras} section (if not "None")\n6. Sign-off with soft CTA`,
   },
 
   // ── VIDEO CONTENT ────────────────────────────────────────────
@@ -486,6 +619,20 @@ export const TOOLS: Tool[] = [
     ],
     systemPrompt: `You are a YouTube content strategist. Write SEO-optimized video descriptions with a compelling intro (first 2 lines visible before "more"), full content overview, timestamp placeholders, and a CTA section. Format cleanly.`,
     userPromptTemplate: `Write a YouTube video description for:\nTitle: {title}\nContent: {summary}\n\nInclude:\n- Hook first 2 lines\n- Content overview\n- Timestamps (use [00:00] placeholders)\n- Subscribe/like CTA\n- Links section placeholder`,
+  },
+  {
+    slug: "podcast-show-notes",
+    name: "Podcast Show Notes",
+    category: "Video Content",
+    description: "Generate complete show notes from a podcast episode title and key points.",
+    icon: "🎙️",
+    fields: [
+      { name: "title", label: "Episode Title", type: "text", placeholder: "e.g. Ep. 42: The Future of AI in Content Marketing", required: true },
+      { name: "summary", label: "Episode Summary / Key Topics", type: "textarea", placeholder: "Key topics covered, guest name, main takeaways, timestamps if available...", required: true, rows: 5 },
+      { name: "guestName", label: "Guest Name (optional)", type: "text", placeholder: "e.g. Jane Smith, CEO of ContentCo" },
+    ],
+    systemPrompt: `You are a podcast producer who writes SEO-friendly show notes. Include a hook, episode summary, key takeaways, timestamps, and a resources section. Write for both listeners and search engines.`,
+    userPromptTemplate: `Write show notes for:\nEpisode: {title}\nGuest: {guestName}\nContent: {summary}\n\nInclude:\n1. Episode description (150-200 words, SEO-friendly)\n2. "In this episode..." section\n3. Key takeaways (5 bullets)\n4. Timestamps (use [00:00] placeholders)\n5. Resources & links ([placeholder])\n6. About the guest (if applicable)\n7. Subscribe/review CTA`,
   },
   {
     slug: "video-script-outline",

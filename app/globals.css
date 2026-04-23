@@ -17,7 +17,7 @@
   --color-panel-soft: #f8fafc;
   --color-border: #d7dee7;
   --color-copy: #0f172a;
-  --color-copy-soft: #64748b;
+  --color-copy-soft: #475569;
 }
 
 * {
@@ -269,7 +269,7 @@ body::after {
 .shell-main .shell-panel .text-slate-500,
 .shell-main .shell-panel-soft .text-slate-500,
 .shell-main .shell-stat-card .text-slate-500 {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .shell-main .text-white\/90 {

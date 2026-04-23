@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useSession, signOut, SessionProvider } from "next-auth/react";
+import { ToastProvider } from "@/components/Toast";
 import {
   BarChart3,
   CalendarRange,
@@ -14,6 +15,7 @@ import {
   HelpCircle,
   History,
   Home,
+  Layers,
   Library,
   LogOut,
   Menu,
@@ -22,22 +24,14 @@ import {
   SlidersHorizontal,
   Sparkles,
   Users,
+  Wrench,
   X,
 } from "lucide-react";
-import { TOOLS, getAllCategories } from "@/lib/tools";
-
-const CATEGORY_ICONS: Record<string, string> = {
-  "Content Creation": "✍️",
-  "Ideas & Planning": "💡",
-  "SEO & Keywords": "🔍",
-  "Editing & Rewriting": "🔄",
-  "Social Media": "📱",
-  "Email & Marketing": "📣",
-  "Video Content": "🎬",
-};
 
 const PRIMARY_NAV = [
   { href: "/", label: "Dashboard", icon: Home },
+  { href: "/tools", label: "Tools", icon: Wrench },
+  { href: "/blueprint", label: "Blueprints", icon: Layers },
   { href: "/seo", label: "SEO Workspace", icon: BarChart3 },
   { href: "/history", label: "History", icon: History },
   { href: "/calendar", label: "Calendar", icon: CalendarRange },
@@ -101,13 +95,9 @@ function SidebarUserCard() {
 
 function Sidebar() {
   const pathname = usePathname();
-  const categories = getAllCategories();
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [customizationOpen, setCustomizationOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const toggle = (cat: string) =>
-    setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
   const closeMobile = () => setMobileOpen(false);
 
   const navigationContent = (
@@ -140,7 +130,10 @@ function Sidebar() {
         <div className="space-y-1.5">
           {PRIMARY_NAV.map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href;
+            const active =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname === item.href || pathname.startsWith(item.href + "/");
 
             return (
               <Link
@@ -204,59 +197,6 @@ function Sidebar() {
           )}
         </div>
 
-        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-3">
-          <div className="flex items-center justify-between px-2 pb-2">
-            <p className="text-[11px] font-mono tracking-[0.24em] uppercase text-slate-400">
-              Tool Library
-            </p>
-            <span className="text-[11px] text-slate-400">{TOOLS.length}</span>
-          </div>
-
-          <div className="space-y-1">
-            {categories.map((cat) => {
-              const tools = TOOLS.filter((t) => t.category === cat);
-              const isOpen = !collapsed[cat];
-
-              return (
-                <div key={cat} className="rounded-2xl border border-white/[0.06] bg-black/10 overflow-hidden">
-                  <button
-                    onClick={() => toggle(cat)}
-                    className="w-full flex items-center justify-between px-4 py-3 text-[11px] font-mono tracking-[0.18em] text-slate-300 hover:text-white uppercase transition-colors"
-                  >
-                    <span className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-base shrink-0">{CATEGORY_ICONS[cat] || "🔧"}</span>
-                      <span className="truncate">{cat}</span>
-                    </span>
-                    {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  </button>
-
-                  {isOpen && (
-                    <div className="px-2 pb-2 space-y-1">
-                      {tools.map((tool) => {
-                        const active = pathname === `/tool/${tool.slug}`;
-                        return (
-                          <Link
-                            key={tool.slug}
-                            href={`/tool/${tool.slug}`}
-                            onClick={closeMobile}
-                            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-                              active
-                                ? "bg-white/10 text-white border border-white/10"
-                                : "text-slate-300 border border-transparent hover:text-white hover:bg-white/[0.04]"
-                            }`}
-                          >
-                            <span className="text-base leading-none">{tool.icon}</span>
-                            <span className="truncate">{tool.name}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </nav>
 
       <SidebarUserCard />
@@ -313,8 +253,10 @@ export default function RootLayout({
     <html lang="en">
       <body className="app-shell flex min-h-screen">
         <SessionProvider>
-          <Sidebar />
-          <main className="shell-main flex-1 overflow-y-auto pt-16 lg:pt-0">{children}</main>
+          <ToastProvider>
+            <Sidebar />
+            <main className="shell-main flex-1 overflow-y-auto pt-16 lg:pt-0">{children}</main>
+          </ToastProvider>
         </SessionProvider>
       </body>
     </html>

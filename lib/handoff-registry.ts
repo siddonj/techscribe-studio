@@ -172,6 +172,78 @@ export const HANDOFF_REGISTRY: HandoffRegistry = {
       fieldMap: { videoTitle: "topic" },
     },
   ],
+  "content-gap": [
+    {
+      label: "Build Outline",
+      targetSlug: "outline-generator",
+      fieldMap: { niche: "topic" },
+    },
+    {
+      label: "Write Article",
+      targetSlug: "article-writer",
+      fieldMap: { niche: "topic" },
+    },
+    {
+      label: "Cluster Keywords",
+      targetSlug: "keyword-cluster",
+      fieldMap: { niche: "niche" },
+    },
+  ],
+  "key-takeaways": [
+    {
+      label: "Create Tweet Thread",
+      targetSlug: "tweet-ideas",
+      fieldMap: { content: "topic" },
+    },
+    {
+      label: "Write LinkedIn Post",
+      targetSlug: "linkedin-post",
+      fieldMap: { content: "topic" },
+    },
+    {
+      label: "Write Newsletter",
+      targetSlug: "newsletter-writer",
+      fieldMap: { content: "summary" },
+    },
+  ],
+  "press-release": [
+    {
+      label: "Create Tweet Posts",
+      targetSlug: "tweet-ideas",
+      fieldMap: { headline: "topic" },
+    },
+    {
+      label: "Write LinkedIn Post",
+      targetSlug: "linkedin-post",
+      fieldMap: { headline: "topic" },
+    },
+  ],
+  "newsletter-writer": [
+    {
+      label: "Write Subject Line",
+      targetSlug: "email-subject-line",
+      fieldMap: { topic: "topic" },
+    },
+  ],
+  "podcast-show-notes": [
+    {
+      label: "Write LinkedIn Post",
+      targetSlug: "linkedin-post",
+      fieldMap: { title: "topic" },
+    },
+    {
+      label: "Create Tweet Posts",
+      targetSlug: "tweet-ideas",
+      fieldMap: { title: "topic" },
+    },
+  ],
+  "permalink-generator": [
+    {
+      label: "Generate OG Tags",
+      targetSlug: "og-meta-tags",
+      fieldMap: { title: "title", keyword: "description" },
+    },
+  ],
   "keyword-research-brief": [
     {
       label: "Write Article",
