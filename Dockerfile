@@ -39,6 +39,11 @@ LABEL org.opencontainers.image.title="TechScribe Studio" \
       org.opencontainers.image.source="https://github.com/siddonj/techscribe-studio" \
       org.opencontainers.image.licenses="UNLICENSED"
 
+# su-exec: minimal setuid helper so the entrypoint can fix bind-mount
+# ownership as root then drop to nextjs before exec-ing the server.
+RUN apt-get update && apt-get install -y --no-install-recommends su-exec \
+ && rm -rf /var/lib/apt/lists/*
+
 # Create a non-root system user/group before copying any files.
 RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 --ingroup nodejs nextjs
@@ -48,12 +53,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static    ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public          ./public
 
-# Pre-create mount points so Docker can overlay them at startup without
-# needing to write to the read-only container filesystem.
+# Entrypoint: fixes /app/data ownership then drops to nextjs user.
+COPY --chmod=755 scripts/docker-entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Pre-create mount points so Docker can overlay them at startup.
 RUN mkdir -p /app/data /app/.next/cache \
  && chown nextjs:nodejs /app/data /app/.next/cache
 
-USER nextjs
+# Runs as root so entrypoint can chown the bind-mount dir; drops to nextjs inside entrypoint.
 EXPOSE 8989
 
 # Inline health check avoids a curl/wget dependency in the minimal image.
@@ -65,4 +72,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     ); \
     req.on('timeout', () => { req.destroy(); process.exit(1); }); \
     req.on('error',   () => process.exit(1));"
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["node", "server.js"]
