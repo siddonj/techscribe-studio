@@ -37,7 +37,6 @@ services:
     cpus: "1.0"
 
     # ── Security hardening ───────────────────────────────────────────────────
-    read_only: true               # container filesystem is immutable at runtime
     security_opt:
       - no-new-privileges:true    # prevent setuid/setgid privilege escalation
     cap_drop:
