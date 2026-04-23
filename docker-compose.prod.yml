@@ -32,7 +32,7 @@ services:
       DATA_DIR: /app/data
 
     volumes:
-      - techscribe-data:/app/data   # SQLite database — survives deployments
+      - ./data:/app/data   # SQLite database lives on the host — survives any docker command
 
     # Writable scratch space for Next.js fetch cache and OS temp files.
     tmpfs:
@@ -95,10 +95,4 @@ networks:
   traefik-public:
     external: true
 
-volumes:
-  techscribe-data:
-    name: techscribe-data
-    driver: local
-    # WARNING: never run "docker compose down -v" — the -v flag deletes this
-    # volume and all history/settings data with it. Use "docker compose down"
-    # (no -v) to stop and remove containers while keeping data intact.
+# No named volumes — data lives at ./data on the host.

@@ -22,7 +22,7 @@ services:
       - "8989:8989"
 
     volumes:
-      - techscribe-data:/app/data   # SQLite database — persists across container restarts
+      - ./data:/app/data   # SQLite database lives on the host — survives any docker command
 
     # Writable scratch space for Next.js fetch cache and OS temp files.
     # These are in-memory and discarded on container stop.
@@ -60,10 +60,5 @@ services:
       start_period: 60s
 
 
-volumes:
-  techscribe-data:
-    name: techscribe-data
-    driver: local
-    # WARNING: never run "docker compose down -v" — the -v flag deletes this
-    # volume and all history/settings data with it. Use "docker compose down"
-    # (no -v) to stop and remove containers while keeping data intact.
+# No named volumes — data lives at ./data on the host. Nothing Docker does
+# (down -v, volume prune, full reinstall) will touch those files.

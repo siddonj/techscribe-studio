@@ -48,11 +48,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static    ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public          ./public
 
-# Pre-create persistent and tmpfs mount points so Docker can overlay them
-# at startup without needing to write to the read-only container filesystem.
+# Pre-create mount points so Docker can overlay them at startup without
+# needing to write to the read-only container filesystem.
 RUN mkdir -p /app/data /app/.next/cache \
  && chown nextjs:nodejs /app/data /app/.next/cache
-VOLUME /app/data
 
 USER nextjs
 EXPOSE 8989
