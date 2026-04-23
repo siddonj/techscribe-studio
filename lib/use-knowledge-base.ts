@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 export interface KnowledgeEntry {
   id: string;
@@ -33,11 +33,7 @@ function save(entries: KnowledgeEntry[]) {
 }
 
 export function useKnowledgeBase() {
-  const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
-
-  useEffect(() => {
-    setEntries(load());
-  }, []);
+  const [entries, setEntries] = useState<KnowledgeEntry[]>(load);
 
   const addEntry = useCallback((entry: Omit<KnowledgeEntry, "id" | "createdAt">) => {
     const newEntry: KnowledgeEntry = {

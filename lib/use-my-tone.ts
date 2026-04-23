@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 export interface ToneConfig {
   preset: string;
@@ -54,18 +54,12 @@ export function loadToneConfig(): ToneConfig {
 }
 
 export function useMyTone() {
-  const [config, setConfig] = useState<ToneConfig>(DEFAULT_TONE);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    setConfig(loadToneConfig());
-    setLoaded(true);
-  }, []);
+  const [config, setConfig] = useState<ToneConfig>(loadToneConfig);
 
   const save = useCallback((next: ToneConfig) => {
     setConfig(next);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   }, []);
 
-  return { config, save, loaded };
+  return { config, save, loaded: true };
 }

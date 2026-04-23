@@ -19,7 +19,7 @@ const SENTENCE_LENGTHS = ["Short & Punchy", "Balanced", "Long & Detailed"];
 const VOICE_TYPES = ["Active", "Passive", "Mixed"];
 
 export default function MyTonePage() {
-  const { config, save, loaded } = useMyTone();
+  const { config, save } = useMyTone();
   const { toast } = useToast();
 
   const [selectedPreset, setSelectedPreset] = useState(config.preset);
@@ -27,17 +27,6 @@ export default function MyTonePage() {
   const [sentenceLength, setSentenceLength] = useState(config.sentenceLength);
   const [voiceType, setVoiceType] = useState(config.voiceType);
   const [customInstructions, setCustomInstructions] = useState(config.customInstructions);
-
-  // Sync local state once localStorage has loaded
-  useEffect(() => {
-    if (loaded) {
-      setSelectedPreset(config.preset);
-      setFormality(config.formality);
-      setSentenceLength(config.sentenceLength);
-      setVoiceType(config.voiceType);
-      setCustomInstructions(config.customInstructions);
-    }
-  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = () => {
     const next: ToneConfig = { preset: selectedPreset, formality, sentenceLength, voiceType, customInstructions };
