@@ -174,14 +174,14 @@ export default function SettingsPage() {
         }),
       });
 
-      const data = (await res.json()) as { message?: string; error?: string; user_name?: string };
+      const data = (await res.json()) as { message?: string; error?: string; user_name?: string; has_successful_test?: boolean; last_tested_at?: string };
       if (!res.ok) {
         throw new Error(data.error || "Failed to test WordPress connection");
       }
 
       setTestMessage(data.message || "Connection successful.");
       setHasSuccessfulTest(true);
-      setLastTestedAt(new Date().toISOString());
+      setLastTestedAt(data.last_tested_at ?? new Date().toISOString());
       setVerifiedSignature(currentConfigSignature);
     } catch (testError) {
       setError(testError instanceof Error ? testError.message : "Failed to test WordPress connection");
