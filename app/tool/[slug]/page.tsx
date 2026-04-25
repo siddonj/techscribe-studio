@@ -316,6 +316,7 @@ function ToolPageContent() {
   const blogIdeaSuggestions = isBlogPostIdeas
     ? parseBlogIdeaSuggestions(output)
     : [];
+  const hideRawMarkdown = isBlogPostIdeas && blogIdeaSuggestions.length > 0 && !loading;
 
   // Research / knowledge sources state
   const [researchItems, setResearchItems] = useState<ResearchItem[]>([]);
@@ -1217,10 +1218,12 @@ function ToolPageContent() {
                     </div>
                   </section>
                 )}
-                <div
-                  className={`markdown-output max-w-3xl ${loading && !output ? "cursor-blink" : ""} ${loading && output ? "cursor-blink" : ""}`}
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(output) }}
-                />
+                {!hideRawMarkdown && (
+                  <div
+                    className={`markdown-output max-w-3xl ${loading && !output ? "cursor-blink" : ""} ${loading && output ? "cursor-blink" : ""}`}
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(output) }}
+                  />
+                )}
               </div>
             )}
 
