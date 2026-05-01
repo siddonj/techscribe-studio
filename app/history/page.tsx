@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { Clock, Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import type { HistoryFolderSummary, HistoryRow, HistoryTagSummary } from "@/lib/db";
 import { TOOLS } from "@/lib/tools";
@@ -187,6 +187,14 @@ interface HistoryFoldersResponse {
   folders: HistoryFolderSummary[];
 }
 
+interface MetadataSuggestions {
+  tags: string[];
+  wp_slug: string;
+  wp_excerpt: string;
+  wp_category_names: string[];
+  wp_tag_names: string[];
+}
+
 const HISTORY_PRESETS_STORAGE_KEY = "techscribe-history-filter-presets";
 const WORKFLOW_STAGES = ["Idea", "Drafting", "Optimization", "Review", "Ready to Publish"];
 const COLLABORATION_STATUSES = ["Not started", "In review", "Needs changes", "Approved"];
@@ -253,6 +261,9 @@ function HistoryPageContent() {
   const [editingComments, setEditingComments] = useState<HistoryRow["collaboration_comments"]>([]);
   const [editingCommentAuthor, setEditingCommentAuthor] = useState("");
   const [editingCommentMessage, setEditingCommentMessage] = useState("");
+  const [suggestingMetadata, setSuggestingMetadata] = useState(false);
+  const [aiMetaSuggestions, setAiMetaSuggestions] = useState<MetadataSuggestions | null>(null);
+  const [metaSuggestError, setMetaSuggestError] = useState<string | null>(null);
   const [savingMetadata, setSavingMetadata] = useState(false);
   const [editingOutput, setEditingOutput] = useState("");
   const [savingOutput, setSavingOutput] = useState(false);
@@ -417,6 +428,8 @@ function HistoryPageContent() {
       setEditingCommentMessage("");
       setEditingOutput("");
       setDetailTab("article");
+      setAiMetaSuggestions(null);
+      setMetaSuggestError(null);
       return;
     }
 
@@ -438,6 +451,8 @@ function HistoryPageContent() {
     setEditingCommentMessage("");
     setEditingOutput(selected.output);
     setDetailTab("article");
+    setAiMetaSuggestions(null);
+    setMetaSuggestError(null);
   }, [selected]);
 
   useEffect(() => {
@@ -842,6 +857,44 @@ function HistoryPageContent() {
       console.error(error);
     } finally {
       setSavingOutput(false);
+    }
+  };
+
+  const handleSuggestMetadata = async () => {
+    if (!selected) return;
+    setSuggestingMetadata(true);
+    setMetaSuggestError(null);
+    setAiMetaSuggestions(null);
+    try {
+      const res = await fetch("/api/history/suggest-metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ historyId: selected.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to get suggestions");
+      }
+      setAiMetaSuggestions(data as MetadataSuggestions);
+    } catch (error) {
+      setMetaSuggestError(String(error));
+    } finally {
+      setSuggestingMetadata(false);
+    }
+  };
+
+  const handleApplyAiSuggestions = () => {
+    if (!aiMetaSuggestions) return;
+    if (aiMetaSuggestions.tags.length > 0) {
+      const currentTags = parseTagValues(editingTags);
+      const merged = Array.from(new Set([...currentTags, ...aiMetaSuggestions.tags]));
+      setEditingTags(joinTagValues(merged));
+    }
+    if (aiMetaSuggestions.wp_slug) {
+      setEditingWpSlug(aiMetaSuggestions.wp_slug);
+    }
+    if (aiMetaSuggestions.wp_excerpt) {
+      setEditingWpExcerpt(aiMetaSuggestions.wp_excerpt);
     }
   };
 
@@ -2067,6 +2120,119 @@ function HistoryPageContent() {
                     />
                   </div>
                 </div>
+
+                {/* AI Suggest button */}
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">WordPress &amp; SEO Metadata</p>
+                  <button
+                    onClick={() => void handleSuggestMetadata()}
+                    disabled={suggestingMetadata}
+                    className="shell-hover-lift flex items-center gap-1.5 px-3 py-2 text-xs font-mono border border-accent/40 rounded-2xl text-accent hover:text-accent-dim hover:border-accent/60 transition-colors disabled:opacity-50"
+                    title="Use AI to suggest tags, WP slug, excerpt, and category/tag names"
+                  >
+                    <Sparkles size={12} />
+                    {suggestingMetadata ? "Thinking…" : "Suggest with AI"}
+                  </button>
+                </div>
+
+                {metaSuggestError && (
+                  <div className="mb-3 text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+                    {metaSuggestError}
+                  </div>
+                )}
+
+                {aiMetaSuggestions && (
+                  <div className="mb-3 shell-panel-soft rounded-[1.5rem] p-4 space-y-3 border border-accent/20">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] font-mono text-accent uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles size={11} />
+                        AI Suggestions
+                      </p>
+                      <button
+                        onClick={handleApplyAiSuggestions}
+                        className="text-xs font-mono text-accent hover:text-accent-dim border border-accent/30 rounded-xl px-2.5 py-1 transition-colors"
+                        title="Apply slug, excerpt, and merge tags into current fields"
+                      >
+                        Apply All
+                      </button>
+                    </div>
+
+                    {aiMetaSuggestions.tags.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1.5">Suggested Tags</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {aiMetaSuggestions.tags.map((tag) => (
+                            <button
+                              key={tag}
+                              onClick={() => handleAddEditingTag(tag)}
+                              className="text-xs font-mono border border-accent/30 rounded px-2 py-0.5 text-accent hover:bg-accent/10 transition-colors"
+                              title="Add this tag"
+                            >
+                              +#{tag}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {aiMetaSuggestions.wp_slug && (
+                      <div>
+                        <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Suggested WP Slug</p>
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs text-slate-700 bg-white/60 rounded px-2 py-1 flex-1">{aiMetaSuggestions.wp_slug}</code>
+                          <button
+                            onClick={() => setEditingWpSlug(aiMetaSuggestions.wp_slug)}
+                            className="text-xs font-mono text-accent hover:text-accent-dim border border-accent/30 rounded-xl px-2.5 py-1 transition-colors whitespace-nowrap"
+                          >
+                            Use
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {aiMetaSuggestions.wp_excerpt && (
+                      <div>
+                        <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Suggested WP Excerpt</p>
+                        <div className="flex items-start gap-2">
+                          <p className="text-xs text-slate-700 flex-1">{aiMetaSuggestions.wp_excerpt}</p>
+                          <button
+                            onClick={() => setEditingWpExcerpt(aiMetaSuggestions.wp_excerpt)}
+                            className="text-xs font-mono text-accent hover:text-accent-dim border border-accent/30 rounded-xl px-2.5 py-1 transition-colors whitespace-nowrap"
+                          >
+                            Use
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {aiMetaSuggestions.wp_category_names.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Suggested WP Categories <span className="normal-case">(look up IDs in WordPress admin)</span></p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {aiMetaSuggestions.wp_category_names.map((name) => (
+                            <span key={name} className="text-xs font-mono border border-slate-300 rounded px-2 py-0.5 text-slate-600">
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {aiMetaSuggestions.wp_tag_names.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Suggested WP Tags <span className="normal-case">(look up IDs in WordPress admin)</span></p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {aiMetaSuggestions.wp_tag_names.map((name) => (
+                            <span key={name} className="text-xs font-mono border border-slate-300 rounded px-2 py-0.5 text-slate-600">
+                              #{name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">WP Slug</label>
@@ -2216,7 +2382,18 @@ function HistoryPageContent() {
                 <div className="mb-3 shell-panel-soft rounded-[1.5rem] p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">Tag Suggestions</p>
-                    <span className="text-[11px] text-slate-500">Add existing tags to keep naming consistent</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-slate-500">Add existing tags to keep naming consistent</span>
+                      <button
+                        onClick={() => void handleSuggestMetadata()}
+                        disabled={suggestingMetadata}
+                        className="shell-hover-lift flex items-center gap-1 px-2 py-1 text-[11px] font-mono border border-accent/30 rounded-xl text-accent hover:text-accent-dim hover:border-accent/50 transition-colors disabled:opacity-50"
+                        title="Let AI suggest tags for this article"
+                      >
+                        <Sparkles size={10} />
+                        {suggestingMetadata ? "…" : "AI Populate"}
+                      </button>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -2240,6 +2417,26 @@ function HistoryPageContent() {
                       Add Tag
                     </button>
                   </div>
+                  {aiMetaSuggestions && aiMetaSuggestions.tags.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-mono text-slate-400 mb-1.5 flex items-center gap-1">
+                        <Sparkles size={10} className="text-accent" />
+                        AI-suggested tags — click to add
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {aiMetaSuggestions.tags.map((tag) => (
+                          <button
+                            key={tag}
+                            onClick={() => handleAddEditingTag(tag)}
+                            className="text-xs font-mono border border-accent/30 rounded px-2 py-0.5 text-accent hover:bg-accent/10 transition-colors"
+                            title="Add this tag"
+                          >
+                            +#{tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {popularTags.map((tagSummary) => (
                       <button
