@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { TOOLS, getAllCategories } from "@/lib/tools";
-import { PageHeader } from "@/components/DashboardPrimitives";
+import { PageContainer, PageHeader, SectionCard, SectionHeader } from "@/components/DashboardPrimitives";
 
 const CATEGORY_ICONS: Record<string, string> = {
   "Content Creation": "✍️",
@@ -172,28 +172,33 @@ export default function HelpPage() {
     : null;
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-8">
-      <PageHeader
-        eyebrow="Reference"
-        title="Help & Documentation"
-        description="Guides, feature walkthroughs, and a full tool directory."
-        icon="📖"
-        stats={[
-          { label: "Tools", value: String(TOOLS.length) },
-          { label: "Categories", value: String(categories.length) },
-          { label: "Features", value: String(FEATURE_SECTIONS.length) },
-        ]}
-      />
+    <div className="min-h-screen flex flex-col">
+      <PageContainer maxWidthClassName="max-w-5xl" className="space-y-8">
+        <PageHeader
+          eyebrow="Reference"
+          title="Help & Documentation"
+          description="Guides, feature walkthroughs, and a full tool directory."
+          icon="📖"
+          stats={[
+            { label: "Tools", value: String(TOOLS.length) },
+            { label: "Categories", value: String(categories.length) },
+            { label: "Features", value: String(FEATURE_SECTIONS.length) },
+          ]}
+        />
 
-      {/* Feature walkthroughs */}
-      <section className="space-y-4">
-        <h2 className="font-mono text-[11px] uppercase tracking-[0.24em] text-muted">Feature Guides</h2>
+        {/* Feature walkthroughs */}
+        <section className="space-y-4">
+          <SectionHeader
+            eyebrow="Feature Guides"
+            title="Browse by workflow area"
+            description="Jump to guided docs for each major surface."
+          />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {FEATURE_SECTIONS.map((section) => (
             <a
               key={section.id}
               href={`#${section.id}`}
-              className="shell-panel shell-hover-lift rounded-2xl p-5 block group"
+              className="surface-interactive surface-interactive-default shell-hover-lift rounded-2xl p-5 block group"
             >
               <div className="flex items-center gap-3 mb-2">
                 <span className="text-2xl">{section.icon}</span>
@@ -207,49 +212,54 @@ export default function HelpPage() {
             </a>
           ))}
         </div>
-      </section>
+        </section>
 
-      {/* Feature detail sections */}
-      {FEATURE_SECTIONS.map((section) => (
-        <section key={section.id} id={section.id} className="scroll-mt-8">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-2xl">{section.icon}</span>
-            <h2 className="text-xl font-semibold text-slate-900">{section.title}</h2>
-          </div>
-          <div className="shell-panel rounded-2xl divide-y divide-border">
+        {/* Feature detail sections */}
+        {FEATURE_SECTIONS.map((section) => (
+          <section key={section.id} id={section.id} className="scroll-mt-8">
+            <SectionHeader
+              className="mb-4"
+              title={
+                <span className="inline-flex items-center gap-3">
+                  <span className="text-2xl">{section.icon}</span>
+                  <span>{section.title}</span>
+                </span>
+              }
+            />
+            <SectionCard className="rounded-2xl divide-y divide-border p-0">
             {section.content.map((item, i) => (
               <div key={i} className="p-5">
                 <h3 className="text-sm font-semibold text-slate-900 mb-1.5">{item.heading}</h3>
                 <p className="text-sm text-slate-600 leading-relaxed">{item.body}</p>
               </div>
             ))}
-          </div>
-        </section>
-      ))}
+            </SectionCard>
+          </section>
+        ))}
 
-      {/* Tool directory */}
-      <section id="tool-directory" className="scroll-mt-8">
-        <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
-          <h2 className="text-xl font-semibold text-slate-900">Tool Directory</h2>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search tools…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="shell-input rounded-xl pl-8 pr-4 py-2 text-sm w-64"
-            />
+        {/* Tool directory */}
+        <section id="tool-directory" className="scroll-mt-8">
+          <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
+            <h2 className="text-xl font-semibold text-slate-900">Tool Directory</h2>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search tools…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="input-base rounded-xl pl-8 pr-4 py-2 text-sm w-64"
+              />
+            </div>
           </div>
-        </div>
 
         {filteredTools !== null ? (
           filteredTools.length === 0 ? (
-            <div className="shell-panel rounded-2xl p-8 text-center text-sm text-muted">
+            <SectionCard className="rounded-2xl p-8 text-center text-sm text-muted">
               No tools match &ldquo;{query}&rdquo;
-            </div>
+            </SectionCard>
           ) : (
-            <div className="shell-panel rounded-2xl divide-y divide-border">
+            <SectionCard className="rounded-2xl divide-y divide-border p-0">
               {filteredTools.map((tool) => (
                 <div key={tool.slug} id={tool.slug} className="flex items-start gap-4 p-4 scroll-mt-8">
                   <span className="text-2xl shrink-0 mt-0.5">{tool.icon}</span>
@@ -257,20 +267,20 @@ export default function HelpPage() {
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <Link
                         href={`/tool/${tool.slug}`}
-                        className="text-sm font-semibold text-slate-900 hover:text-accent transition-colors"
-                      >
-                        {tool.name}
-                      </Link>
-                      <span className="text-[10px] font-mono border border-border rounded-full px-2 py-0.5 text-muted">
+                          className="text-sm font-semibold text-slate-900 hover:text-accent transition-colors"
+                        >
+                          {tool.name}
+                        </Link>
+                      <span className="status-badge text-[10px] px-2 py-0.5 border-border text-muted">
                         {tool.category}
                       </span>
                       {tool.outlineSystemPrompt && (
-                        <span className="text-[10px] font-mono border border-accent/30 bg-accent/5 text-accent rounded-full px-2 py-0.5">
+                        <span className="status-badge text-[10px] px-2 py-0.5 border-accent/30 bg-accent/5 text-accent">
                           outline flow
                         </span>
                       )}
                       {tool.supportsResearch && (
-                        <span className="text-[10px] font-mono border border-accent/30 bg-accent/5 text-accent rounded-full px-2 py-0.5">
+                        <span className="status-badge text-[10px] px-2 py-0.5 border-accent/30 bg-accent/5 text-accent">
                           research inputs
                         </span>
                       )}
@@ -282,13 +292,13 @@ export default function HelpPage() {
                   </div>
                   <Link
                     href={`/tool/${tool.slug}`}
-                    className="shrink-0 text-xs font-mono text-accent hover:text-accent-dim border border-accent/30 hover:border-accent/60 rounded-xl px-3 py-1.5 transition-colors"
+                    className="btn-secondary shrink-0 text-xs border-accent/30 text-accent hover:border-accent/60 hover:text-accent-dim"
                   >
                     Open →
                   </Link>
                 </div>
               ))}
-            </div>
+            </SectionCard>
           )
         ) : (
           <div className="space-y-6">
@@ -301,7 +311,7 @@ export default function HelpPage() {
                     <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-muted">{cat}</h3>
                     <span className="text-xs text-muted">({catTools.length})</span>
                   </div>
-                  <div className="shell-panel rounded-2xl divide-y divide-border">
+                  <SectionCard className="rounded-2xl divide-y divide-border p-0">
                     {catTools.map((tool) => (
                       <div key={tool.slug} id={tool.slug} className="flex items-start gap-4 p-4 scroll-mt-8">
                         <span className="text-2xl shrink-0 mt-0.5">{tool.icon}</span>
@@ -314,12 +324,12 @@ export default function HelpPage() {
                               {tool.name}
                             </Link>
                             {tool.outlineSystemPrompt && (
-                              <span className="text-[10px] font-mono border border-accent/30 bg-accent/5 text-accent rounded-full px-2 py-0.5">
+                              <span className="status-badge text-[10px] px-2 py-0.5 border-accent/30 bg-accent/5 text-accent">
                                 outline flow
                               </span>
                             )}
                             {tool.supportsResearch && (
-                              <span className="text-[10px] font-mono border border-accent/30 bg-accent/5 text-accent rounded-full px-2 py-0.5">
+                              <span className="status-badge text-[10px] px-2 py-0.5 border-accent/30 bg-accent/5 text-accent">
                                 research inputs
                               </span>
                             )}
@@ -331,19 +341,20 @@ export default function HelpPage() {
                         </div>
                         <Link
                           href={`/tool/${tool.slug}`}
-                          className="shrink-0 text-xs font-mono text-accent hover:text-accent-dim border border-accent/30 hover:border-accent/60 rounded-xl px-3 py-1.5 transition-colors"
+                          className="btn-secondary shrink-0 text-xs border-accent/30 text-accent hover:border-accent/60 hover:text-accent-dim"
                         >
                           Open →
                         </Link>
                       </div>
                     ))}
-                  </div>
+                  </SectionCard>
                 </div>
               );
             })}
           </div>
         )}
-      </section>
+        </section>
+      </PageContainer>
     </div>
   );
 }
