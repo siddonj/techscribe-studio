@@ -414,12 +414,26 @@ function ToolPageContent() {
   }, []);
 
   const generateFnRef = useRef<() => void>(() => {});
+  const saveFnRef = useRef<() => void>(() => {});
+  const copyFnRef = useRef<() => void>(() => {});
   const [draftOutput, setDraftOutput] = useState<string | null>(null);
+  const [draftHistory, setDraftHistory] = useState<Array<{ output: string; timestamp: number }>>([]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
         generateFnRef.current?.();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveFnRef.current?.();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        copyFnRef.current?.();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -428,12 +442,23 @@ function ToolPageContent() {
 
   useEffect(() => {
     setDraftOutput(null);
+    setDraftHistory([]);
     try {
       const raw = localStorage.getItem(`techscribe_draft_${slug}`);
       if (!raw) return;
-      const saved = JSON.parse(raw) as { output: string; timestamp: number };
-      if (Date.now() - saved.timestamp < 48 * 60 * 60 * 1000 && saved.output) {
-        setDraftOutput(saved.output);
+      const parsed = JSON.parse(raw) as
+        | { output: string; timestamp: number }
+        | { history: Array<{ output: string; timestamp: number }> };
+      const history = "history" in parsed
+        ? parsed.history
+        : [parsed];
+      const freshHistory = history
+        .filter((item) => Date.now() - item.timestamp < 48 * 60 * 60 * 1000 && item.output)
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 10);
+      if (freshHistory.length > 0) {
+        setDraftOutput(freshHistory[0].output);
+        setDraftHistory(freshHistory);
       }
     } catch { /* ignore */ }
   }, [slug]);
@@ -442,7 +467,24 @@ function ToolPageContent() {
     if (!output || !slug) return;
     const timer = setTimeout(() => {
       try {
-        localStorage.setItem(`techscribe_draft_${slug}`, JSON.stringify({ output, timestamp: Date.now() }));
+        const raw = localStorage.getItem(`techscribe_draft_${slug}`);
+        const parsed = raw
+          ? (JSON.parse(raw) as
+              | { output: string; timestamp: number }
+              | { history: Array<{ output: string; timestamp: number }> })
+          : null;
+        const previous = parsed
+          ? ("history" in parsed ? parsed.history : [parsed])
+          : [];
+        const nextSnapshot = { output, timestamp: Date.now() };
+        const nextHistory = [nextSnapshot, ...previous]
+          .filter((item, index, arr) => {
+            const firstIndex = arr.findIndex((entry) => entry.output === item.output);
+            return firstIndex === index;
+          })
+          .slice(0, 10);
+        localStorage.setItem(`techscribe_draft_${slug}`, JSON.stringify({ history: nextHistory }));
+        setDraftHistory(nextHistory);
       } catch { /* ignore */ }
     }, 2000);
     return () => clearTimeout(timer);
@@ -720,6 +762,8 @@ function ToolPageContent() {
   };
 
   generateFnRef.current = loading ? () => {} : articleStep === "outline-editing" ? handleGenerateArticle : handleGenerate;
+  saveFnRef.current = output ? () => { void handleSave(); } : () => {};
+  copyFnRef.current = output ? () => { void handleCopy(); } : () => {};
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -802,8 +846,33 @@ function ToolPageContent() {
 
           {draftOutput && (
             <div className="shell-panel-soft rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
-              <p className="text-xs text-amber-300/90">Unsaved draft recovered</p>
-              <div className="flex items-center gap-3">
+              <div className="min-w-0">
+                <p className="text-xs text-amber-300/90">Unsaved draft recovered</p>
+                {draftHistory.length > 1 && (
+                  <p className="text-[11px] text-slate-500 mt-1">{draftHistory.length} snapshots available</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {draftHistory.length > 1 && (
+                  <select
+                    className="input-base text-xs py-1.5 px-2 min-w-[12rem]"
+                    onChange={(event) => {
+                      const timestamp = Number(event.target.value);
+                      const snapshot = draftHistory.find((item) => item.timestamp === timestamp);
+                      if (snapshot) {
+                        setOutput(snapshot.output);
+                        setDraftOutput(snapshot.output);
+                      }
+                    }}
+                    value={draftHistory[0]?.timestamp ?? ""}
+                  >
+                    {draftHistory.map((item) => (
+                      <option key={item.timestamp} value={item.timestamp}>
+                        {new Date(item.timestamp).toLocaleString()}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <button
                   onClick={() => { setOutput(draftOutput); setDraftOutput(null); }}
                   className="text-xs text-accent hover:text-white transition-colors font-medium"
@@ -814,6 +883,7 @@ function ToolPageContent() {
                   onClick={() => {
                     try { localStorage.removeItem(`techscribe_draft_${slug}`); } catch { /* ignore */ }
                     setDraftOutput(null);
+                    setDraftHistory([]);
                   }}
                   className="text-xs text-muted hover:text-white transition-colors"
                 >

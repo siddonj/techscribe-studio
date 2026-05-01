@@ -188,8 +188,33 @@ interface HistoryFoldersResponse {
 }
 
 const HISTORY_PRESETS_STORAGE_KEY = "techscribe-history-filter-presets";
+const HISTORY_RENDER_LIMIT_STEP = 120;
 const WORKFLOW_STAGES = ["Idea", "Drafting", "Optimization", "Review", "Ready to Publish"];
 const COLLABORATION_STATUSES = ["Not started", "In review", "Needs changes", "Approved"];
+
+function getSlaIndicator(row: HistoryRow): { label: string; tone: string } | null {
+  const status = row.collaboration_status ?? "Not started";
+  if (status === "Approved") return { label: "On track", tone: "text-emerald-700" };
+
+  const created = new Date(row.created_at).getTime();
+  const ageHours = (Date.now() - created) / (1000 * 60 * 60);
+  if (ageHours >= 72) return { label: "At risk", tone: "text-red-700" };
+  if (ageHours >= 24) return { label: "Watch", tone: "text-amber-700" };
+  return { label: "On track", tone: "text-emerald-700" };
+}
+
+function getChangedLineCount(before: string, after: string): number {
+  const beforeLines = before.split("\n");
+  const afterLines = after.split("\n");
+  const maxLength = Math.max(beforeLines.length, afterLines.length);
+  let count = 0;
+  for (let i = 0; i < maxLength; i++) {
+    if ((beforeLines[i] ?? "") !== (afterLines[i] ?? "")) {
+      count += 1;
+    }
+  }
+  return count;
+}
 
 function HistoryPageContent() {
   const searchParams = useSearchParams();
@@ -255,6 +280,9 @@ function HistoryPageContent() {
   const [editingCommentMessage, setEditingCommentMessage] = useState("");
   const [savingMetadata, setSavingMetadata] = useState(false);
   const [editingOutput, setEditingOutput] = useState("");
+  const [originalOutput, setOriginalOutput] = useState("");
+  const [showOutputDiff, setShowOutputDiff] = useState(false);
+  const [mentionNotice, setMentionNotice] = useState<string | null>(null);
   const [savingOutput, setSavingOutput] = useState(false);
   const [detailTab, setDetailTab] = useState<"article" | "editor">("article");
   const [bulkFolderName, setBulkFolderName] = useState("");
@@ -271,6 +299,7 @@ function HistoryPageContent() {
   const [filterFolderMgmtOpen, setFilterFolderMgmtOpen] = useState(false);
   const [filterTagMgmtOpen, setFilterTagMgmtOpen] = useState(false);
   const [filterPresetsOpen, setFilterPresetsOpen] = useState(false);
+  const [renderLimit, setRenderLimit] = useState(HISTORY_RENDER_LIMIT_STEP);
 
   const trimmedSearchQuery = searchQuery.trim();
   const trimmedFolderFilter = folderFilter.trim();
@@ -398,6 +427,10 @@ function HistoryPageContent() {
   }, [assigneeFilter, collaborationStatusFilter, dateFrom, dateTo, filterSlug, fetchHistory, sortBy, statusFilter, trimmedFolderFilter, trimmedSearchQuery, normalizedTagFilters]);
 
   useEffect(() => {
+    setRenderLimit(HISTORY_RENDER_LIMIT_STEP);
+  }, [filterSlug, trimmedFolderFilter, trimmedSearchQuery, statusFilter, collaborationStatusFilter, assigneeFilter, dateFrom, dateTo, sortBy, normalizedTagFilters]);
+
+  useEffect(() => {
     if (!selected) {
       setEditingTitle("");
       setEditingFolder("");
@@ -437,6 +470,9 @@ function HistoryPageContent() {
     setEditingCommentAuthor("");
     setEditingCommentMessage("");
     setEditingOutput(selected.output);
+    setOriginalOutput(selected.output);
+    setShowOutputDiff(false);
+    setMentionNotice(null);
     setDetailTab("article");
   }, [selected]);
 
@@ -517,6 +553,10 @@ function HistoryPageContent() {
   }, [fetchHistory, filterSlug, selected]);
 
   const handleDelete = async (id: number) => {
+    const row = rows.find((item) => item.id === id);
+    if (!window.confirm(`Delete "${row?.title ?? "this entry"}"?`)) {
+      return;
+    }
     setDeleting(id);
     await fetch(`/api/history/${id}`, { method: "DELETE" });
     setRows((prev) => prev.filter((r) => r.id !== id));
@@ -637,6 +677,9 @@ function HistoryPageContent() {
   const handleBulkDelete = async () => {
     const idsToDelete = selectedIds;
     if (idsToDelete.length === 0) return;
+    if (!window.confirm(`Delete ${idsToDelete.length} selected entr${idsToDelete.length === 1 ? "y" : "ies"}?`)) {
+      return;
+    }
 
     setBulkAction("delete");
 
@@ -657,6 +700,9 @@ function HistoryPageContent() {
   const handleBulkPublish = async () => {
     const rowsToPublish = rows.filter((row) => selectedIds.includes(row.id));
     if (rowsToPublish.length === 0) return;
+    if (!window.confirm(`Publish ${rowsToPublish.length} selected entr${rowsToPublish.length === 1 ? "y" : "ies"} to WordPress?`)) {
+      return;
+    }
 
     setBulkAction("organize");
 
@@ -676,6 +722,9 @@ function HistoryPageContent() {
       (row) => selectedIds.includes(row.id) && resolvePublishState(row) === "failed"
     );
     if (failedRows.length === 0) return;
+    if (!window.confirm(`Retry publish for ${failedRows.length} failed entr${failedRows.length === 1 ? "y" : "ies"}?`)) {
+      return;
+    }
 
     setBulkAction("organize");
 
@@ -692,6 +741,9 @@ function HistoryPageContent() {
 
   const handleBulkAssignMetadata = async (options?: { clearFolder?: boolean; folderName?: string; includeTags?: boolean }) => {
     if (selectedIds.length === 0) return;
+    if (!window.confirm(`Apply metadata changes to ${selectedIds.length} selected entr${selectedIds.length === 1 ? "y" : "ies"}?`)) {
+      return;
+    }
 
     setBulkAction("publish");
 
@@ -875,6 +927,12 @@ function HistoryPageContent() {
         created_at: new Date().toISOString(),
       },
     ]);
+    const mentions = Array.from(new Set(message.match(/@([a-zA-Z0-9._-]+)/g) ?? []));
+    if (mentions.length > 0) {
+      setMentionNotice(`Mentions detected: ${mentions.join(", ")}. Share this note with those teammates.`);
+    } else {
+      setMentionNotice(null);
+    }
     setEditingCommentMessage("");
   };
 
@@ -1064,7 +1122,8 @@ function HistoryPageContent() {
     URL.revokeObjectURL(url);
   };
 
-  const visibleRows = rows;
+  const visibleRows = rows.slice(0, renderLimit);
+  const hasRenderMore = rows.length > renderLimit;
   const allVisibleSelected = visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id));
   const selectedCount = selectedIds.length;
   const selectedFailedCount = rows.filter((row) => selectedIds.includes(row.id) && resolvePublishState(row) === "failed").length;
@@ -1157,7 +1216,7 @@ function HistoryPageContent() {
         {/* List panel */}
         <div className="w-96 border-r border-white/5 flex flex-col overflow-hidden shell-panel">
           {/* Filter bar */}
-          <ControlBar className="rounded-none border-0 border-b border-white/5 space-y-3 overflow-y-auto shrink-0 max-h-[60vh] bg-white/[0.02]">
+          <ControlBar className="rounded-none border-0 border-b border-white/5 space-y-3 overflow-y-auto shrink-0 max-h-[60vh] bg-white/[0.02] sticky top-0 z-10">
             {selectedCount > 0 && (
               <div className="shell-panel-soft rounded-2xl p-3 space-y-3 shell-hover-lift">
                 <div className="flex items-center justify-between gap-3">
@@ -1818,6 +1877,16 @@ function HistoryPageContent() {
                 </div>
               );
             })}
+            {!loading && hasRenderMore && (
+              <div className="px-4 py-3">
+                <button
+                  onClick={() => setRenderLimit((current) => current + HISTORY_RENDER_LIMIT_STEP)}
+                  className="btn-secondary w-full"
+                >
+                  Show more loaded rows ({rows.length - renderLimit} remaining)
+                </button>
+              </div>
+            )}
 
             {!loading && visibleRows.length > 0 && (
               <div className="px-4 py-3 border-t border-white/5 bg-white/[0.03]">
@@ -1860,7 +1929,7 @@ function HistoryPageContent() {
           ) : (
             <>
               {/* Detail toolbar */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0 sticky top-0 z-10 bg-card">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -1874,6 +1943,11 @@ function HistoryPageContent() {
                       <span className={`font-mono text-xs ${getDraftDetailClassName(selected)}`}>
                         {getDraftStatusText(selected)}
                       </span>
+                      {(() => {
+                        const sla = getSlaIndicator(selected);
+                        if (!sla) return null;
+                        return <span className={`font-mono text-xs ${sla.tone}`}>SLA: {sla.label}</span>;
+                      })()}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 ml-4 shrink-0">
@@ -1897,6 +1971,18 @@ function HistoryPageContent() {
                     >
                       Editor
                     </button>
+                    {detailTab === "editor" && (
+                      <button
+                        onClick={() => setShowOutputDiff((current) => !current)}
+                        className={`font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                          showOutputDiff
+                            ? "border-accent text-accent bg-accent/10"
+                            : "border-border text-slate-600 hover:text-slate-900 hover:border-slate-300"
+                        }`}
+                      >
+                        {showOutputDiff ? "Hide Diff" : "Compare"}
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -2191,6 +2277,9 @@ function HistoryPageContent() {
                       Add Note
                     </button>
                   </div>
+                  {mentionNotice && (
+                    <p className="text-xs text-accent">{mentionNotice}</p>
+                  )}
                   <div className="space-y-2 max-h-36 overflow-y-auto">
                     {(editingComments ?? []).length === 0 && (
                       <p className="text-xs text-slate-500">No collaboration notes yet.</p>
@@ -2209,6 +2298,37 @@ function HistoryPageContent() {
                         </div>
                         <p className="text-sm text-slate-700 mt-1">{comment.message}</p>
                         <p className="text-[11px] text-slate-500 mt-1">{formatDate(comment.created_at)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mb-3 shell-panel-soft rounded-[1.5rem] p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">Activity Timeline</p>
+                    <span className="text-[11px] text-slate-500">
+                      {(editingComments?.length ?? 0) + selected.wp_sync_log.length + 1} events
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-44 overflow-y-auto">
+                    {[{
+                      id: `created-${selected.id}`,
+                      timestamp: selected.created_at,
+                      text: "Entry created",
+                      tone: "text-slate-700",
+                    }, ...(editingComments ?? []).map((comment) => ({
+                      id: `comment-${comment.id}`,
+                      timestamp: comment.created_at,
+                      text: `${comment.author}: ${comment.message}`,
+                      tone: "text-slate-700",
+                    })), ...selected.wp_sync_log.map((entry, index) => ({
+                      id: `sync-${entry.timestamp}-${index}`,
+                      timestamp: entry.timestamp,
+                      text: entry.message,
+                      tone: entry.status === "failed" ? "text-red-700" : "text-emerald-700",
+                    }))].sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime()).map((event) => (
+                      <div key={event.id} className="rounded-xl border border-border bg-white/[0.03] px-3 py-2">
+                        <p className={`text-sm ${event.tone}`}>{event.text}</p>
+                        <p className="text-[11px] text-slate-500 mt-1">{formatDate(event.timestamp)}</p>
                       </div>
                     ))}
                   </div>
@@ -2300,13 +2420,40 @@ function HistoryPageContent() {
                   />
                 ) : (
                   <div className="flex flex-col h-full gap-3">
-                    <textarea
-                      className="flex-1 w-full min-h-[400px] bg-transparent text-slate-900 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-400"
-                      value={editingOutput}
-                      onChange={(e) => setEditingOutput(e.target.value)}
-                      placeholder="Edit your content here…"
-                    />
+                    {showOutputDiff ? (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 flex-1 min-h-[400px]">
+                        <div className="flex flex-col">
+                          <p className="text-xs font-mono text-slate-500 uppercase tracking-wider mb-1">Original</p>
+                          <textarea
+                            className="flex-1 w-full bg-white/[0.04] text-slate-700 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-400"
+                            value={originalOutput}
+                            readOnly
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <p className="text-xs font-mono text-slate-500 uppercase tracking-wider mb-1">Edited</p>
+                          <textarea
+                            className="flex-1 w-full bg-transparent text-slate-900 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-400"
+                            value={editingOutput}
+                            onChange={(e) => setEditingOutput(e.target.value)}
+                            placeholder="Edit your content here…"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <textarea
+                        className="flex-1 w-full min-h-[400px] bg-transparent text-slate-900 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-400"
+                        value={editingOutput}
+                        onChange={(e) => setEditingOutput(e.target.value)}
+                        placeholder="Edit your content here…"
+                      />
+                    )}
                     <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+                      {showOutputDiff && (
+                        <span className="font-mono text-xs text-slate-500">
+                          {getChangedLineCount(originalOutput, editingOutput)} lines changed
+                        </span>
+                      )}
                       <span className="font-mono text-xs text-muted">
                         {editingOutput.split(/\s+/).filter(Boolean).length} words
                       </span>

@@ -44,6 +44,8 @@ interface CalendarDraft {
   wp_tags: string;
 }
 
+const CALENDAR_VIEW_PREFS_KEY = "techscribe-calendar-view-prefs";
+
 const inputClassName =
   "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-colors";
 
@@ -292,6 +294,52 @@ export default function CalendarPage() {
   const [editorTab, setEditorTab] = useState<"details" | "brief" | "workflow" | "publishing">("details");
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(CALENDAR_VIEW_PREFS_KEY);
+      if (!raw) return;
+      const prefs = JSON.parse(raw) as Partial<{
+        statusFilter: string;
+        toolFilter: string;
+        publishIntentFilter: string;
+        viewMode: "list" | "week" | "month";
+        weekOffset: number;
+        monthOffset: number;
+        showAdvanced: boolean;
+      }>;
+      if (prefs.statusFilter) setStatusFilter(prefs.statusFilter);
+      if (prefs.toolFilter) setToolFilter(prefs.toolFilter);
+      if (prefs.publishIntentFilter) setPublishIntentFilter(prefs.publishIntentFilter);
+      if (prefs.viewMode) setViewMode(prefs.viewMode);
+      if (typeof prefs.weekOffset === "number") setWeekOffset(prefs.weekOffset);
+      if (typeof prefs.monthOffset === "number") setMonthOffset(prefs.monthOffset);
+      if (typeof prefs.showAdvanced === "boolean") setShowAdvanced(prefs.showAdvanced);
+    } catch {
+      // ignore saved view errors
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        CALENDAR_VIEW_PREFS_KEY,
+        JSON.stringify({
+          statusFilter,
+          toolFilter,
+          publishIntentFilter,
+          viewMode,
+          weekOffset,
+          monthOffset,
+          showAdvanced,
+        })
+      );
+    } catch {
+      // ignore saved view errors
+    }
+  }, [statusFilter, toolFilter, publishIntentFilter, viewMode, weekOffset, monthOffset, showAdvanced]);
+
   // When arriving via a "Plan in Calendar" handoff from a keyword research
   // brief, URL params pre-fill the Quick Plan form so the user can schedule
   // the planned content without re-typing the researched title and keywords.
@@ -367,11 +415,22 @@ export default function CalendarPage() {
     setEditorDraft(selectedEntry ? toDraft(selectedEntry) : null);
   }, [selectedEntry]);
 
+  const rowsByScheduledDate = useMemo(() => {
+    const map = new Map<string, CalendarEntry[]>();
+    for (const row of rows) {
+      if (!row.scheduled_for) continue;
+      const existing = map.get(row.scheduled_for) ?? [];
+      existing.push(row);
+      map.set(row.scheduled_for, existing);
+    }
+    return map;
+  }, [rows]);
+
   const groupedSections = useMemo(() => {
     const todayValue = getTodayValue();
     const thisWeekValue = getFutureDateValue(7);
     const overdue = rows.filter((row) => row.scheduled_for && row.scheduled_for < todayValue && row.status !== "published");
-    const today = rows.filter((row) => row.scheduled_for === todayValue);
+    const today = rowsByScheduledDate.get(todayValue) ?? [];
     const upcomingByDate = new Map<string, CalendarEntry[]>();
     const later: CalendarEntry[] = [];
     const unscheduled = rows.filter((row) => !row.scheduled_for);
@@ -382,8 +441,7 @@ export default function CalendarPage() {
       }
 
       if (row.scheduled_for <= thisWeekValue) {
-        const existing = upcomingByDate.get(row.scheduled_for) ?? [];
-        existing.push(row);
+        const existing = rowsByScheduledDate.get(row.scheduled_for) ?? [];
         upcomingByDate.set(row.scheduled_for, existing);
         continue;
       }
@@ -418,7 +476,7 @@ export default function CalendarPage() {
     }
 
     return sections;
-  }, [rows]);
+  }, [rows, rowsByScheduledDate]);
 
   const weekDates = useMemo(
     () => (viewMode === "week" ? getWeekDates(weekOffset) : []),
@@ -428,10 +486,10 @@ export default function CalendarPage() {
   const weekItemsByDate = useMemo(() => {
     const map = new Map<string, CalendarEntry[]>();
     for (const date of weekDates) {
-      map.set(date, rows.filter((r) => r.scheduled_for === date));
+      map.set(date, rowsByScheduledDate.get(date) ?? []);
     }
     return map;
-  }, [weekDates, rows]);
+  }, [weekDates, rowsByScheduledDate]);
 
   const weekUnscheduled = useMemo(
     () => (viewMode === "week" ? rows.filter((r) => !r.scheduled_for) : []),
@@ -446,10 +504,10 @@ export default function CalendarPage() {
   const monthItemsByDate = useMemo(() => {
     const map = new Map<string, CalendarEntry[]>();
     for (const cell of monthCells) {
-      map.set(cell.dateValue, rows.filter((r) => r.scheduled_for === cell.dateValue));
+      map.set(cell.dateValue, rowsByScheduledDate.get(cell.dateValue) ?? []);
     }
     return map;
-  }, [monthCells, rows]);
+  }, [monthCells, rowsByScheduledDate]);
 
   const monthUnscheduled = useMemo(
     () => (viewMode === "month" ? rows.filter((r) => !r.scheduled_for) : []),
@@ -519,6 +577,9 @@ export default function CalendarPage() {
 
   async function handleDeleteSelected() {
     if (!selectedEntry) {
+      return;
+    }
+    if (!window.confirm(`Delete "${selectedEntry.title}" from the calendar?`)) {
       return;
     }
 
@@ -740,7 +801,7 @@ export default function CalendarPage() {
 
         <div className="flex-1 min-h-0 flex gap-6 overflow-hidden">
           <aside className={`${viewMode === "list" ? "w-[28rem] shrink-0" : "flex-1"} shell-panel rounded-[2rem] overflow-hidden flex flex-col`}>
-            <ControlBar className="rounded-none border-0 border-b border-white/5 space-y-3 bg-white/[0.02]">
+            <ControlBar className="rounded-none border-0 border-b border-white/5 space-y-3 bg-white/[0.02] sticky top-0 z-10">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex gap-1 rounded-2xl bg-black/15 p-1 border border-white/5">
                   <button
@@ -885,7 +946,7 @@ export default function CalendarPage() {
 
                 {!loading && groupedSections.map((section) => (
                   <section key={section.id} className="border-b border-white/5 last:border-b-0">
-                    <div className="px-4 py-3 bg-white/[0.03] flex items-center justify-between">
+                    <div className="px-4 py-3 bg-white/[0.03] flex items-center justify-between sticky top-0 z-[1]">
                       <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">{section.title}</p>
                       <span className="text-[11px] text-slate-500">{section.rows.length} items</span>
                     </div>
@@ -1233,7 +1294,7 @@ export default function CalendarPage() {
             ) : (
               <>
                 {/* Editor header */}
-                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3 sticky top-0 z-10 bg-card">
                   <div className="min-w-0">
                     <p className="font-mono text-xs text-accent uppercase tracking-widest">Planned Item</p>
                     <h2 className="text-slate-900 text-base font-semibold mt-0.5 truncate">{selectedEntry.title}</h2>
@@ -1263,7 +1324,7 @@ export default function CalendarPage() {
                 </div>
 
                 {/* Tab bar */}
-                <div className="flex border-b border-white/5 px-2 pt-1 shrink-0">
+                <div className="flex border-b border-white/5 px-2 pt-1 shrink-0 sticky top-[73px] z-10 bg-card">
                   {(["details", "brief", "workflow", "publishing"] as const).map((tab) => (
                     <button
                       key={tab}
