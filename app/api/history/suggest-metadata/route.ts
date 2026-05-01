@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
     const suggestions = JSON.parse(jsonMatch[0]) as MetadataSuggestions;
 
-    // Normalise the result to ensure expected shape
+    // Normalize the result to ensure expected shape
     const result: MetadataSuggestions = {
       tags: Array.isArray(suggestions.tags) ? suggestions.tags.map(String) : [],
       wp_slug: typeof suggestions.wp_slug === "string" ? suggestions.wp_slug : "",

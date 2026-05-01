@@ -2125,7 +2125,7 @@ function HistoryPageContent() {
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">WordPress &amp; SEO Metadata</p>
                   <button
-                    onClick={() => void handleSuggestMetadata()}
+                    onClick={handleSuggestMetadata}
                     disabled={suggestingMetadata}
                     className="shell-hover-lift flex items-center gap-1.5 px-3 py-2 text-xs font-mono border border-accent/40 rounded-2xl text-accent hover:text-accent-dim hover:border-accent/60 transition-colors disabled:opacity-50"
                     title="Use AI to suggest tags, WP slug, excerpt, and category/tag names"
@@ -2385,7 +2385,7 @@ function HistoryPageContent() {
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] text-slate-500">Add existing tags to keep naming consistent</span>
                       <button
-                        onClick={() => void handleSuggestMetadata()}
+                        onClick={handleSuggestMetadata}
                         disabled={suggestingMetadata}
                         className="shell-hover-lift flex items-center gap-1 px-2 py-1 text-[11px] font-mono border border-accent/30 rounded-xl text-accent hover:text-accent-dim hover:border-accent/50 transition-colors disabled:opacity-50"
                         title="Let AI suggest tags for this article"
