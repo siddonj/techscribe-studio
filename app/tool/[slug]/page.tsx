@@ -9,7 +9,7 @@ import { parseToolOutput, ParsedToolOutput } from "@/lib/output-parsers";
 import HandoffCard from "@/components/HandoffCard";
 import AddKnowledgeModal, { ResearchItem } from "@/components/AddKnowledgeModal";
 import { BookOpen, FileText, Link2, Pencil, SearchX, Sparkles } from "lucide-react";
-import { EmptyState, PageHeader } from "@/components/DashboardPrimitives";
+import { ControlBar, EmptyState, PageContainer, PageHeader, SectionHeader } from "@/components/DashboardPrimitives";
 import { useToast } from "@/components/Toast";
 import { useKnowledgeBase } from "@/lib/use-knowledge-base";
 import { useMyTone, buildToneInstruction } from "@/lib/use-my-tone";
@@ -696,7 +696,7 @@ function ToolPageContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="p-5 md:p-8 max-w-[1600px] mx-auto w-full flex-1 flex flex-col gap-6">
+      <PageContainer maxWidthClassName="max-w-[1600px]" className="flex-1 flex flex-col gap-6 min-h-0">
         <PageHeader
           eyebrow={tool.category}
           title={tool.name}
@@ -749,8 +749,13 @@ function ToolPageContent() {
         <div className="flex flex-1 overflow-hidden gap-6 min-h-0">
           <aside className="w-96 shell-panel rounded-[2rem] p-6 flex flex-col gap-4 overflow-y-auto shrink-0">
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-accent">Input Studio</p>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <SectionHeader
+                  eyebrow="Input Studio"
+                  title="Prompt configuration"
+                  description="Shape the brief, tone, and constraints before you generate."
+                  className="flex-1"
+                />
                 <button
                   onClick={() => setHelpOpen(true)}
                   className="h-6 w-6 rounded-lg border border-border flex items-center justify-center text-muted hover:text-slate-900 hover:border-accent/40 transition-colors"
@@ -760,7 +765,6 @@ function ToolPageContent() {
                   <span className="text-xs font-mono leading-none">?</span>
                 </button>
               </div>
-              <p className="text-slate-400 text-sm mb-6">Shape the brief, tone, and constraints before you generate.</p>
               {Number.isFinite(calendarId) && (
                 <div className="shell-panel-soft rounded-2xl px-4 py-3 text-sm mb-4">
                   <p className="text-slate-500 text-xs font-mono uppercase tracking-wider mb-1">Calendar Linked</p>
@@ -972,7 +976,7 @@ function ToolPageContent() {
           <section className="flex-1 shell-panel rounded-[2rem] overflow-hidden flex flex-col min-w-0">
           {/* Output toolbar */}
           {output && articleStep !== "outline-editing" && (
-            <div className="px-6 py-4 border-b border-white/5">
+            <ControlBar className="rounded-none border-0 border-b border-white/5 px-6 py-4 bg-white/[0.02]">
               <div className="flex items-center justify-between gap-4">
                 {(articleStep === "article-done" || (!isOutlineMode && !loading)) ? (
                   <div className="flex items-center gap-1">
@@ -1106,7 +1110,7 @@ function ToolPageContent() {
                   })()}
                 </div>
               )}
-            </div>
+            </ControlBar>
           )}
 
           {/* Outline toolbar */}
@@ -1257,7 +1261,7 @@ function ToolPageContent() {
           </div>
           </section>
         </div>
-      </div>
+      </PageContainer>
 
       {/* Add Knowledge modal */}
       {showKnowledgeModal && (

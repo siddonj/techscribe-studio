@@ -7,14 +7,14 @@ import { PageHeader, SurfaceNotice } from "@/components/DashboardPrimitives";
 import type { UserRow } from "@/lib/db";
 
 const STATUS_STYLES: Record<string, string> = {
-  approved: "border-emerald-400/30 bg-emerald-400/10 text-emerald-700",
-  pending:  "border-amber-400/30  bg-amber-400/10  text-amber-700",
-  rejected: "border-red-400/30    bg-red-400/10    text-red-700",
+  approved: "border-emerald-300/60 bg-emerald-50 text-emerald-700",
+  pending:  "border-amber-300/60 bg-amber-50 text-amber-700",
+  rejected: "border-red-300/60 bg-red-50 text-red-700",
 };
 
 const ROLE_STYLES: Record<string, string> = {
   admin: "border-accent/30 bg-accent/10 text-accent",
-  user:  "border-border    bg-subtle      text-muted",
+  user: "border-slate-300/60 bg-slate-100/80 text-slate-600",
 };
 
 export default function AdminUsersPage() {
@@ -141,34 +141,34 @@ function UserRow({
       </div>
 
       <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-        <span className={`text-xs font-mono border rounded-full px-2 py-0.5 ${STATUS_STYLES[user.status] ?? ""}`}>
+        <span className={`status-badge ${STATUS_STYLES[user.status] ?? ""}`}>
           {user.status}
         </span>
-        <span className={`text-xs font-mono border rounded-full px-2 py-0.5 ${ROLE_STYLES[user.role] ?? ""}`}>
+        <span className={`status-badge ${ROLE_STYLES[user.role] ?? ""}`}>
           {user.role}
         </span>
 
         {user.status === "pending" && (
           <>
-            <button
-              onClick={() => onPatch(user.id, { status: "approved" })}
-              className="text-xs font-mono border border-emerald-400/40 text-emerald-700 hover:bg-emerald-50 rounded-xl px-3 py-1.5 transition-colors"
-            >
-              Approve
-            </button>
-            <button
-              onClick={() => onPatch(user.id, { status: "rejected" })}
-              className="text-xs font-mono border border-red-400/40 text-red-600 hover:bg-red-50 rounded-xl px-3 py-1.5 transition-colors"
-            >
-              Reject
-            </button>
+              <button
+                onClick={() => onPatch(user.id, { status: "approved" })}
+                className="btn-secondary text-emerald-700 border-emerald-300/70 hover:border-emerald-400/70 hover:bg-emerald-50"
+              >
+                Approve
+              </button>
+              <button
+                onClick={() => onPatch(user.id, { status: "rejected" })}
+                className="btn-danger"
+              >
+                Reject
+              </button>
           </>
         )}
 
         {user.status === "approved" && !isSelf && (
           <button
             onClick={() => onPatch(user.id, { status: "rejected" })}
-            className="text-xs font-mono border border-border text-muted hover:text-red-600 hover:border-red-400/40 rounded-xl px-3 py-1.5 transition-colors"
+            className="btn-secondary hover:text-red-700 hover:border-red-300/70"
           >
             Revoke
           </button>
@@ -177,7 +177,7 @@ function UserRow({
         {user.status === "rejected" && (
           <button
             onClick={() => onPatch(user.id, { status: "approved" })}
-            className="text-xs font-mono border border-border text-muted hover:text-emerald-700 hover:border-emerald-400/40 rounded-xl px-3 py-1.5 transition-colors"
+            className="btn-secondary hover:text-emerald-700 hover:border-emerald-300/70"
           >
             Re-approve
           </button>
@@ -186,7 +186,7 @@ function UserRow({
         {user.status === "approved" && user.role === "user" && (
           <button
             onClick={() => onPatch(user.id, { role: "admin" })}
-            className="text-xs font-mono border border-border text-muted hover:text-accent hover:border-accent/40 rounded-xl px-3 py-1.5 transition-colors"
+            className="btn-secondary"
           >
             Make admin
           </button>
@@ -195,7 +195,7 @@ function UserRow({
         {user.role === "admin" && user.status === "approved" && (
           <button
             onClick={() => onPatch(user.id, { role: "user" })}
-            className="text-xs font-mono border border-border text-muted hover:text-slate-900 rounded-xl px-3 py-1.5 transition-colors"
+            className="btn-secondary"
           >
             Remove admin
           </button>

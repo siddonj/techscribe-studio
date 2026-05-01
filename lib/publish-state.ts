@@ -63,29 +63,29 @@ export const PUBLISH_STATE_ICONS: Record<PublishState, string> = {
 
 /** CSS classes for the small pill/badge shown in list rows. */
 export const PUBLISH_STATE_BADGE_CLASSES: Record<PublishState, string> = {
-  draft_created: "text-emerald-300 border-emerald-400/30 bg-emerald-400/10",
-  draft_updated: "text-emerald-300 border-emerald-400/30 bg-emerald-400/10",
-  published: "text-fuchsia-300 border-fuchsia-400/30 bg-fuchsia-400/10",
-  scheduled: "text-sky-300 border-sky-400/30 bg-sky-400/10",
-  failed: "text-red-300 border-red-400/30 bg-red-400/10",
+  draft_created: "text-emerald-700 border-emerald-300/60 bg-emerald-50",
+  draft_updated: "text-emerald-700 border-emerald-300/60 bg-emerald-50",
+  published: "text-fuchsia-700 border-fuchsia-300/60 bg-fuchsia-50",
+  scheduled: "text-sky-700 border-sky-300/60 bg-sky-50",
+  failed: "text-red-700 border-red-300/60 bg-red-50",
 };
 
 /** CSS classes for inline text annotations (slightly dimmed). */
 export const PUBLISH_STATE_INLINE_CLASSES: Record<PublishState, string> = {
-  draft_created: "text-green-300/75",
-  draft_updated: "text-green-300/75",
-  published: "text-fuchsia-300/75",
-  scheduled: "text-blue-300/75",
-  failed: "text-red-300/75",
+  draft_created: "text-emerald-700/80",
+  draft_updated: "text-emerald-700/80",
+  published: "text-fuchsia-700/80",
+  scheduled: "text-sky-700/80",
+  failed: "text-red-700/80",
 };
 
 /** CSS classes for detail-panel text (slightly less dimmed than inline). */
 export const PUBLISH_STATE_DETAIL_CLASSES: Record<PublishState, string> = {
-  draft_created: "text-green-300/90",
-  draft_updated: "text-green-300/90",
-  published: "text-fuchsia-300/90",
-  scheduled: "text-blue-300/90",
-  failed: "text-red-300/90",
+  draft_created: "text-emerald-700/90",
+  draft_updated: "text-emerald-700/90",
+  published: "text-fuchsia-700/90",
+  scheduled: "text-sky-700/90",
+  failed: "text-red-700/90",
 };
 
 // ─── State derivation ─────────────────────────────────────────────────────────
@@ -137,21 +137,21 @@ export function resolvePublishState(row: HistoryRow): PublishState | null {
 /** Returns the badge CSS class for a history row, or the "no-state" default. */
 export function getPublishStateBadgeClass(row: HistoryRow): string {
   const state = resolvePublishState(row);
-  if (!state) return "text-slate-300 border-slate-400/20 bg-slate-400/5";
+  if (!state) return "text-slate-600 border-slate-300/60 bg-slate-100/80";
   return PUBLISH_STATE_BADGE_CLASSES[state];
 }
 
 /** Returns the inline text CSS class for a history row. */
 export function getPublishStateInlineClass(row: HistoryRow): string {
   const state = resolvePublishState(row);
-  if (!state) return "text-slate-400/75";
+  if (!state) return "text-slate-500/80";
   return PUBLISH_STATE_INLINE_CLASSES[state];
 }
 
 /** Returns the detail-panel text CSS class for a history row. */
 export function getPublishStateDetailClass(row: HistoryRow): string {
   const state = resolvePublishState(row);
-  if (!state) return "text-muted/70";
+  if (!state) return "text-slate-600/80";
   return PUBLISH_STATE_DETAIL_CLASSES[state];
 }
 
