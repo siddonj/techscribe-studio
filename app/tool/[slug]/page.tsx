@@ -30,6 +30,26 @@ interface BlogIdeaSuggestion {
 
 // Simple markdown renderer (no external deps)
 function renderMarkdown(text: string): string {
+  const escapeHtmlAttribute = (value: string) =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+  const sanitizeHttpUrl = (value: string): string | null => {
+    try {
+      const parsed = new URL(value);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return null;
+      }
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  };
+
   // Named set of block-level tag prefixes that should never be wrapped in <p>.
   // Checked via startsWith so the pattern stays readable and easy to extend.
   const BLOCK_TAGS = ["<h1", "<h2", "<h3", "<h4", "<h5", "<h6",
@@ -44,8 +64,15 @@ function renderMarkdown(text: string): string {
     // Render markdown images before headings so URLs aren't double-escaped
     .replace(
       /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g,
-      (_match, alt, src) =>
-        `<figure class="article-photo"><img src="${src}" alt="${alt}" loading="lazy" /><figcaption><a href="${src}" target="_blank" rel="noopener noreferrer">${alt || "Photo"}</a></figcaption></figure>`
+      (_match, alt, src) => {
+        const safeSrc = sanitizeHttpUrl(String(src).trim());
+        if (!safeSrc) {
+          return `<p>${alt || "Image removed: invalid URL"}</p>`;
+        }
+        const safeAlt = escapeHtmlAttribute(String(alt).trim());
+        const safeSrcAttr = escapeHtmlAttribute(safeSrc);
+        return `<figure class="article-photo"><img src="${safeSrcAttr}" alt="${safeAlt}" loading="lazy" /><figcaption><a href="${safeSrcAttr}" target="_blank" rel="noopener noreferrer">${safeAlt || "Photo"}</a></figcaption></figure>`;
+      }
     )
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
