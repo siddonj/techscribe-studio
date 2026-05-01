@@ -519,6 +519,7 @@ For upgrade and migration guidance — including how schema migrations work, how
 - Saved WordPress settings are stored locally for this self-hosted app.
 - The Anthropic API key is only used server-side.
 - If WordPress credentials were exposed outside your local environment, rotate the application password.
+- Every response includes a full set of security headers: `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and an explicit `Content-Security-Policy`. See [docs/operations.md § Security Headers](docs/operations.md#11-security-headers) for the complete directive reference and guidance on updating the policy.
 
 ## Tool Handoffs
 
