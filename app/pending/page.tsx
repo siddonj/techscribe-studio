@@ -69,7 +69,7 @@ export default function PendingPage() {
                 </p>
               </div>
               {session?.user?.email && (
-                <div className="rounded-xl bg-subtle border border-border px-4 py-2.5 text-sm text-slate-600 text-left">
+                <div className="shell-panel-soft rounded-xl border px-4 py-2.5 text-sm text-slate-600 text-left">
                   <p className="text-xs font-mono text-muted uppercase tracking-wider mb-0.5">Signed in as</p>
                   <p className="font-medium text-slate-900 truncate">{session.user.email}</p>
                 </div>
@@ -82,7 +82,7 @@ export default function PendingPage() {
 
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm text-slate-500 hover:text-slate-900 hover:border-accent/40 transition-colors"
+            className="btn-secondary w-full rounded-xl px-4 py-2.5 text-sm"
           >
             <LogOut className="h-3.5 w-3.5" />
             Sign out

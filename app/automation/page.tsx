@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PageHeader, SectionCard, SurfaceNotice } from "@/components/DashboardPrimitives";
+import { PageContainer, PageHeader, SectionCard, SectionHeader, SurfaceNotice } from "@/components/DashboardPrimitives";
 
 interface AutomationTemplate {
   id: number;
@@ -40,11 +40,11 @@ function formatDate(value: string) {
 function getRunStatusClass(status: AutomationRun["status"]) {
   switch (status) {
     case "success":
-      return "border-emerald-400/30 bg-emerald-400/10 text-emerald-300";
+      return "border-emerald-300/60 bg-emerald-50 text-emerald-700";
     case "partial":
-      return "border-amber-400/30 bg-amber-400/10 text-amber-300";
+      return "border-amber-300/60 bg-amber-50 text-amber-700";
     case "error":
-      return "border-red-400/30 bg-red-400/10 text-red-300";
+      return "border-red-300/60 bg-red-50 text-red-700";
   }
 }
 
@@ -153,38 +153,40 @@ export default function AutomationPage() {
   }
 
   return (
-    <div className="p-5 md:p-8 max-w-7xl mx-auto space-y-6">
-      <PageHeader
-        eyebrow="Automation"
-        title="Saved batch templates and run history"
-        description="Store reusable batch payloads for external schedulers, then inspect the latest automation runs without digging through logs."
-        stats={[
-          { label: "Templates", value: templates.length, meta: "saved payload sets" },
-          { label: "Recent Runs", value: runs.length, meta: "latest executions" },
-          { label: "Composer", value: parsedJobs ? `${parsedJobs.length} jobs` : "Invalid JSON", meta: "current draft" },
-          { label: "State", value: loading ? "Loading" : "Ready", meta: "automation workspace" },
-        ]}
-      />
+    <div className="min-h-screen flex flex-col">
+      <PageContainer maxWidthClassName="max-w-7xl" className="space-y-6">
+        <PageHeader
+          eyebrow="Automation"
+          title="Saved batch templates and run history"
+          description="Store reusable batch payloads for external schedulers, then inspect the latest automation runs without digging through logs."
+          stats={[
+            { label: "Templates", value: templates.length, meta: "saved payload sets" },
+            { label: "Recent Runs", value: runs.length, meta: "latest executions" },
+            { label: "Composer", value: parsedJobs ? `${parsedJobs.length} jobs` : "Invalid JSON", meta: "current draft" },
+            { label: "State", value: loading ? "Loading" : "Ready", meta: "automation workspace" },
+          ]}
+        />
 
-      {(error || message) && (
-        <section className="space-y-2">
-          {error && <SurfaceNotice tone="error">{error}</SurfaceNotice>}
-          {message && <SurfaceNotice tone="success">{message}</SurfaceNotice>}
-        </section>
-      )}
+        {(error || message) && (
+          <section className="space-y-2">
+            {error && <SurfaceNotice tone="error">{error}</SurfaceNotice>}
+            {message && <SurfaceNotice tone="success">{message}</SurfaceNotice>}
+          </section>
+        )}
 
-      <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <SectionCard className="p-5 md:p-6 space-y-4">
-          <div>
-            <p className="font-mono text-xs text-accent uppercase tracking-widest">New Template</p>
-            <p className="text-sm text-slate-400 mt-1">Save a reusable jobs array for cron, CI, or MCP-driven calls.</p>
-          </div>
+        <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+          <SectionCard className="p-5 md:p-6 space-y-4">
+            <SectionHeader
+              eyebrow="New Template"
+              title="Create reusable batch payload"
+              description="Save a reusable jobs array for cron, CI, or MCP-driven calls."
+            />
           <input className={inputClassName} value={name} onChange={(event) => setName(event.target.value)} placeholder="Weekly SEO batch" />
           <input className={inputClassName} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Optional description" />
           <textarea className={`${inputClassName} resize-none font-mono text-xs`} rows={14} value={jobsText} onChange={(event) => setJobsText(event.target.value)} />
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-slate-500">{parsedJobs ? `${parsedJobs.length} jobs parsed` : "Invalid JSON"}</p>
-            <button onClick={handleSaveTemplate} disabled={saving || !name.trim() || !parsedJobs} className="bg-accent text-white font-semibold px-4 py-2 rounded-2xl text-sm hover:bg-accent-dim transition-colors disabled:opacity-50">
+            <button onClick={handleSaveTemplate} disabled={saving || !name.trim() || !parsedJobs} className="btn-primary rounded-2xl px-4 py-2 text-sm">
               {saving ? "Saving..." : "Save Template"}
             </button>
           </div>
@@ -216,7 +218,7 @@ export default function AutomationPage() {
                         <p className="text-white font-medium">{template.name}</p>
                         {template.description && <p className="text-sm text-slate-400 mt-1">{template.description}</p>}
                       </div>
-                      <button onClick={() => void handleDeleteTemplate(template.id)} className="text-xs text-red-600/80 hover:text-red-700 transition-colors">Delete</button>
+                      <button onClick={() => void handleDeleteTemplate(template.id)} className="btn-danger text-xs px-2.5 py-1">Delete</button>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
                       <span>Template #{template.id}</span>
@@ -246,7 +248,7 @@ export default function AutomationPage() {
                       <p className="text-white font-medium">Run #{run.id}</p>
                       <p className="text-sm text-slate-400 mt-1">{run.trigger_source} • {run.job_count} jobs • {run.success_count} success / {run.error_count} errors</p>
                     </div>
-                    <span className={`text-[11px] font-mono border rounded-full px-2.5 py-1 ${getRunStatusClass(run.status)}`}>{run.status}</span>
+                    <span className={`status-badge ${getRunStatusClass(run.status)}`}>{run.status}</span>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
                     {run.template_id && <span>Template #{run.template_id}</span>}
@@ -259,6 +261,7 @@ export default function AutomationPage() {
           </SectionCard>
         </div>
       </section>
+      </PageContainer>
     </div>
   );
 }
