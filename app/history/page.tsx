@@ -23,7 +23,7 @@ import {
   PUBLISH_STATE_BADGE_CLASSES,
   PUBLISH_STATE_ICONS,
 } from "@/lib/publish-state";
-import { EmptyState, PageHeader, StatusStrip } from "@/components/DashboardPrimitives";
+import { ControlBar, EmptyState, PageContainer, PageHeader, StatusStrip } from "@/components/DashboardPrimitives";
 
 // Simple markdown renderer (same as tool page)
 function renderMarkdown(text: string): string {
@@ -1093,7 +1093,7 @@ function HistoryPageContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="p-5 md:p-8 pb-0">
+      <PageContainer maxWidthClassName="max-w-[1600px]" className="pb-0 flex flex-1 flex-col min-h-0 gap-4">
         <PageHeader
           eyebrow="Archive"
           title="Generation History"
@@ -1105,9 +1105,6 @@ function HistoryPageContent() {
             { label: "Publishing", value: publishAllowed ? "Enabled" : publishStatusLoaded ? "Needs config" : "Checking", meta: "WordPress sync" },
           ]}
         />
-      </div>
-
-      <div className="px-5 md:px-8 pt-4">
         <StatusStrip
           columnsClassName="xl:grid-cols-5"
           items={[
@@ -1118,50 +1115,49 @@ function HistoryPageContent() {
             { label: "Publishing", value: publishAllowed ? "Draft sync enabled" : publishStatusLoaded ? "Connection required" : "Checking" },
           ]}
         />
-      </div>
 
       {/* Publish State Summary */}
       {!loading && rows.length > 0 && (
-        <div className="border-b border-border px-8 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <ControlBar className="rounded-[1.5rem] py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
           <p className="font-mono text-xs text-muted uppercase tracking-wider shrink-0">Publish States</p>
           {publishStateCounts.failed > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.failed}`}>
+            <span className={`status-badge ${PUBLISH_STATE_BADGE_CLASSES.failed}`}>
               {PUBLISH_STATE_ICONS.failed}{PUBLISH_STATE_LABELS.failed}: {publishStateCounts.failed}
             </span>
           )}
           {publishStateCounts.published > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.published}`}>
+            <span className={`status-badge ${PUBLISH_STATE_BADGE_CLASSES.published}`}>
               {PUBLISH_STATE_ICONS.published}{PUBLISH_STATE_LABELS.published}: {publishStateCounts.published}
             </span>
           )}
           {publishStateCounts.scheduled > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.scheduled}`}>
+            <span className={`status-badge ${PUBLISH_STATE_BADGE_CLASSES.scheduled}`}>
               {PUBLISH_STATE_ICONS.scheduled}{PUBLISH_STATE_LABELS.scheduled}: {publishStateCounts.scheduled}
             </span>
           )}
           {publishStateCounts.draft_updated > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.draft_updated}`}>
+            <span className={`status-badge ${PUBLISH_STATE_BADGE_CLASSES.draft_updated}`}>
               {PUBLISH_STATE_ICONS.draft_updated}{PUBLISH_STATE_LABELS.draft_updated}: {publishStateCounts.draft_updated}
             </span>
           )}
           {publishStateCounts.draft_created > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.draft_created}`}>
+            <span className={`status-badge ${PUBLISH_STATE_BADGE_CLASSES.draft_created}`}>
               {PUBLISH_STATE_ICONS.draft_created}{PUBLISH_STATE_LABELS.draft_created}: {publishStateCounts.draft_created}
             </span>
           )}
           {publishStateCounts.unpublished > 0 && (
-            <span className="text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 border-slate-400/20 bg-slate-400/5 text-slate-400">
+            <span className="status-badge border-slate-300/60 bg-slate-100/80 text-slate-600">
               📄 Never Published: {publishStateCounts.unpublished}
             </span>
           )}
-        </div>
+        </ControlBar>
       )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* List panel */}
         <div className="w-96 border-r border-white/5 flex flex-col overflow-hidden shell-panel">
           {/* Filter bar */}
-          <div className="px-4 py-3 border-b border-white/5 space-y-3 overflow-y-auto shrink-0 max-h-[60vh]">
+          <ControlBar className="rounded-none border-0 border-b border-white/5 space-y-3 overflow-y-auto shrink-0 max-h-[60vh] bg-white/[0.02]">
             {selectedCount > 0 && (
               <div className="shell-panel-soft rounded-2xl p-3 space-y-3 shell-hover-lift">
                 <div className="flex items-center justify-between gap-3">
@@ -1711,7 +1707,7 @@ function HistoryPageContent() {
                 </div>
               )}
             </div>
-          </div>
+          </ControlBar>
 
           {/* List */}
           <div className="flex-1 overflow-y-auto">
@@ -1748,8 +1744,8 @@ function HistoryPageContent() {
               return (
                 <div
                   key={row.id}
-                  className={`shell-hover-lift w-full text-left px-4 py-3 rounded-2xl border transition-colors ${
-                    isSelected ? "bg-accent/8 border-accent/30" : "border-white/8 bg-black/10 hover:bg-white/[0.03]"
+                  className={`surface-interactive w-full text-left px-4 py-3 ${
+                    isSelected ? "surface-interactive-selected" : "surface-interactive-default"
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -1772,7 +1768,7 @@ function HistoryPageContent() {
                           </div>
                         </div>
                         {draftBadgeLabel && (
-                          <span className={`font-mono text-xs border rounded px-1.5 py-0.5 flex items-center gap-1 ${getDraftBadgeClassName(row)}`}>
+                          <span className={`status-badge ${getDraftBadgeClassName(row)}`}>
                             {publishStateIcon}
                             {draftBadgeLabel}
                           </span>
@@ -2329,6 +2325,7 @@ function HistoryPageContent() {
           )}
         </div>
       </div>
+      </PageContainer>
 
       <datalist id="history-tag-options">
         {tagSummaries.map((tagSummary) => (

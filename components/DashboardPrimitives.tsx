@@ -34,6 +34,30 @@ interface SectionCardProps {
   className?: string;
 }
 
+interface PanelProps {
+  children: ReactNode;
+  className?: string;
+}
+
+interface PageContainerProps {
+  children: ReactNode;
+  className?: string;
+  maxWidthClassName?: string;
+}
+
+interface SectionHeaderProps {
+  eyebrow?: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  className?: string;
+}
+
+interface ControlBarProps {
+  children: ReactNode;
+  className?: string;
+}
+
 interface SurfaceNoticeProps {
   tone?: "success" | "error" | "warning" | "info";
   children: ReactNode;
@@ -115,8 +139,55 @@ export function StatusStrip({ items, columnsClassName }: StatusStripProps) {
   );
 }
 
-export function SectionCard({ children, className }: SectionCardProps) {
+export function PageContainer({
+  children,
+  className,
+  maxWidthClassName = "max-w-7xl",
+}: PageContainerProps) {
+  return (
+    <div className={clsx("p-5 md:p-8 w-full mx-auto flex-1", maxWidthClassName, className)}>
+      {children}
+    </div>
+  );
+}
+
+export function SectionHeader({
+  eyebrow,
+  title,
+  description,
+  actions,
+  className,
+}: SectionHeaderProps) {
+  return (
+    <div className={clsx("flex items-start justify-between gap-4", className)}>
+      <div className="min-w-0">
+        {eyebrow ? (
+          <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-accent mb-1.5">
+            {eyebrow}
+          </p>
+        ) : null}
+        <h2 className="text-lg md:text-xl text-white leading-snug">{title}</h2>
+        {description ? <p className="text-sm text-slate-400 mt-1.5">{description}</p> : null}
+      </div>
+      {actions ? <div className="shrink-0">{actions}</div> : null}
+    </div>
+  );
+}
+
+export function Panel({ children, className }: PanelProps) {
   return <section className={clsx("shell-panel rounded-[2rem] p-6", className)}>{children}</section>;
+}
+
+export function SectionCard({ children, className }: SectionCardProps) {
+  return <Panel className={className}>{children}</Panel>;
+}
+
+export function ControlBar({ children, className }: ControlBarProps) {
+  return (
+    <div className={clsx("shell-panel-soft rounded-2xl p-4 border border-border/80", className)}>
+      {children}
+    </div>
+  );
 }
 
 export function SurfaceNotice({ tone = "info", children, className }: SurfaceNoticeProps) {
