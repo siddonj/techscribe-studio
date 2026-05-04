@@ -26,6 +26,49 @@ function buildResearchSection(research: ResearchItem[]): string {
   return `\n\nResearch Sources:\n${items}`;
 }
 
+/**
+ * Fetches real Unsplash image URLs when an access key is configured.
+ * Falls back to null so the caller can use placeholder instructions.
+ */
+async function fetchUnsplashPhotos(keyword: string, count: number): Promise<string[] | null> {
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+  if (!accessKey) return null;
+
+  try {
+    const res = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(keyword)}&per_page=${count}&orientation=landscape`,
+      { headers: { Authorization: `Client-ID ${accessKey}` }, cache: "no-store" }
+    );
+    if (!res.ok) {
+      console.error(`[unsplash] API error ${res.status}: ${await res.text()}`);
+      return null;
+    }
+    const data = (await res.json()) as { results: Array<{ urls: { raw: string } }> };
+    return data.results.map((r) => `${r.urls.raw}&w=1200&h=628&fit=crop&q=80`);
+  } catch (err) {
+    console.error("[unsplash] fetch failed:", err);
+    return null;
+  }
+}
+
+function buildPhotoInstructions(photoUrls: string[] | null): string {
+  if (photoUrls && photoUrls.length > 0) {
+    return (
+      "\n\nPhoto instructions: Embed these royalty-free photos throughout the article at natural break points between sections. " +
+      "Use each photo exactly once with this Markdown format on its own line:\n" +
+      photoUrls.map((url) => `![Relevant descriptive caption — Photo via Unsplash](${url})`).join("\n") +
+      "\n\nDo not cluster photos together; spread them evenly across the article."
+    );
+  }
+
+  return (
+    "\n\nPhoto instructions: Embed 3–5 relevant image placeholders throughout the article at natural break points between sections. " +
+    "For each photo use this exact Markdown format on its own line:\n" +
+    "![A descriptive caption explaining what the photo shows — Photo needed](https://placehold.co/1200x628?text=Replace+with+real+image)\n" +
+    "Set the UNSPLASH_ACCESS_KEY environment variable to automatically inject real Unsplash photo URLs."
+  );
+}
+
 export async function POST(req: NextRequest) {
   const auth = await requireApprovedSession();
   if ("error" in auth) return auth.error;
@@ -110,18 +153,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Append photo-embedding instructions when the option is enabled.
-    // TODO: source.unsplash.com/featured is deprecated by Unsplash. To migrate to a
-    // supported API, add an UNSPLASH_ACCESS_KEY (or PEXELS_API_KEY / PIXABAY_API_KEY)
-    // environment variable, fetch a real image URL server-side before generation, and
-    // inject resolved URLs into the prompt instead of using the source redirect pattern.
     if (includePhotos) {
-      userPrompt +=
-        "\n\nPhoto instructions: Embed 3–5 relevant royalty-free photos throughout the article at natural break points between sections. " +
-        "For each photo use this exact Markdown format on its own line (replace the bracketed parts with real content):\n" +
-        "![A descriptive caption explaining what the photo shows — Photo via Unsplash](https://source.unsplash.com/featured/1200x628/?actual-keyword)\n" +
-        "For the URL, replace 'actual-keyword' with a specific, descriptive search term (use hyphens between words, no spaces) that will return highly relevant images for the surrounding content. " +
-        "Example: for a section about JavaScript performance, use 'javascript-code' or 'web-performance'. " +
-        "Do not cluster photos together; spread them evenly across the article.";
+      const keyword = fields.keywords || fields.topic || fields.videoTitle || "technology";
+      const photoUrls = await fetchUnsplashPhotos(keyword, 5);
+      userPrompt += buildPhotoInstructions(photoUrls);
     }
 
     const ALLOWED_MODELS = new Set(["claude-haiku-4-5-20251001", "claude-sonnet-4-6", "claude-opus-4-7"]);
@@ -169,4 +204,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
