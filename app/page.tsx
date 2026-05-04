@@ -28,7 +28,7 @@ async function getDashboardData(isAdmin: boolean) {
     ).get() as { count: number }).count;
 
     const todayItems = (db.prepare(
-      "SELECT COUNT(*) as count FROM calendar WHERE scheduled_for = date('now') AND status != 'published'"
+      "SELECT COUNT(*) as count FROM content_calendar WHERE scheduled_for = date('now') AND status != 'published'"
     ).get() as { count: number }).count;
 
     const failedPublishes = (db.prepare(
@@ -44,7 +44,7 @@ async function getDashboardData(isAdmin: boolean) {
     ).all() as { id: number; title: string; tool_name: string; tool_icon: string; created_at: string }[];
 
     const upcomingItems = db.prepare(
-      "SELECT id, title, scheduled_for, status FROM calendar WHERE scheduled_for >= date('now') AND status != 'published' ORDER BY scheduled_for ASC LIMIT 5"
+      "SELECT id, title, scheduled_for, status FROM content_calendar WHERE scheduled_for >= date('now') AND status != 'published' ORDER BY scheduled_for ASC LIMIT 5"
     ).all() as { id: number; title: string; scheduled_for: string; status: string }[];
 
     return { recentSaves, todayItems, failedPublishes, pendingUsers, recentHistory, upcomingItems };

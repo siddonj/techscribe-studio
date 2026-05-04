@@ -1,3 +1,4 @@
+import { marked } from "marked";
 import { getWordPressSettings } from "@/lib/db";
 
 export interface WordPressConfig {
@@ -6,36 +7,17 @@ export interface WordPressConfig {
   appPassword: string;
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
+/**
+ * Convert Markdown to WordPress-compatible HTML.
+ *
+ * Uses `marked` for robust, spec-compliant parsing instead of the previous
+ * regex-based converter which broke on nested formatting, code blocks with
+ * special characters, and complex lists.
+ */
 export function markdownToWordPressHtml(markdown: string): string {
-  return markdown
-    .replace(/```[\w]*\n([\s\S]*?)```/g, (_match, code) => {
-      return `<pre><code>${escapeHtml(String(code).trim())}</code></pre>`;
-    })
-    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-    .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, (_match, code) => `<code>${escapeHtml(code)}</code>`)
-    .replace(/^---$/gm, "<hr />")
-    .replace(/^\d+\.\s+(.+)$/gm, "<li>$1</li>")
-    .replace(/^[-*]\s+(.+)$/gm, "<li>$1</li>")
-    .replace(/(<li>[\s\S]*?<\/li>)/g, "<ul>$1</ul>")
-    .replace(/<\/ul>\s*<ul>/g, "")
-    .replace(/\n\n/g, "</p><p>")
-    .replace(/^(?!<[hupol]|<\/[hupol]|<li|<hr)(.+)$/gm, (match) =>
-      match.startsWith("<") ? match : `<p>${match}</p>`
-    )
-    .replace(/<p><\/p>/g, "");
+  // marked returns a Promise in async mode; synchronous call returns a string.
+  const html = marked.parse(markdown, { async: false }) as string;
+  return html.trim();
 }
 
 export function resolveWordPressConfig(overrides?: Partial<WordPressConfig>) {
