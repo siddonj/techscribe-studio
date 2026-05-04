@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { Clock, Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import type { HistoryFolderSummary, HistoryRow, HistoryTagSummary } from "@/lib/db";
 import { TOOLS } from "@/lib/tools";
@@ -23,7 +23,7 @@ import {
   PUBLISH_STATE_BADGE_CLASSES,
   PUBLISH_STATE_ICONS,
 } from "@/lib/publish-state";
-import { EmptyState, PageHeader, StatusStrip } from "@/components/DashboardPrimitives";
+import { ControlBar, EmptyState, PageContainer, PageHeader, StatusStrip } from "@/components/DashboardPrimitives";
 
 // Simple markdown renderer (same as tool page)
 function renderMarkdown(text: string): string {
@@ -187,9 +187,42 @@ interface HistoryFoldersResponse {
   folders: HistoryFolderSummary[];
 }
 
+interface MetadataSuggestions {
+  tags: string[];
+  wp_slug: string;
+  wp_excerpt: string;
+  wp_category_names: string[];
+  wp_tag_names: string[];
+}
+
 const HISTORY_PRESETS_STORAGE_KEY = "techscribe-history-filter-presets";
+const HISTORY_RENDER_LIMIT_STEP = 120;
 const WORKFLOW_STAGES = ["Idea", "Drafting", "Optimization", "Review", "Ready to Publish"];
 const COLLABORATION_STATUSES = ["Not started", "In review", "Needs changes", "Approved"];
+
+function getSlaIndicator(row: HistoryRow): { label: string; tone: string } | null {
+  const status = row.collaboration_status ?? "Not started";
+  if (status === "Approved") return { label: "On track", tone: "text-emerald-700" };
+
+  const created = new Date(row.created_at).getTime();
+  const ageHours = (Date.now() - created) / (1000 * 60 * 60);
+  if (ageHours >= 72) return { label: "At risk", tone: "text-red-700" };
+  if (ageHours >= 24) return { label: "Watch", tone: "text-amber-700" };
+  return { label: "On track", tone: "text-emerald-700" };
+}
+
+function getChangedLineCount(before: string, after: string): number {
+  const beforeLines = before.split("\n");
+  const afterLines = after.split("\n");
+  const maxLength = Math.max(beforeLines.length, afterLines.length);
+  let count = 0;
+  for (let i = 0; i < maxLength; i++) {
+    if ((beforeLines[i] ?? "") !== (afterLines[i] ?? "")) {
+      count += 1;
+    }
+  }
+  return count;
+}
 
 function HistoryPageContent() {
   const searchParams = useSearchParams();
@@ -253,8 +286,14 @@ function HistoryPageContent() {
   const [editingComments, setEditingComments] = useState<HistoryRow["collaboration_comments"]>([]);
   const [editingCommentAuthor, setEditingCommentAuthor] = useState("");
   const [editingCommentMessage, setEditingCommentMessage] = useState("");
+  const [suggestingMetadata, setSuggestingMetadata] = useState(false);
+  const [aiMetaSuggestions, setAiMetaSuggestions] = useState<MetadataSuggestions | null>(null);
+  const [metaSuggestError, setMetaSuggestError] = useState<string | null>(null);
   const [savingMetadata, setSavingMetadata] = useState(false);
   const [editingOutput, setEditingOutput] = useState("");
+  const [originalOutput, setOriginalOutput] = useState("");
+  const [showOutputDiff, setShowOutputDiff] = useState(false);
+  const [mentionNotice, setMentionNotice] = useState<string | null>(null);
   const [savingOutput, setSavingOutput] = useState(false);
   const [detailTab, setDetailTab] = useState<"article" | "editor">("article");
   const [bulkFolderName, setBulkFolderName] = useState("");
@@ -271,6 +310,7 @@ function HistoryPageContent() {
   const [filterFolderMgmtOpen, setFilterFolderMgmtOpen] = useState(false);
   const [filterTagMgmtOpen, setFilterTagMgmtOpen] = useState(false);
   const [filterPresetsOpen, setFilterPresetsOpen] = useState(false);
+  const [renderLimit, setRenderLimit] = useState(HISTORY_RENDER_LIMIT_STEP);
 
   const trimmedSearchQuery = searchQuery.trim();
   const trimmedFolderFilter = folderFilter.trim();
@@ -398,6 +438,10 @@ function HistoryPageContent() {
   }, [assigneeFilter, collaborationStatusFilter, dateFrom, dateTo, filterSlug, fetchHistory, sortBy, statusFilter, trimmedFolderFilter, trimmedSearchQuery, normalizedTagFilters]);
 
   useEffect(() => {
+    setRenderLimit(HISTORY_RENDER_LIMIT_STEP);
+  }, [filterSlug, trimmedFolderFilter, trimmedSearchQuery, statusFilter, collaborationStatusFilter, assigneeFilter, dateFrom, dateTo, sortBy, normalizedTagFilters]);
+
+  useEffect(() => {
     if (!selected) {
       setEditingTitle("");
       setEditingFolder("");
@@ -417,6 +461,8 @@ function HistoryPageContent() {
       setEditingCommentMessage("");
       setEditingOutput("");
       setDetailTab("article");
+      setAiMetaSuggestions(null);
+      setMetaSuggestError(null);
       return;
     }
 
@@ -437,7 +483,12 @@ function HistoryPageContent() {
     setEditingCommentAuthor("");
     setEditingCommentMessage("");
     setEditingOutput(selected.output);
+    setOriginalOutput(selected.output);
+    setShowOutputDiff(false);
+    setMentionNotice(null);
     setDetailTab("article");
+    setAiMetaSuggestions(null);
+    setMetaSuggestError(null);
   }, [selected]);
 
   useEffect(() => {
@@ -517,6 +568,10 @@ function HistoryPageContent() {
   }, [fetchHistory, filterSlug, selected]);
 
   const handleDelete = async (id: number) => {
+    const row = rows.find((item) => item.id === id);
+    if (!window.confirm(`Delete "${row?.title ?? "this entry"}"?`)) {
+      return;
+    }
     setDeleting(id);
     await fetch(`/api/history/${id}`, { method: "DELETE" });
     setRows((prev) => prev.filter((r) => r.id !== id));
@@ -637,6 +692,9 @@ function HistoryPageContent() {
   const handleBulkDelete = async () => {
     const idsToDelete = selectedIds;
     if (idsToDelete.length === 0) return;
+    if (!window.confirm(`Delete ${idsToDelete.length} selected entr${idsToDelete.length === 1 ? "y" : "ies"}?`)) {
+      return;
+    }
 
     setBulkAction("delete");
 
@@ -657,6 +715,9 @@ function HistoryPageContent() {
   const handleBulkPublish = async () => {
     const rowsToPublish = rows.filter((row) => selectedIds.includes(row.id));
     if (rowsToPublish.length === 0) return;
+    if (!window.confirm(`Publish ${rowsToPublish.length} selected entr${rowsToPublish.length === 1 ? "y" : "ies"} to WordPress?`)) {
+      return;
+    }
 
     setBulkAction("organize");
 
@@ -676,6 +737,9 @@ function HistoryPageContent() {
       (row) => selectedIds.includes(row.id) && resolvePublishState(row) === "failed"
     );
     if (failedRows.length === 0) return;
+    if (!window.confirm(`Retry publish for ${failedRows.length} failed entr${failedRows.length === 1 ? "y" : "ies"}?`)) {
+      return;
+    }
 
     setBulkAction("organize");
 
@@ -692,6 +756,9 @@ function HistoryPageContent() {
 
   const handleBulkAssignMetadata = async (options?: { clearFolder?: boolean; folderName?: string; includeTags?: boolean }) => {
     if (selectedIds.length === 0) return;
+    if (!window.confirm(`Apply metadata changes to ${selectedIds.length} selected entr${selectedIds.length === 1 ? "y" : "ies"}?`)) {
+      return;
+    }
 
     setBulkAction("publish");
 
@@ -845,6 +912,44 @@ function HistoryPageContent() {
     }
   };
 
+  const handleSuggestMetadata = async () => {
+    if (!selected) return;
+    setSuggestingMetadata(true);
+    setMetaSuggestError(null);
+    setAiMetaSuggestions(null);
+    try {
+      const res = await fetch("/api/history/suggest-metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ historyId: selected.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to get suggestions");
+      }
+      setAiMetaSuggestions(data as MetadataSuggestions);
+    } catch (error) {
+      setMetaSuggestError(String(error));
+    } finally {
+      setSuggestingMetadata(false);
+    }
+  };
+
+  const handleApplyAiSuggestions = () => {
+    if (!aiMetaSuggestions) return;
+    if (aiMetaSuggestions.tags.length > 0) {
+      const currentTags = parseTagValues(editingTags);
+      const merged = Array.from(new Set([...currentTags, ...aiMetaSuggestions.tags]));
+      setEditingTags(joinTagValues(merged));
+    }
+    if (aiMetaSuggestions.wp_slug) {
+      setEditingWpSlug(aiMetaSuggestions.wp_slug);
+    }
+    if (aiMetaSuggestions.wp_excerpt) {
+      setEditingWpExcerpt(aiMetaSuggestions.wp_excerpt);
+    }
+  };
+
   const handleAddEditingTag = (value?: string) => {
     const nextTag = String(value ?? editingTagDraft).trim();
     if (!nextTag) {
@@ -875,6 +980,12 @@ function HistoryPageContent() {
         created_at: new Date().toISOString(),
       },
     ]);
+    const mentions = Array.from(new Set(message.match(/@([a-zA-Z0-9._-]+)/g) ?? []));
+    if (mentions.length > 0) {
+      setMentionNotice(`Mentions detected: ${mentions.join(", ")}. Share this note with those teammates.`);
+    } else {
+      setMentionNotice(null);
+    }
     setEditingCommentMessage("");
   };
 
@@ -1064,7 +1175,8 @@ function HistoryPageContent() {
     URL.revokeObjectURL(url);
   };
 
-  const visibleRows = rows;
+  const visibleRows = rows.slice(0, renderLimit);
+  const hasRenderMore = rows.length > renderLimit;
   const allVisibleSelected = visibleRows.length > 0 && visibleRows.every((row) => selectedIds.includes(row.id));
   const selectedCount = selectedIds.length;
   const selectedFailedCount = rows.filter((row) => selectedIds.includes(row.id) && resolvePublishState(row) === "failed").length;
@@ -1093,7 +1205,7 @@ function HistoryPageContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="p-5 md:p-8 pb-0">
+      <PageContainer maxWidthClassName="max-w-[1600px]" className="pb-0 flex flex-1 flex-col min-h-0 gap-4">
         <PageHeader
           eyebrow="Archive"
           title="Generation History"
@@ -1105,9 +1217,6 @@ function HistoryPageContent() {
             { label: "Publishing", value: publishAllowed ? "Enabled" : publishStatusLoaded ? "Needs config" : "Checking", meta: "WordPress sync" },
           ]}
         />
-      </div>
-
-      <div className="px-5 md:px-8 pt-4">
         <StatusStrip
           columnsClassName="xl:grid-cols-5"
           items={[
@@ -1118,50 +1227,49 @@ function HistoryPageContent() {
             { label: "Publishing", value: publishAllowed ? "Draft sync enabled" : publishStatusLoaded ? "Connection required" : "Checking" },
           ]}
         />
-      </div>
 
       {/* Publish State Summary */}
       {!loading && rows.length > 0 && (
-        <div className="border-b border-border px-8 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <ControlBar className="rounded-[1.5rem] py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
           <p className="font-mono text-xs text-muted uppercase tracking-wider shrink-0">Publish States</p>
           {publishStateCounts.failed > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.failed}`}>
+            <span className={`status-badge ${PUBLISH_STATE_BADGE_CLASSES.failed}`}>
               {PUBLISH_STATE_ICONS.failed}{PUBLISH_STATE_LABELS.failed}: {publishStateCounts.failed}
             </span>
           )}
           {publishStateCounts.published > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.published}`}>
+            <span className={`status-badge ${PUBLISH_STATE_BADGE_CLASSES.published}`}>
               {PUBLISH_STATE_ICONS.published}{PUBLISH_STATE_LABELS.published}: {publishStateCounts.published}
             </span>
           )}
           {publishStateCounts.scheduled > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.scheduled}`}>
+            <span className={`status-badge ${PUBLISH_STATE_BADGE_CLASSES.scheduled}`}>
               {PUBLISH_STATE_ICONS.scheduled}{PUBLISH_STATE_LABELS.scheduled}: {publishStateCounts.scheduled}
             </span>
           )}
           {publishStateCounts.draft_updated > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.draft_updated}`}>
+            <span className={`status-badge ${PUBLISH_STATE_BADGE_CLASSES.draft_updated}`}>
               {PUBLISH_STATE_ICONS.draft_updated}{PUBLISH_STATE_LABELS.draft_updated}: {publishStateCounts.draft_updated}
             </span>
           )}
           {publishStateCounts.draft_created > 0 && (
-            <span className={`text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 ${PUBLISH_STATE_BADGE_CLASSES.draft_created}`}>
+            <span className={`status-badge ${PUBLISH_STATE_BADGE_CLASSES.draft_created}`}>
               {PUBLISH_STATE_ICONS.draft_created}{PUBLISH_STATE_LABELS.draft_created}: {publishStateCounts.draft_created}
             </span>
           )}
           {publishStateCounts.unpublished > 0 && (
-            <span className="text-xs font-mono border rounded px-2 py-0.5 flex items-center gap-1 border-slate-400/20 bg-slate-400/5 text-slate-400">
+            <span className="status-badge border-slate-300/60 bg-slate-100/80 text-slate-600">
               📄 Never Published: {publishStateCounts.unpublished}
             </span>
           )}
-        </div>
+        </ControlBar>
       )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* List panel */}
         <div className="w-96 border-r border-white/5 flex flex-col overflow-hidden shell-panel">
           {/* Filter bar */}
-          <div className="px-4 py-3 border-b border-white/5 space-y-3 overflow-y-auto shrink-0 max-h-[60vh]">
+          <ControlBar className="rounded-none border-0 border-b border-white/5 space-y-3 overflow-y-auto shrink-0 max-h-[60vh] bg-white/[0.02] sticky top-0 z-10">
             {selectedCount > 0 && (
               <div className="shell-panel-soft rounded-2xl p-3 space-y-3 shell-hover-lift">
                 <div className="flex items-center justify-between gap-3">
@@ -1711,7 +1819,7 @@ function HistoryPageContent() {
                 </div>
               )}
             </div>
-          </div>
+          </ControlBar>
 
           {/* List */}
           <div className="flex-1 overflow-y-auto">
@@ -1748,8 +1856,8 @@ function HistoryPageContent() {
               return (
                 <div
                   key={row.id}
-                  className={`shell-hover-lift w-full text-left px-4 py-3 rounded-2xl border transition-colors ${
-                    isSelected ? "bg-accent/8 border-accent/30" : "border-white/8 bg-black/10 hover:bg-white/[0.03]"
+                  className={`surface-interactive w-full text-left px-4 py-3 ${
+                    isSelected ? "surface-interactive-selected" : "surface-interactive-default"
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -1772,7 +1880,7 @@ function HistoryPageContent() {
                           </div>
                         </div>
                         {draftBadgeLabel && (
-                          <span className={`font-mono text-xs border rounded px-1.5 py-0.5 flex items-center gap-1 ${getDraftBadgeClassName(row)}`}>
+                          <span className={`status-badge ${getDraftBadgeClassName(row)}`}>
                             {publishStateIcon}
                             {draftBadgeLabel}
                           </span>
@@ -1822,6 +1930,16 @@ function HistoryPageContent() {
                 </div>
               );
             })}
+            {!loading && hasRenderMore && (
+              <div className="px-4 py-3">
+                <button
+                  onClick={() => setRenderLimit((current) => current + HISTORY_RENDER_LIMIT_STEP)}
+                  className="btn-secondary w-full"
+                >
+                  Show more loaded rows ({rows.length - renderLimit} remaining)
+                </button>
+              </div>
+            )}
 
             {!loading && visibleRows.length > 0 && (
               <div className="px-4 py-3 border-t border-white/5 bg-white/[0.03]">
@@ -1864,7 +1982,7 @@ function HistoryPageContent() {
           ) : (
             <>
               {/* Detail toolbar */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0 sticky top-0 z-10 bg-card">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
@@ -1878,6 +1996,11 @@ function HistoryPageContent() {
                       <span className={`font-mono text-xs ${getDraftDetailClassName(selected)}`}>
                         {getDraftStatusText(selected)}
                       </span>
+                      {(() => {
+                        const sla = getSlaIndicator(selected);
+                        if (!sla) return null;
+                        return <span className={`font-mono text-xs ${sla.tone}`}>SLA: {sla.label}</span>;
+                      })()}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 ml-4 shrink-0">
@@ -1901,6 +2024,18 @@ function HistoryPageContent() {
                     >
                       Editor
                     </button>
+                    {detailTab === "editor" && (
+                      <button
+                        onClick={() => setShowOutputDiff((current) => !current)}
+                        className={`font-mono text-xs px-3 py-1.5 rounded-md border transition-colors ${
+                          showOutputDiff
+                            ? "border-accent text-accent bg-accent/10"
+                            : "border-border text-slate-600 hover:text-slate-900 hover:border-slate-300"
+                        }`}
+                      >
+                        {showOutputDiff ? "Hide Diff" : "Compare"}
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -2071,6 +2206,119 @@ function HistoryPageContent() {
                     />
                   </div>
                 </div>
+
+                {/* AI Suggest button */}
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">WordPress &amp; SEO Metadata</p>
+                  <button
+                    onClick={handleSuggestMetadata}
+                    disabled={suggestingMetadata}
+                    className="shell-hover-lift flex items-center gap-1.5 px-3 py-2 text-xs font-mono border border-accent/40 rounded-2xl text-accent hover:text-accent-dim hover:border-accent/60 transition-colors disabled:opacity-50"
+                    title="Use AI to suggest tags, WP slug, excerpt, and category/tag names"
+                  >
+                    <Sparkles size={12} />
+                    {suggestingMetadata ? "Thinking…" : "Suggest with AI"}
+                  </button>
+                </div>
+
+                {metaSuggestError && (
+                  <div className="mb-3 text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+                    {metaSuggestError}
+                  </div>
+                )}
+
+                {aiMetaSuggestions && (
+                  <div className="mb-3 shell-panel-soft rounded-[1.5rem] p-4 space-y-3 border border-accent/20">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] font-mono text-accent uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles size={11} />
+                        AI Suggestions
+                      </p>
+                      <button
+                        onClick={handleApplyAiSuggestions}
+                        className="text-xs font-mono text-accent hover:text-accent-dim border border-accent/30 rounded-xl px-2.5 py-1 transition-colors"
+                        title="Apply slug, excerpt, and merge tags into current fields"
+                      >
+                        Apply All
+                      </button>
+                    </div>
+
+                    {aiMetaSuggestions.tags.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1.5">Suggested Tags</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {aiMetaSuggestions.tags.map((tag) => (
+                            <button
+                              key={tag}
+                              onClick={() => handleAddEditingTag(tag)}
+                              className="text-xs font-mono border border-accent/30 rounded px-2 py-0.5 text-accent hover:bg-accent/10 transition-colors"
+                              title="Add this tag"
+                            >
+                              +#{tag}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {aiMetaSuggestions.wp_slug && (
+                      <div>
+                        <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Suggested WP Slug</p>
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs text-slate-700 bg-white/60 rounded px-2 py-1 flex-1">{aiMetaSuggestions.wp_slug}</code>
+                          <button
+                            onClick={() => setEditingWpSlug(aiMetaSuggestions.wp_slug)}
+                            className="text-xs font-mono text-accent hover:text-accent-dim border border-accent/30 rounded-xl px-2.5 py-1 transition-colors whitespace-nowrap"
+                          >
+                            Use
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {aiMetaSuggestions.wp_excerpt && (
+                      <div>
+                        <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Suggested WP Excerpt</p>
+                        <div className="flex items-start gap-2">
+                          <p className="text-xs text-slate-700 flex-1">{aiMetaSuggestions.wp_excerpt}</p>
+                          <button
+                            onClick={() => setEditingWpExcerpt(aiMetaSuggestions.wp_excerpt)}
+                            className="text-xs font-mono text-accent hover:text-accent-dim border border-accent/30 rounded-xl px-2.5 py-1 transition-colors whitespace-nowrap"
+                          >
+                            Use
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {aiMetaSuggestions.wp_category_names.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Suggested WP Categories <span className="normal-case">(look up IDs in WordPress admin)</span></p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {aiMetaSuggestions.wp_category_names.map((name) => (
+                            <span key={name} className="text-xs font-mono border border-slate-300 rounded px-2 py-0.5 text-slate-600">
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {aiMetaSuggestions.wp_tag_names.length > 0 && (
+                      <div>
+                        <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider mb-1">Suggested WP Tags <span className="normal-case">(look up IDs in WordPress admin)</span></p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {aiMetaSuggestions.wp_tag_names.map((name) => (
+                            <span key={name} className="text-xs font-mono border border-slate-300 rounded px-2 py-0.5 text-slate-600">
+                              #{name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1">WP Slug</label>
@@ -2195,6 +2443,9 @@ function HistoryPageContent() {
                       Add Note
                     </button>
                   </div>
+                  {mentionNotice && (
+                    <p className="text-xs text-accent">{mentionNotice}</p>
+                  )}
                   <div className="space-y-2 max-h-36 overflow-y-auto">
                     {(editingComments ?? []).length === 0 && (
                       <p className="text-xs text-slate-500">No collaboration notes yet.</p>
@@ -2219,8 +2470,50 @@ function HistoryPageContent() {
                 </div>
                 <div className="mb-3 shell-panel-soft rounded-[1.5rem] p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
+                    <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">Activity Timeline</p>
+                    <span className="text-[11px] text-slate-500">
+                      {(editingComments?.length ?? 0) + selected.wp_sync_log.length + 1} events
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-44 overflow-y-auto">
+                    {[{
+                      id: `created-${selected.id}`,
+                      timestamp: selected.created_at,
+                      text: "Entry created",
+                      tone: "text-slate-700",
+                    }, ...(editingComments ?? []).map((comment) => ({
+                      id: `comment-${comment.id}`,
+                      timestamp: comment.created_at,
+                      text: `${comment.author}: ${comment.message}`,
+                      tone: "text-slate-700",
+                    })), ...selected.wp_sync_log.map((entry, index) => ({
+                      id: `sync-${entry.timestamp}-${index}`,
+                      timestamp: entry.timestamp,
+                      text: entry.message,
+                      tone: entry.status === "failed" ? "text-red-700" : "text-emerald-700",
+                    }))].sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime()).map((event) => (
+                      <div key={event.id} className="rounded-xl border border-border bg-white/[0.03] px-3 py-2">
+                        <p className={`text-sm ${event.tone}`}>{event.text}</p>
+                        <p className="text-[11px] text-slate-500 mt-1">{formatDate(event.timestamp)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mb-3 shell-panel-soft rounded-[1.5rem] p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] font-mono text-slate-500 uppercase tracking-wider">Tag Suggestions</p>
-                    <span className="text-[11px] text-slate-500">Add existing tags to keep naming consistent</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-slate-500">Add existing tags to keep naming consistent</span>
+                      <button
+                        onClick={handleSuggestMetadata}
+                        disabled={suggestingMetadata}
+                        className="shell-hover-lift flex items-center gap-1 px-2 py-1 text-[11px] font-mono border border-accent/30 rounded-xl text-accent hover:text-accent-dim hover:border-accent/50 transition-colors disabled:opacity-50"
+                        title="Let AI suggest tags for this article"
+                      >
+                        <Sparkles size={10} />
+                        {suggestingMetadata ? "…" : "AI Populate"}
+                      </button>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -2244,6 +2537,26 @@ function HistoryPageContent() {
                       Add Tag
                     </button>
                   </div>
+                  {aiMetaSuggestions && aiMetaSuggestions.tags.length > 0 && (
+                    <div>
+                      <p className="text-[11px] font-mono text-slate-400 mb-1.5 flex items-center gap-1">
+                        <Sparkles size={10} className="text-accent" />
+                        AI-suggested tags — click to add
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {aiMetaSuggestions.tags.map((tag) => (
+                          <button
+                            key={tag}
+                            onClick={() => handleAddEditingTag(tag)}
+                            className="text-xs font-mono border border-accent/30 rounded px-2 py-0.5 text-accent hover:bg-accent/10 transition-colors"
+                            title="Add this tag"
+                          >
+                            +#{tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {popularTags.map((tagSummary) => (
                       <button
@@ -2304,13 +2617,40 @@ function HistoryPageContent() {
                   />
                 ) : (
                   <div className="flex flex-col h-full gap-3">
-                    <textarea
-                      className="flex-1 w-full min-h-[400px] bg-transparent text-slate-900 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-400"
-                      value={editingOutput}
-                      onChange={(e) => setEditingOutput(e.target.value)}
-                      placeholder="Edit your content here…"
-                    />
+                    {showOutputDiff ? (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 flex-1 min-h-[400px]">
+                        <div className="flex flex-col">
+                          <p className="text-xs font-mono text-slate-500 uppercase tracking-wider mb-1">Original</p>
+                          <textarea
+                            className="flex-1 w-full bg-white/[0.04] text-slate-700 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-400"
+                            value={originalOutput}
+                            readOnly
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <p className="text-xs font-mono text-slate-500 uppercase tracking-wider mb-1">Edited</p>
+                          <textarea
+                            className="flex-1 w-full bg-transparent text-slate-900 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-400"
+                            value={editingOutput}
+                            onChange={(e) => setEditingOutput(e.target.value)}
+                            placeholder="Edit your content here…"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <textarea
+                        className="flex-1 w-full min-h-[400px] bg-transparent text-slate-900 text-sm font-mono leading-relaxed resize-none focus:outline-none placeholder:text-slate-400"
+                        value={editingOutput}
+                        onChange={(e) => setEditingOutput(e.target.value)}
+                        placeholder="Edit your content here…"
+                      />
+                    )}
                     <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
+                      {showOutputDiff && (
+                        <span className="font-mono text-xs text-slate-500">
+                          {getChangedLineCount(originalOutput, editingOutput)} lines changed
+                        </span>
+                      )}
                       <span className="font-mono text-xs text-muted">
                         {editingOutput.split(/\s+/).filter(Boolean).length} words
                       </span>
@@ -2329,6 +2669,7 @@ function HistoryPageContent() {
           )}
         </div>
       </div>
+      </PageContainer>
 
       <datalist id="history-tag-options">
         {tagSummaries.map((tagSummary) => (

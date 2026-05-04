@@ -43,7 +43,7 @@ function LoginContent() {
 
           <button
             onClick={() => signIn("google", { callbackUrl })}
-            className="w-full flex items-center justify-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 text-sm font-medium text-slate-900 hover:border-accent/40 hover:shadow-sm transition-all"
+            className="btn-secondary w-full rounded-2xl border-border bg-white px-4 py-3 text-sm font-medium text-slate-900 hover:border-accent/40"
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
@@ -67,7 +67,7 @@ function LoginContent() {
               </div>
               <button
                 onClick={() => signIn("dev-login", { callbackUrl })}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 hover:border-accent/50 hover:text-accent transition-all"
+                className="btn-secondary w-full rounded-2xl border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 hover:border-accent/50 hover:text-accent"
               >
                 Skip auth — Dev login
               </button>

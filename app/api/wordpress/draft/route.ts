@@ -8,6 +8,7 @@ import {
   updateHistoryWordPressDraft,
 } from "@/lib/db";
 import {
+  assertWordPressSiteUrlSafe,
   buildWordPressAuthHeader,
   getWordPressConfig,
   markdownToWordPressHtml,
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { siteUrl, username, appPassword } = getWordPressConfig();
+    await assertWordPressSiteUrlSafe(siteUrl);
     const finalTitle = deriveTitle(content, title);
     const htmlContent = markdownToWordPressHtml(content);
 

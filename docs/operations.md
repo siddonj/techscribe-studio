@@ -20,6 +20,7 @@ For the full upgrade and migration reference — including how schema migrations
 8. [Smoke-Test Checklist](#8-smoke-test-checklist)
 9. [Upgrading](#9-upgrading)
 10. [Upgrade and Migration Reference](#10-upgrade-and-migration-reference)
+11. [Security Headers](#11-security-headers)
 
 ---
 
@@ -427,3 +428,59 @@ Key points summarised here:
 - Every upgrade should be preceded by a backup of `data/history.db`.
 - Release notes will explicitly call out any **persistence-sensitive change** (data format change, column default change, or table restructure) that requires special handling beyond the standard procedure.
 - To roll back: restore the pre-upgrade backup, check out the previous code, reinstall, rebuild, and restart.
+
+---
+
+## 11. Security Headers
+
+Every HTTP response from TechScribe Studio carries a set of security headers defined in `next.config.mjs`. The headers apply to all routes via `source: "/(.*)"`.
+
+### Header reference
+
+| Header | Value | Purpose |
+|---|---|---|
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | Enforce HTTPS for 2 years; eligible for browser HSTS preload list. |
+| `X-Frame-Options` | `SAMEORIGIN` | Legacy clickjacking protection (also enforced by CSP `frame-ancestors`). |
+| `X-Content-Type-Options` | `nosniff` | Prevent MIME-type sniffing attacks. |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Send full URL to same-origin requests; send only the origin to cross-origin HTTPS destinations; send nothing to HTTP destinations. |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Disable camera, microphone, and geolocation APIs for this origin. |
+| `X-DNS-Prefetch-Control` | `on` | Allow DNS prefetching for links on the page (performance optimisation). |
+| `Content-Security-Policy` | _(see below)_ | Restrict the sources from which the browser may load resources. |
+
+### Content Security Policy directives
+
+```
+default-src 'self'
+script-src  'self'
+style-src   'self' 'unsafe-inline' https://fonts.googleapis.com
+font-src    'self' https://fonts.gstatic.com data:
+img-src     'self' data: https:
+connect-src 'self' https:
+frame-ancestors 'self'
+base-uri    'self'
+form-action 'self'
+object-src  'none'
+upgrade-insecure-requests
+```
+
+**Directive notes:**
+
+- **`script-src 'self'`** — Scripts are only loaded from the same origin (Next.js bundles under `/_next/static/`). Inline scripts and `eval()` are blocked.
+- **`style-src 'unsafe-inline'`** — Required for Tailwind CSS utility classes. Google Fonts stylesheets are fetched from `https://fonts.googleapis.com`.
+- **`font-src`** — Google Fonts binary files are fetched from `https://fonts.gstatic.com`; `data:` covers base64 inline fonts in `globals.css`.
+- **`img-src https:`** — Permits images from any HTTPS URL. This covers external images that may appear in AI-generated markdown output (e.g., Unsplash placeholder URLs). Tighten to specific origins if the set of permitted image sources becomes well-defined.
+- **`connect-src https:`** — Covers any HTTPS `fetch`/XHR calls that may be issued by the page. All current first-party API calls target `'self'`; the `https:` token provides headroom for future integrations. Tighten to specific origins if requirements stabilise.
+- **`frame-ancestors 'self'`** — Only same-origin frames are allowed; this is the CSP-level equivalent of `X-Frame-Options: SAMEORIGIN`.
+- **`object-src 'none'`** — Completely disallows Flash and other plugin content.
+- **`upgrade-insecure-requests`** — Instructs browsers to rewrite `http://` sub-resource requests to `https://` automatically.
+
+### Updating the policy
+
+1. Edit the `contentSecurityPolicy` array at the top of `next.config.mjs`.
+2. Rebuild and redeploy.
+3. Verify using browser DevTools (Console tab → CSP violation messages) or a `report-uri` / `report-to` endpoint.
+4. Update this section to reflect the change.
+
+### Testing CSP compliance
+
+After deploying, open the app in a browser and check the Console for CSP violation reports. You can also use the **Network** tab to inspect the `Content-Security-Policy` response header on any page load and confirm the directive set matches what is documented here.

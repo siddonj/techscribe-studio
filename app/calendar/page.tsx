@@ -18,7 +18,7 @@ import {
   type CalendarSummary,
 } from "@/lib/calendar";
 import { TOOLS, getToolBySlug } from "@/lib/tools";
-import { EmptyState, PageHeader, StatusStrip, SurfaceNotice } from "@/components/DashboardPrimitives";
+import { ControlBar, EmptyState, PageContainer, PageHeader, SectionHeader, StatusStrip, SurfaceNotice } from "@/components/DashboardPrimitives";
 
 interface CalendarResponse {
   rows: CalendarEntry[];
@@ -43,6 +43,8 @@ interface CalendarDraft {
   wp_category: string;
   wp_tags: string;
 }
+
+const CALENDAR_VIEW_PREFS_KEY = "techscribe-calendar-view-prefs";
 
 const inputClassName =
   "shell-input w-full rounded-2xl px-3.5 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-colors";
@@ -144,30 +146,30 @@ function formatDateLabel(value: string) {
 function getStatusBadgeClass(status: CalendarEntryStatus) {
   switch (status) {
     case "backlog":
-      return "border-slate-400/20 bg-slate-400/5 text-slate-300";
+      return "border-slate-300/60 bg-slate-100/80 text-slate-600";
     case "planned":
-      return "border-sky-400/30 bg-sky-400/10 text-sky-300";
+      return "border-sky-300/60 bg-sky-50 text-sky-700";
     case "in-progress":
-      return "border-amber-400/30 bg-amber-400/10 text-amber-300";
+      return "border-amber-300/60 bg-amber-50 text-amber-700";
     case "ready":
-      return "border-emerald-400/30 bg-emerald-400/10 text-emerald-300";
+      return "border-emerald-300/60 bg-emerald-50 text-emerald-700";
     case "published":
-      return "border-fuchsia-400/30 bg-fuchsia-400/10 text-fuchsia-300";
+      return "border-fuchsia-300/60 bg-fuchsia-50 text-fuchsia-700";
   }
 }
 
 function getApprovalBadgeClass(status: CalendarApprovalStatus) {
   switch (status) {
     case "pending_review":
-      return "border-sky-400/30 bg-sky-400/10 text-sky-300";
+      return "border-sky-300/60 bg-sky-50 text-sky-700";
     case "changes_requested":
-      return "border-amber-400/30 bg-amber-400/10 text-amber-300";
+      return "border-amber-300/60 bg-amber-50 text-amber-700";
     case "approved":
-      return "border-emerald-400/30 bg-emerald-400/10 text-emerald-300";
+      return "border-emerald-300/60 bg-emerald-50 text-emerald-700";
     case "blocked":
-      return "border-rose-400/30 bg-rose-400/10 text-rose-300";
+      return "border-rose-300/60 bg-rose-50 text-rose-700";
     case "not_requested":
-      return "border-slate-400/20 bg-slate-400/5 text-slate-300";
+      return "border-slate-300/60 bg-slate-100/80 text-slate-600";
   }
 }
 
@@ -292,6 +294,52 @@ export default function CalendarPage() {
   const [editorTab, setEditorTab] = useState<"details" | "brief" | "workflow" | "publishing">("details");
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(CALENDAR_VIEW_PREFS_KEY);
+      if (!raw) return;
+      const prefs = JSON.parse(raw) as Partial<{
+        statusFilter: string;
+        toolFilter: string;
+        publishIntentFilter: string;
+        viewMode: "list" | "week" | "month";
+        weekOffset: number;
+        monthOffset: number;
+        showAdvanced: boolean;
+      }>;
+      if (prefs.statusFilter) setStatusFilter(prefs.statusFilter);
+      if (prefs.toolFilter) setToolFilter(prefs.toolFilter);
+      if (prefs.publishIntentFilter) setPublishIntentFilter(prefs.publishIntentFilter);
+      if (prefs.viewMode) setViewMode(prefs.viewMode);
+      if (typeof prefs.weekOffset === "number") setWeekOffset(prefs.weekOffset);
+      if (typeof prefs.monthOffset === "number") setMonthOffset(prefs.monthOffset);
+      if (typeof prefs.showAdvanced === "boolean") setShowAdvanced(prefs.showAdvanced);
+    } catch {
+      // ignore saved view errors
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        CALENDAR_VIEW_PREFS_KEY,
+        JSON.stringify({
+          statusFilter,
+          toolFilter,
+          publishIntentFilter,
+          viewMode,
+          weekOffset,
+          monthOffset,
+          showAdvanced,
+        })
+      );
+    } catch {
+      // ignore saved view errors
+    }
+  }, [statusFilter, toolFilter, publishIntentFilter, viewMode, weekOffset, monthOffset, showAdvanced]);
+
   // When arriving via a "Plan in Calendar" handoff from a keyword research
   // brief, URL params pre-fill the Quick Plan form so the user can schedule
   // the planned content without re-typing the researched title and keywords.
@@ -367,11 +415,22 @@ export default function CalendarPage() {
     setEditorDraft(selectedEntry ? toDraft(selectedEntry) : null);
   }, [selectedEntry]);
 
+  const rowsByScheduledDate = useMemo(() => {
+    const map = new Map<string, CalendarEntry[]>();
+    for (const row of rows) {
+      if (!row.scheduled_for) continue;
+      const existing = map.get(row.scheduled_for) ?? [];
+      existing.push(row);
+      map.set(row.scheduled_for, existing);
+    }
+    return map;
+  }, [rows]);
+
   const groupedSections = useMemo(() => {
     const todayValue = getTodayValue();
     const thisWeekValue = getFutureDateValue(7);
     const overdue = rows.filter((row) => row.scheduled_for && row.scheduled_for < todayValue && row.status !== "published");
-    const today = rows.filter((row) => row.scheduled_for === todayValue);
+    const today = rowsByScheduledDate.get(todayValue) ?? [];
     const upcomingByDate = new Map<string, CalendarEntry[]>();
     const later: CalendarEntry[] = [];
     const unscheduled = rows.filter((row) => !row.scheduled_for);
@@ -382,8 +441,7 @@ export default function CalendarPage() {
       }
 
       if (row.scheduled_for <= thisWeekValue) {
-        const existing = upcomingByDate.get(row.scheduled_for) ?? [];
-        existing.push(row);
+        const existing = rowsByScheduledDate.get(row.scheduled_for) ?? [];
         upcomingByDate.set(row.scheduled_for, existing);
         continue;
       }
@@ -418,7 +476,7 @@ export default function CalendarPage() {
     }
 
     return sections;
-  }, [rows]);
+  }, [rows, rowsByScheduledDate]);
 
   const weekDates = useMemo(
     () => (viewMode === "week" ? getWeekDates(weekOffset) : []),
@@ -428,10 +486,10 @@ export default function CalendarPage() {
   const weekItemsByDate = useMemo(() => {
     const map = new Map<string, CalendarEntry[]>();
     for (const date of weekDates) {
-      map.set(date, rows.filter((r) => r.scheduled_for === date));
+      map.set(date, rowsByScheduledDate.get(date) ?? []);
     }
     return map;
-  }, [weekDates, rows]);
+  }, [weekDates, rowsByScheduledDate]);
 
   const weekUnscheduled = useMemo(
     () => (viewMode === "week" ? rows.filter((r) => !r.scheduled_for) : []),
@@ -446,10 +504,10 @@ export default function CalendarPage() {
   const monthItemsByDate = useMemo(() => {
     const map = new Map<string, CalendarEntry[]>();
     for (const cell of monthCells) {
-      map.set(cell.dateValue, rows.filter((r) => r.scheduled_for === cell.dateValue));
+      map.set(cell.dateValue, rowsByScheduledDate.get(cell.dateValue) ?? []);
     }
     return map;
-  }, [monthCells, rows]);
+  }, [monthCells, rowsByScheduledDate]);
 
   const monthUnscheduled = useMemo(
     () => (viewMode === "month" ? rows.filter((r) => !r.scheduled_for) : []),
@@ -521,6 +579,9 @@ export default function CalendarPage() {
     if (!selectedEntry) {
       return;
     }
+    if (!window.confirm(`Delete "${selectedEntry.title}" from the calendar?`)) {
+      return;
+    }
 
     setDeleting(true);
     setError(null);
@@ -579,7 +640,7 @@ export default function CalendarPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="p-5 md:p-8 max-w-7xl w-full mx-auto flex-1 overflow-hidden flex flex-col gap-6">
+      <PageContainer maxWidthClassName="max-w-7xl" className="flex flex-1 overflow-hidden flex-col gap-6">
         <PageHeader
           eyebrow="Phase 2 Planner"
           title="Content Calendar"
@@ -605,15 +666,16 @@ export default function CalendarPage() {
         />
 
         <section className="shell-panel rounded-[2rem] p-5 space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="font-mono text-xs text-accent uppercase tracking-widest">Quick Plan</p>
-              <p className="text-sm text-slate-200 mt-1">Add a title, pick a tool, and set a date.</p>
-            </div>
-            <Link href={buildToolHref(createDraft)} className="text-sm border border-border rounded-2xl px-4 py-2.5 text-slate-700 hover:text-slate-900 hover:border-accent/40 transition-colors shrink-0">
-              Open Tool
-            </Link>
-          </div>
+          <SectionHeader
+            eyebrow="Quick Plan"
+            title="Create and queue content"
+            description="Add a title, pick a tool, and set a date."
+            actions={(
+              <Link href={buildToolHref(createDraft)} className="btn-secondary rounded-2xl px-4 py-2.5 text-sm">
+                Open Tool
+              </Link>
+            )}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-3 items-end">
             <input
@@ -739,7 +801,7 @@ export default function CalendarPage() {
 
         <div className="flex-1 min-h-0 flex gap-6 overflow-hidden">
           <aside className={`${viewMode === "list" ? "w-[28rem] shrink-0" : "flex-1"} shell-panel rounded-[2rem] overflow-hidden flex flex-col`}>
-            <div className="p-4 border-b border-white/5 space-y-3">
+            <ControlBar className="rounded-none border-0 border-b border-white/5 space-y-3 bg-white/[0.02] sticky top-0 z-10">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex gap-1 rounded-2xl bg-black/15 p-1 border border-white/5">
                   <button
@@ -853,7 +915,7 @@ export default function CalendarPage() {
                   <span className="font-mono">↑ Click any day to instantly move</span> <span className="text-slate-900">{selectedEntry.title}</span> <span className="text-slate-500">to that date.</span>
                 </p>
               )}
-            </div>
+            </ControlBar>
 
             {viewMode === "list" && (
               <div className="flex-1 overflow-y-auto">
@@ -884,7 +946,7 @@ export default function CalendarPage() {
 
                 {!loading && groupedSections.map((section) => (
                   <section key={section.id} className="border-b border-white/5 last:border-b-0">
-                    <div className="px-4 py-3 bg-white/[0.03] flex items-center justify-between">
+                    <div className="px-4 py-3 bg-white/[0.03] flex items-center justify-between sticky top-0 z-[1]">
                       <p className="font-mono text-xs text-slate-500 uppercase tracking-wider">{section.title}</p>
                       <span className="text-[11px] text-slate-500">{section.rows.length} items</span>
                     </div>
@@ -897,7 +959,7 @@ export default function CalendarPage() {
                         return (
                           <div
                             key={row.id}
-                            className={`shell-hover-lift border rounded-2xl p-3 transition-colors ${selected ? "border-accent/35 bg-accent/8" : "border-white/8 bg-black/10 hover:border-accent/20 hover:bg-white/[0.03]"}`}
+                            className={`surface-interactive p-3 ${selected ? "surface-interactive-selected" : "surface-interactive-default"}`}
                           >
                             <button
                               onClick={() => setSelectedId(row.id)}
@@ -913,13 +975,13 @@ export default function CalendarPage() {
                                   <div className="flex flex-wrap items-center gap-2 mt-2">
                                     {row.owner && <span className="text-[11px] text-slate-400">Owner: {row.owner}</span>}
                                     {row.approval_status !== "not_requested" && (
-                                      <span className={`text-[11px] font-mono border rounded-full px-2 py-0.5 ${getApprovalBadgeClass(row.approval_status)}`}>
+                                      <span className={`status-badge ${getApprovalBadgeClass(row.approval_status)}`}>
                                         {CALENDAR_APPROVAL_STATUS_LABELS[row.approval_status]}
                                       </span>
                                     )}
                                   </div>
                                 </div>
-                                <span className={`text-[11px] font-mono border rounded-full px-2.5 py-1 shrink-0 ${getStatusBadgeClass(row.status)}`}>
+                                <span className={`status-badge shrink-0 ${getStatusBadgeClass(row.status)}`}>
                                   {CALENDAR_STATUS_LABELS[row.status]}
                                 </span>
                               </div>
@@ -1038,7 +1100,7 @@ export default function CalendarPage() {
                                     <p className="text-xs text-slate-900 font-medium leading-snug line-clamp-2">{row.title}</p>
                                     <div className="flex items-center justify-between mt-1.5 gap-1">
                                       <span className="text-xs">{tool?.icon ?? "📝"}</span>
-                                      <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
+                                      <span className={`status-badge px-1.5 py-0.5 text-xs ${getStatusBadgeClass(row.status)}`}>
                                         {CALENDAR_STATUS_LABELS[row.status]}
                                       </span>
                                     </div>
@@ -1081,7 +1143,7 @@ export default function CalendarPage() {
                                 <p className="text-xs text-slate-900 font-medium truncate">{row.title}</p>
                                 <div className="flex items-center justify-between mt-1.5 gap-1">
                                   <span className="text-xs">{tool?.icon ?? "📝"}</span>
-                                  <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
+                                  <span className={`status-badge px-1.5 py-0.5 text-xs ${getStatusBadgeClass(row.status)}`}>
                                     {CALENDAR_STATUS_LABELS[row.status]}
                                   </span>
                                 </div>
@@ -1173,7 +1235,7 @@ export default function CalendarPage() {
                                     className={`w-full text-left rounded px-1.5 py-0.5 transition-colors ${selected ? "bg-accent/20 text-accent" : "bg-white/[0.04] hover:bg-white/[0.08] text-slate-900"}`}
                                   >
                                     <p className="text-xs leading-snug truncate">{row.title}</p>
-                                    <span className={`inline-block text-xs font-mono border rounded px-1 leading-tight mt-0.5 ${getStatusBadgeClass(row.status)}`}>
+                                    <span className={`status-badge inline-flex px-1 py-0.5 text-xs leading-tight mt-0.5 ${getStatusBadgeClass(row.status)}`}>
                                       {CALENDAR_STATUS_LABELS[row.status]}
                                     </span>
                                   </button>
@@ -1204,7 +1266,7 @@ export default function CalendarPage() {
                                 <p className="text-xs text-slate-900 font-medium truncate">{row.title}</p>
                                 <div className="flex items-center justify-between mt-1.5 gap-1">
                                   <span className="text-xs">{tool?.icon ?? "📝"}</span>
-                                  <span className={`text-xs font-mono border rounded px-1.5 py-0.5 ${getStatusBadgeClass(row.status)}`}>
+                                  <span className={`status-badge px-1.5 py-0.5 text-xs ${getStatusBadgeClass(row.status)}`}>
                                     {CALENDAR_STATUS_LABELS[row.status]}
                                   </span>
                                 </div>
@@ -1232,7 +1294,7 @@ export default function CalendarPage() {
             ) : (
               <>
                 {/* Editor header */}
-                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between gap-3 sticky top-0 z-10 bg-card">
                   <div className="min-w-0">
                     <p className="font-mono text-xs text-accent uppercase tracking-widest">Planned Item</p>
                     <h2 className="text-slate-900 text-base font-semibold mt-0.5 truncate">{selectedEntry.title}</h2>
@@ -1262,7 +1324,7 @@ export default function CalendarPage() {
                 </div>
 
                 {/* Tab bar */}
-                <div className="flex border-b border-white/5 px-2 pt-1 shrink-0">
+                <div className="flex border-b border-white/5 px-2 pt-1 shrink-0 sticky top-[73px] z-10 bg-card">
                   {(["details", "brief", "workflow", "publishing"] as const).map((tab) => (
                     <button
                       key={tab}
@@ -1413,7 +1475,7 @@ export default function CalendarPage() {
                     <>
                       <div className="flex items-center justify-between gap-3 mb-1">
                         <p className="text-xs font-mono text-slate-500 uppercase tracking-wider">Approval</p>
-                        <span className={`text-[11px] font-mono border rounded-full px-2.5 py-1 ${getApprovalBadgeClass(editorDraft.approval_status)}`}>
+                        <span className={`status-badge ${getApprovalBadgeClass(editorDraft.approval_status)}`}>
                           {CALENDAR_APPROVAL_STATUS_LABELS[editorDraft.approval_status]}
                         </span>
                       </div>
@@ -1540,7 +1602,7 @@ export default function CalendarPage() {
             )}
           </section>
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 }

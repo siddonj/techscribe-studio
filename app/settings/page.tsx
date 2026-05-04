@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Cpu } from "lucide-react";
-import { PageHeader, SectionCard, SurfaceNotice } from "@/components/DashboardPrimitives";
+import { PageContainer, PageHeader, SectionCard, SectionHeader, SurfaceNotice } from "@/components/DashboardPrimitives";
 
 const MODEL_OPTIONS = [
   { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5", description: "Fast & economical. Best for short-form content and quick drafts." },
@@ -174,14 +174,14 @@ export default function SettingsPage() {
         }),
       });
 
-      const data = (await res.json()) as { message?: string; error?: string; user_name?: string };
+      const data = (await res.json()) as { message?: string; error?: string; user_name?: string; has_successful_test?: boolean; last_tested_at?: string };
       if (!res.ok) {
         throw new Error(data.error || "Failed to test WordPress connection");
       }
 
       setTestMessage(data.message || "Connection successful.");
       setHasSuccessfulTest(true);
-      setLastTestedAt(new Date().toISOString());
+      setLastTestedAt(data.last_tested_at ?? new Date().toISOString());
       setVerifiedSignature(currentConfigSignature);
     } catch (testError) {
       setError(testError instanceof Error ? testError.message : "Failed to test WordPress connection");
@@ -200,7 +200,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <div className="p-5 md:p-8 max-w-6xl w-full mx-auto space-y-6">
+      <PageContainer maxWidthClassName="max-w-6xl" className="space-y-6">
         <PageHeader
           eyebrow="Configuration"
           title="Settings"
@@ -246,7 +246,12 @@ export default function SettingsPage() {
         </SectionCard>
 
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <p className="col-span-full font-mono text-xs text-slate-500 uppercase tracking-wider">WordPress Integration</p>
+          <SectionHeader
+            className="col-span-full"
+            eyebrow="WordPress Integration"
+            title="Publishing Connection"
+            description="Save credentials once, verify them, and unlock draft publishing across the workspace."
+          />
           <SectionCard className="space-y-5">
             <div>
               <p className="font-mono text-xs text-slate-500 uppercase tracking-wider mb-1">Connection</p>
@@ -370,7 +375,7 @@ export default function SettingsPage() {
             </div>
           </SectionCard>
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 }
